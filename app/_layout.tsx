@@ -3,25 +3,35 @@ import React, { useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { apiClient } from '@/src/axios/apiClient';
 import { AuthContext, AuthProvider } from '@/src/context/AuthContext';
 import { NotificationsProvider } from '@/src/context/NotificationsContext';
 import { ThemeProvider } from '@/src/context/ThemeProvider';
 import { UserProvider } from '@/src/context/UserContext';
+import { LogsProvider } from '@/src/context/LogsContext';
+import { JournalProvider } from '@/src/context/JournalContext';
 import { getTokens } from '@/src/Storage/tokenStorage';
+import HomeOnlyCheckInController from '@/src/components/HomeOnlyCheckInController';
 
 export default function RootLayout() {
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <AuthProvider>
       <ThemeProvider>
         <NotificationsProvider>
-            <UserProvider>
+          <UserProvider>
+            <LogsProvider>
+              <JournalProvider>
               <AuthNavigation />
-            </UserProvider>
+              </JournalProvider>
+            </LogsProvider>
+          </UserProvider>
         </NotificationsProvider>
       </ThemeProvider>
     </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -68,11 +78,16 @@ const AuthNavigation: React.FC = () => {
   }
 
   return (
+    <>
     <Stack>
       {!isAuthenticated ? (
         <>
           <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)signup" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)/signup" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)/analysis-complete" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)/goals" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)/symptoms" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)/subscription" options={{ headerShown: false }} />
         </>
       ) : (
         <>
@@ -90,6 +105,10 @@ const AuthNavigation: React.FC = () => {
         </>
       )}
     </Stack>
+      
+      {/* Show daily check-in popup only for authenticated users on the home page */}
+      {isAuthenticated && !loading && <HomeOnlyCheckInController />}
+    </>
   );
 };
 

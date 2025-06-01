@@ -1,59 +1,71 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Tabs } from 'expo-router';
+import { StyleSheet } from 'react-native';
+
+import { useTheme } from '@/src/context/ThemeProvider';
 
 export default function TabLayout() {
-  const router = useRouter();
-
+  const { theme } = useTheme();
+  
   return (
-    <View style={{ flex: 1 }}>
-      <Tabs
-        screenOptions={{
-          tabBarActiveTintColor: '#ffd33d',
-          headerShown: false,
-          tabBarStyle: {
-            height: 90,
-            paddingBottom: 12,
-            paddingLeft: 12,
-            paddingTop: 5,
-            backgroundColor: '#25292e',
-            paddingRight: 90
-          },
-          tabBarLabelStyle: {
-            fontSize: 10,
-            fontWeight: '600',
-          },
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: theme.colors.primary,
+        headerShown: false,
+        tabBarStyle: {
+          height: 76,
+          paddingBottom: 14,
+          paddingTop: 8,
+          backgroundColor: theme.colors.backgroundDeep,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.borderLight,
+          ...theme.shadows.medium
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+          marginTop: 3,
+        },
+        tabBarInactiveTintColor: theme.colors.textMuted,
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} color={color} size={22} />
+          ),
         }}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Home',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'home-sharp' : 'home-outline'} color={color} size={24} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="analytics"
-          options={{
-            title: 'Old Screen',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'newspaper' : 'newspaper-outline'} color={color} size={24}/>
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: 'Settings',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'settings' : 'settings-outline'} color={color} size={24}/>
-            ),
-          }}
-        />
-      </Tabs>
-    </View>
+      />
+      <Tabs.Screen
+        name="journal"
+        options={{
+          title: 'Journal',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'book' : 'book-outline'} color={color} size={22}/>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="analytics"
+        options={{
+          title: 'Community',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'people' : 'people-outline'} color={color} size={22}/>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={22}/>
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
 

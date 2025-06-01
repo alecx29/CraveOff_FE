@@ -1,22 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 
-import AButton from '@/src/components/AButton/AButton';
+import { useTheme } from '@/src/context/ThemeProvider';
 import { useNotifications } from '@/src/context/NotificationsContext';
 
 import SettingCard from './SettingsCard';
 
-const CircularProgress = ({ progress }: { progress: number }) => (
-  <View style={styles.progressContainer}>
-    <View style={styles.progressBackground} />
-    <View style={[styles.progressFill, { transform: [{ rotate: `${progress * 360}deg` }] }]} />
-  </View>
-);
-
 const SettingsScreen = () => {
+  const { theme } = useTheme();
   const { isNotificationsEnabled, setNotificationsEnabled } = useNotifications();
+  const styles = createStyles(theme);
 
   const handleNotificationToggle = async (enabled: boolean) => {
     await setNotificationsEnabled(enabled);
@@ -26,114 +20,148 @@ const SettingsScreen = () => {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>Customize your experience</Text>
+        <Text style={styles.title}>Profile</Text>
+        <TouchableOpacity style={styles.settingsIcon}>
+          <Ionicons name="settings-outline" size={24} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Profile Card */}
+      <View style={styles.profileCard}>
+        <View style={styles.avatarContainer}>
+          <Ionicons name="person" size={40} color="#fff" />
         </View>
-        <View style={styles.headerIcon}>
-          <CircularProgress progress={0.75} />
-          <View style={styles.iconWrapper}>
-            <Ionicons name="settings" size={24} color="#FFD33D" />
-          </View>
+        <Text style={styles.username}>Your Name</Text>
+        <Text style={styles.memberSince}>Member since January 2024</Text>
+      </View>
+
+      {/* Stats Row */}
+      <View style={styles.statsRow}>
+        {/* Clean Days */}
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>7</Text>
+          <Ionicons name="flame" size={16} color={theme.colors.flame} style={styles.statIcon} />
+          <Text style={styles.statLabel}>Days Clean</Text>
+        </View>
+        
+        {/* Journal Entries */}
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>12</Text>
+          <Text style={styles.statLabel}>Journal Entries</Text>
+        </View>
+        
+        {/* Achievements */}
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>3</Text>
+          <Text style={styles.statLabel}>Achievements</Text>
         </View>
       </View>
 
-      {/* Preferences Section */}
-      <Text style={styles.sectionTitle}>Preferences</Text>
-      {/* <SettingCard icon="moon" title="Dark Mode" showSwitch isActive={isDarkMode} onToggle={setIsDarkMode} /> */}
+      {/* Settings Options */}
       <SettingCard
-        icon="notifications"
-        title="Push Notifications"
-        showSwitch
-        isActive={isNotificationsEnabled}
-        onToggle={handleNotificationToggle}
+        icon="notifications-outline"
+        title="Notifications"
+        onPress={() => {}}
+        iconComponent={Ionicons}
       />
-      {/* <SettingCard icon="sync" title="Auto Sync" showSwitch isActive={dataSync} onToggle={setDataSync} /> */}
+      <SettingCard
+        icon="shield-outline"
+        title="Privacy & Security"
+        onPress={() => {}}
+        iconComponent={Ionicons}
+      />
+      <SettingCard
+        icon="help-circle-outline"
+        title="Support"
+        onPress={() => {}}
+        iconComponent={Ionicons}
+      />
 
-      {/* Account Section */}
-      <Text style={styles.sectionTitle}>Customization</Text>
-
-      {/* Support Section */}
-      <Text style={styles.sectionTitle}>Support</Text>
-      <SettingCard icon="delete" title="Delete Account" onPress={() => {}} type="ant-design" />
-      <SettingCard icon="mail" title="Contact Support" onPress={() => {}} />
-      <SettingCard icon="information-circle" title="About" value="Version 1.0.0" onPress={() => {}} />
-
-      {/* Logout Button */}
-      <AButton customStyles={{ button: styles.logoutButton }} title="Log Out" onPress={() => router.push('/login')} />
+      {/* Logout Button (hidden for now) */}
+      {/* <AButton customStyles={{ button: styles.logoutButton }} title="Log Out" onPress={() => router.push('/login')} /> */}
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor: "#1C1C1E",
   },
   content: {
     padding: 20,
+    paddingTop: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 30,
-    marginTop: 20,
+    marginBottom: 24,
   },
-  headerIcon: {
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: theme.colors.textPrimary,
   },
-  iconWrapper: {
-    position: 'absolute',
+  settingsIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2C2C2E',
+    backgroundColor: theme.colors.cardBackground,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 34,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
+  profileCard: {
+    backgroundColor: theme.colors.backgroundDeep,
+    borderRadius: theme.borderRadius.medium,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#6C6C6C',
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  sectionTitle: {
+  username: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
-    marginTop: 30,
-    marginBottom: 15,
+    color: theme.colors.textPrimary,
+    marginBottom: 8,
   },
-  progressContainer: {
-    width: 50,
-    height: 50,
-    position: 'absolute',
+  memberSince: {
+    fontSize: 14,
+    color: theme.colors.textMuted,
   },
-  progressBackground: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 3,
-    borderColor: '#3A3A3C',
-    position: 'absolute',
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
   },
-  progressFill: {
-    width: 25,
-    height: 50,
-    position: 'absolute',
-    borderTopRightRadius: 25,
-    borderBottomRightRadius: 25,
-    backgroundColor: '#FFD33D',
-    transform: [{ rotate: '45deg' }],
-    right: 0,
+  statCard: {
+    flex: 1,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.borderRadius.medium,
+    padding: 16,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    marginBottom: 4,
+  },
+  statIcon: {
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
   },
   logoutButton: {
     marginTop: 30,

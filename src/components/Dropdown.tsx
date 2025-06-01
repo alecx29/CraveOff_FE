@@ -1,50 +1,88 @@
-// src/components/Input.tsx
+// src/components/Dropdown.tsx
 
+import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, View } from 'react-native';
 
-interface InputProps extends TextInputProps {
+import { useTheme } from '@/src/context/ThemeProvider';
+
+interface DropdownProps extends TextInputProps {
   label?: string;
   error?: string;
+  onPress?: () => void;
+  value?: string;
 }
 
-const Input: React.FC<InputProps> = ({ label, error, style, ...props }) => {
+const Dropdown: React.FC<DropdownProps> = ({ label, error, style, onPress, value, ...props }) => {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+  
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <TextInput style={[styles.input, style, error && styles.inputError]} {...props} />
+      <TouchableOpacity 
+        onPress={onPress}
+        activeOpacity={0.7}
+        style={[styles.dropdown, style, error && styles.dropdownError]}
+      >
+        <Text 
+          style={[
+            styles.dropdownText, 
+            !value && styles.placeholder
+          ]}
+        >
+          {value || props.placeholder || 'Select option'}
+        </Text>
+        <MaterialIcons name="arrow-drop-down" size={24} color={theme.colors.textSecondary} />
+      </TouchableOpacity>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 };
 
-export default Input;
+export default Dropdown;
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
   container: {
-    marginVertical: 8,
+    marginVertical: theme.spacing.sm,
     width: '100%',
   },
   label: {
-    marginBottom: 4,
-    color: '#333',
-    fontSize: 16,
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.small,
+    fontWeight: theme.typography.weightMedium,
   },
-  input: {
-    height: 48,
-    borderColor: '#ccc',
+  dropdown: {
+    height: theme.sizes.inputHeight,
+    borderColor: theme.colors.inputBorder,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#fff',
-    fontSize: 16,
+    borderRadius: theme.borderRadius.medium,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.inputBackground,
+    fontSize: theme.typography.body,
+    color: theme.colors.textPrimary,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    ...theme.shadows.light,
   },
-  inputError: {
-    borderColor: '#FF4D4F',
+  dropdownText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.body,
+  },
+  placeholder: {
+    color: theme.colors.textPlaceholder,
+  },
+  dropdownError: {
+    borderColor: theme.colors.buttonEmergency,
+    borderWidth: 1,
+    ...theme.shadows.redGlow,
   },
   errorText: {
-    color: '#FF4D4F',
-    marginTop: 4,
-    fontSize: 14,
+    color: theme.colors.buttonEmergency,
+    marginTop: theme.spacing.xs,
+    fontSize: theme.typography.small,
+    fontWeight: theme.typography.weightMedium,
   },
 });

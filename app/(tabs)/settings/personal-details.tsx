@@ -5,12 +5,16 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 
 import AButton from '@/src/components/AButton/AButton';
+import { useTheme } from '@/src/context/ThemeProvider';
 import { useUser } from '@/src/context/UserContext';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 
 export default function PersonalDetailsScreen() {
   const navigation = useNavigation();
   const { user } = useUser();
+  const { theme } = useTheme();
+
+  const styles = createStyles(theme);
 
   return (
     <GradientBackground>
@@ -23,7 +27,7 @@ export default function PersonalDetailsScreen() {
             style={styles.backButton} 
             onPress={() => navigation.goBack()}
           >
-            <Feather name="arrow-left" size={24} color="#000" />
+            <Feather name="arrow-left" size={theme.sizes.iconLarge} color={theme.colors.iconBackButton} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Personal Details</Text>
         </View>
@@ -46,7 +50,7 @@ export default function PersonalDetailsScreen() {
               <View style={styles.valueContainer}>
                 <Text style={styles.detailValue}>{user?.weight ?? '--'} kg</Text>
                 <TouchableOpacity onPress={() => router.push('/settings/edit-current-weight')}>
-                  <Feather name="edit-2" size={20} color="#888" />
+                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={theme.colors.icon} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -59,7 +63,7 @@ export default function PersonalDetailsScreen() {
               <View style={styles.valueContainer}>
                 <Text style={styles.detailValue}>{user?.height ?? '--'} cm</Text>
                 <TouchableOpacity onPress={() => router.push('/settings/edit-height')}>
-                  <Feather name="edit-2" size={20} color="#888" />
+                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={theme.colors.icon} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -72,7 +76,7 @@ export default function PersonalDetailsScreen() {
               <View style={styles.valueContainer}>
                 <Text style={styles.detailValue}>{user?.birthdate ?? '--'}</Text>
                 <TouchableOpacity onPress={() => router.push('/settings/edit-birthdate')}>
-                  <Feather name="edit-2" size={20} color="#888" />
+                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={theme.colors.icon} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -85,7 +89,7 @@ export default function PersonalDetailsScreen() {
               <View style={styles.valueContainer}>
                 <Text style={styles.detailValue}>{user?.gender ?? '--'}</Text>
                 <TouchableOpacity onPress={() => router.push('/settings/edit-gender')}>
-                  <Feather name="edit-2" size={20} color="#888" />
+                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={theme.colors.icon} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -96,44 +100,42 @@ export default function PersonalDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor: '#121212', // Dark background matching other screens
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    borderRadius: theme.borderRadius.circle,
+    backgroundColor: theme.colors.backButton,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: theme.typography.heading3,
+    fontWeight: theme.typography.weightBold,
+    color: theme.colors.textPrimary,
     textAlign: 'center',
     flex: 1,
     marginRight: 40, // To offset the back button and center the title
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.md,
   },
   goalCard: {
-    // backgroundColor: '#1E1E1E',
-    backgroundColor: 'rgba(58,63,71,1.00)',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.borderRadius.large,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -142,54 +144,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fieldLabel: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 5,
+    fontSize: theme.typography.body,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
   },
   fieldValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  changeGoalButton: {
-    backgroundColor: '#000000',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-  },
-  changeGoalText: {
-    color: '#FFFFFF',
-    fontWeight: '500',
+    fontSize: theme.typography.heading2,
+    fontWeight: theme.typography.weightBold,
+    color: theme.colors.textPrimary,
   },
   detailsCard: {
-    // backgroundColor: '#1E1E1E',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
-    backgroundColor: 'rgba(58,63,71,1.00)'
+    borderRadius: theme.borderRadius.large,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.cardBackground,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 15,
+    paddingVertical: theme.spacing.md - 1,
   },
   detailLabel: {
-    fontSize: 16,
-    color: '#FFFFFF',
+    fontSize: theme.typography.body,
+    color: theme.colors.textPrimary,
   },
   valueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   detailValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginRight: 15,
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightBold,
+    color: theme.colors.textPrimary,
+    marginRight: theme.spacing.md - 1,
   },
   separator: {
     height: 1,
-    backgroundColor: '#333333',
+    backgroundColor: theme.colors.separator,
   },
 });

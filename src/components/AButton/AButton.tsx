@@ -1,19 +1,32 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import { useTheme } from '@/src/context/ThemeProvider';
+
+interface ThemeType {
+  colors: any;
+  spacing: any;
+  typography: any;
+  borderRadius: any;
+  shadows: any;
+  sizes: any;
+}
 
 interface AButtonProps {
   onPress: () => void;
   title?: string;
-  color?: string; // Default color
+  color?: string;
   customStyles?: {
-    button?: ViewStyle;
-    text?: TextStyle;
+    button?: any;
+    text?: any;
   };
   disabled?: boolean;
-  gradient?: any;
-  leftChildren?: any;
-  children?: React.ReactNode; // Support for icons, images, or custom content
+  loading?: boolean;
+  variant?: 'primary' | 'secondary' | 'emergency' | 'outline';
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 const AButton: React.FC<AButtonProps> = ({
@@ -22,54 +35,117 @@ const AButton: React.FC<AButtonProps> = ({
   color,
   customStyles,
   disabled,
+  loading,
+  variant = 'primary',
+  leftIcon,
+  rightIcon,
   children,
-  leftChildren,
-  gradient,
 }) => {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
+  // Determine gradient colors based on variant
+  const getGradientColors = () => {
+    if (disabled) return [theme.colors.cardInteractive, theme.colors.cardInteractive];
+    
+    switch (variant) {
+      case 'primary':
+        return [theme.colors.primaryLight, theme.colors.primary];
+      case 'emergency':
+        return [theme.colors.emergencyLight, theme.colors.emergency];
+      case 'secondary':
+        return [theme.colors.cardInteractive, theme.colors.cardBackground];
+      case 'outline':
+        return ['transparent', 'transparent'];
+      default:
+        return [theme.colors.primaryLight, theme.colors.primary];
+    }
+  };
+
+  // Get button style
+  const buttonStyle = [
+    styles.button,
+    variant === 'outline' && styles.outlineButton,
+    disabled && styles.disabledButton,
+    color && { backgroundColor: color },
+    customStyles?.button,
+  ];
+
+  // Get text style
+  const textStyle = [
+    styles.buttonText,
+    variant === 'outline' && styles.outlineText,
+    disabled && styles.disabledText,
+    customStyles?.text,
+  ];
+
+  // Get shadow style
+  const shadowStyle = disabled ? {} : (
+    variant === 'primary' ? theme.shadows.indigoGlow :
+    variant === 'emergency' ? theme.shadows.redGlow :
+    theme.shadows.medium
+  );
+
   return (
-    <TouchableOpacity onPress={!disabled ? onPress : () => {}}>
+    <TouchableOpacity 
+      onPress={!disabled && !loading ? onPress : () => {}}
+      activeOpacity={0.8}
+      style={shadowStyle}
+      disabled={disabled || loading}
+    >
       <LinearGradient
-        colors={gradient || ['#3A4047', '#2A2F37']} // Lighter to darker shades of dark silver
+        colors={getGradientColors()}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
-        style={[{ backgroundColor: color }, styles.button, customStyles?.button]}>
-        {children && leftChildren ? children : null}
-        {title ? <Text style={[styles.buttonText, customStyles?.text]}>{title}</Text> : null}
-        {children && !leftChildren ? children : null}
+        style={buttonStyle}>
+        
+        {loading ? (
+          <ActivityIndicator size="small" color={variant === 'outline' ? theme.colors.primary : theme.colors.textPrimary} />
+        ) : (
+          <>
+            {leftIcon && <View style={styles.iconContainer}>{leftIcon}</View>}
+            {title && <Text style={textStyle}>{title}</Text>}
+            {children}
+            {rightIcon && <View style={styles.iconContainer}>{rightIcon}</View>}
+          </>
+        )}
       </LinearGradient>
     </TouchableOpacity>
   );
 };
-// transition-duration: 0s;
-//     background-image: linear-gradient(to bottom, rgba(255, 221, 85, 1), rgba(255, 200, 0, 1));
-//     color: white;
-const styles = StyleSheet.create({
+
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   button: {
-    display: 'flex',
     flexDirection: 'row',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.medium,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(58,63,71,1.00)',
-
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3, // Android shadow
+    minHeight: theme.sizes.buttonHeight,
+  },
+  outlineButton: {
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
+    backgroundColor: 'transparent',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   buttonText: {
-    fontSize: 14,
-    fontWeight: 600,
-    display: 'flex',
-    color: '#ffd33d', // Default text color
-    marginHorizontal: 8,
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightSemiBold,
+    textAlign: 'center',
+    color: theme.colors.textPrimary,
   },
-  icon: {
-    width: 24,
-    height: 24,
+  outlineText: {
+    color: theme.colors.primary,
+  },
+  disabledText: {
+    color: theme.colors.textMuted,
+  },
+  iconContainer: {
+    marginHorizontal: theme.spacing.xs,
   },
 });
 

@@ -1,19 +1,24 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 
+import { useTheme } from '@/src/context/ThemeProvider';
+
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string | any;
 }
 
 const Input: React.FC<InputProps> = ({ label, error, style, ...props }) => {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+  
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
       <TextInput
         style={[styles.input, style, error && styles.inputError]}
         {...props}
-        placeholderTextColor="rgba(180, 180, 180, 1.00)"
+        placeholderTextColor={theme.colors.textPlaceholder}
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
@@ -22,30 +27,37 @@ const Input: React.FC<InputProps> = ({ label, error, style, ...props }) => {
 
 export default Input;
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
   container: {
     width: '100%',
+    marginBottom: theme.spacing.md,
   },
   label: {
-    marginBottom: 4,
-    // color: '#333',
-    color: '#fff',
-    fontSize: 16,
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.small,
+    fontWeight: theme.typography.weightMedium,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: '#f9f9f9',
-    marginBottom: 8,
+    borderColor: theme.colors.inputBorder,
+    borderRadius: theme.borderRadius.medium,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.inputBackground,
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.body,
+    height: theme.sizes.inputHeight,
+    ...theme.shadows.light,
   },
   inputError: {
-    borderColor: '#FF4D4F',
+    borderColor: theme.colors.buttonEmergency,
+    borderWidth: 1,
+    ...theme.shadows.redGlow,
   },
   errorText: {
-    color: '#FF4D4F',
-    marginTop: 4,
-    fontSize: 14,
+    color: theme.colors.buttonEmergency,
+    marginTop: theme.spacing.xs,
+    fontSize: theme.typography.small,
+    fontWeight: theme.typography.weightMedium,
   },
 });

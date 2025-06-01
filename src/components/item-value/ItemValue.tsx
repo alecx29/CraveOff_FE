@@ -3,6 +3,8 @@ import React, { useMemo, useRef } from 'react';
 import { StyleSheet, Text, TextInputProps, View, TouchableOpacity, Dimensions } from 'react-native';
 import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { useTheme } from '@/src/context/ThemeProvider';
+
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string | any;
@@ -32,6 +34,9 @@ const ItemValue: React.FC<InputProps> = ({
   onEdit,
   index,
 }) => {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+  
   const showedTime = useMemo(
     () => new Date(time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
     [time],
@@ -52,7 +57,7 @@ const ItemValue: React.FC<InputProps> = ({
             }
           }}
         >
-          <MaterialCommunityIcons name="delete" size={24} color="#fff" />
+          <MaterialCommunityIcons name="delete" size={24} color={theme.colors.textPrimary} />
           <Text style={styles.actionText}>Delete</Text>
         </TouchableOpacity>
       </View>
@@ -103,7 +108,7 @@ const ItemValue: React.FC<InputProps> = ({
             </View>
             <View>
               <View style={styles.flexRow}>
-                <MaterialCommunityIcons name="fire" size={12} style={styles.flameIcon} color="orange" />
+                <MaterialCommunityIcons name="fire" size={12} style={styles.flameIcon} color={theme.colors.flame} />
                 <Text style={styles.calories}>{data}</Text>
               </View>
               <Text style={[styles.foodMacros, styles.time]}>{showedTime}</Text>
@@ -120,89 +125,94 @@ export default ItemValue;
 
 const { width } = Dimensions.get('window');
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
   container: {
-    marginVertical: 8,
+    marginVertical: theme.spacing.sm,
     width: '100%',
-    // boxShadow:'0px 2px 4px rgba(0, 0, 0, 0.20)'
   },
   label: {
-    marginBottom: 4,
-    // color: '#333',
-    color: '#fff',
-    fontSize: 12,
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.tiny,
+    fontWeight: theme.typography.weightMedium,
   },
   valueContainer: {
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.20)',
+    ...theme.shadows.medium,
     height: 70,
     borderWidth: 0,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    // backgroundColor: 'rgba(58, 63, 71, 1.00)',
-    backgroundColor: 'rgba(37, 41, 46, 0.90)',
-    fontSize: 16,
+    borderRadius: theme.borderRadius.medium,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.cardInteractive,
+    fontSize: theme.typography.body,
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    color: '#fff',
+    color: theme.colors.textPrimary,
+    borderLeftWidth: 3,
+    borderLeftColor: theme.colors.primary,
   },
   titleQuantityContainer: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
     textAlign: 'left',
-    marginBottom: 5,
+    marginBottom: theme.spacing.xs,
   },
   foodTitle: {
-    color: '#fff',
-    fontWeight: 400,
+    color: theme.colors.textPrimary,
+    fontWeight: theme.typography.weightMedium,
+    fontSize: theme.typography.body,
   },
   calories: {
-    color: '#fff',
-    fontWeight: 600,
+    color: theme.colors.flame,
+    fontWeight: theme.typography.weightSemiBold,
   },
   macrosContainer: {
     display: 'flex',
     flexDirection: 'row',
+    alignItems: 'center',
   },
   foodDescrption: {
-    color: '#ababab',
-    fontSize: 12,
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.tiny,
   },
   foodMacros: {
-    color: '#fff',
-    fontWeight: 400,
-    fontSize: 10,
-    marginHorizontal: 2,
-    marginRight: 8,
+    color: theme.colors.textSecondary,
+    fontWeight: theme.typography.weightNormal,
+    fontSize: theme.typography.tiny,
+    marginHorizontal: theme.spacing.xxs,
+    marginRight: theme.spacing.sm,
   },
   time: {
     display: 'flex',
     justifyContent: 'flex-end',
+    color: theme.colors.textMuted,
   },
   foodData: {
-    color: '#fff',
+    color: theme.colors.textPrimary,
   },
   inputError: {
-    borderColor: '#FF4D4F',
+    borderColor: theme.colors.buttonEmergency,
   },
   textError: {
-    color: '#FF4D4F',
-    marginTop: 4,
-    fontSize: 14,
+    color: theme.colors.buttonEmergency,
+    marginTop: theme.spacing.xs,
+    fontSize: theme.typography.small,
+    fontWeight: theme.typography.weightMedium,
   },
   flexRow: {
     display: 'flex',
     flexDirection: 'row',
-    marginRight: 5,
+    marginRight: theme.spacing.xs,
+    alignItems: 'center',
   },
   flameIcon: {
     display: 'flex',
     flexDirection: 'row',
     textAlign: 'center',
     alignItems: 'center',
-    marginRight: 5,
+    marginRight: theme.spacing.xs,
   },
   maxWidth75: {
     maxWidth: '70%',
@@ -222,15 +232,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
+    borderTopRightRadius: theme.borderRadius.medium,
+    borderBottomRightRadius: theme.borderRadius.medium,
   },
   deleteButton: {
-    backgroundColor: '#E53935',
+    backgroundColor: theme.colors.buttonEmergency,
   },
   actionText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 4,
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.tiny,
+    marginTop: theme.spacing.xs,
+    fontWeight: theme.typography.weightMedium,
   },
 });

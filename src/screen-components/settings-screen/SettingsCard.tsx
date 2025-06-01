@@ -2,15 +2,19 @@ import { AntDesign, Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { View, Text, Switch, StyleSheet, TouchableOpacity } from 'react-native';
 
+import { useTheme } from '@/src/context/ThemeProvider';
+
 interface SettingCardProps {
-  icon: any
+  icon: any;
   title: string;
   value?: string;
   onPress?: () => void;
   showSwitch?: boolean;
   isActive?: boolean;
   onToggle?: (value: boolean) => void;
-  type?: 'ant-design' | 'ion-icons'
+  type?: 'ant-design' | 'ion-icons';
+  variant?: 'primary' | 'emergency' | 'default';
+  iconComponent?: any;
 }
 
 const SettingCard: React.FC<SettingCardProps> = ({
@@ -21,19 +25,35 @@ const SettingCard: React.FC<SettingCardProps> = ({
   showSwitch,
   isActive,
   onToggle,
-  type = 'ion-icons'
-}) => (
+  type = 'ion-icons',
+  variant = 'default',
+  iconComponent
+}) => {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+  const IconComponent = iconComponent || (type === 'ion-icons' ? Ionicons : AntDesign);
+
+  const getIconColor = () => {
+    switch (variant) {
+      case 'primary':
+        return theme.colors.primary;
+      case 'emergency':
+        return theme.colors.emergency;
+      default:
+        return theme.colors.textSecondary;
+    }
+  };
+
+  return (
   <TouchableOpacity 
-    style={styles.card} 
+      style={[styles.card, onPress && styles.cardInteractive]} 
     onPress={onPress}
-    disabled={showSwitch}
+      disabled={showSwitch || !onPress}
+      activeOpacity={0.7}
   >
     <View style={styles.cardContent}>
-      <View style={styles.cardIcon}>
-        {type === 'ion-icons'
-          ? <Ionicons name={icon} size={24} color="#FFD33D" />
-          : <AntDesign name="delete" size={24} color="#FFD33D" />
-        }
+        <View style={[styles.cardIcon, { backgroundColor: variant === 'default' ? theme.colors.cardInteractive : `${getIconColor()}20` }]}>
+          <IconComponent name={icon} size={22} color={getIconColor()} />
       </View>
       <View style={styles.cardTextContainer}>
         <Text style={styles.cardTitle}>{title}</Text>
@@ -43,51 +63,54 @@ const SettingCard: React.FC<SettingCardProps> = ({
         <Switch
           value={isActive}
           onValueChange={onToggle}
-          trackColor={{ false: '#4A4A4A', true: '#FFD33D10' }}
-          thumbColor={isActive ? '#FFD33D' : '#FFFFFF'}
+            trackColor={{ false: theme.colors.cardInteractive, true: `${theme.colors.primary}30` }}
+            thumbColor={isActive ? theme.colors.primary : theme.colors.textSecondary}
           style={styles.switch}
         />
-      ) : (
-        <Ionicons name="chevron-forward" size={20} color="#6C6C6C" />
-      )}
+        ) : onPress ? (
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+        ) : null}
     </View>
   </TouchableOpacity>
 );
+};
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   card: {
-    // backgroundColor: '#2C2C2E',
-    // backgroundColor: 'rgba(58, 63, 71, 1.00)',
-    borderRadius: 16,
-    marginBottom: 12,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.borderRadius.medium,
+    marginBottom: theme.spacing.sm,
     overflow: 'hidden',
+    ...theme.shadows.light,
+  },
+  cardInteractive: {
+    // Removed border from left side
   },
   cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 56
+    paddingHorizontal: theme.spacing.md,
+    height: 60, // Reduced height slightly
   },
   cardIcon: {
-    width: 40,
-    // height: 20,
-    borderRadius: 20,
-    backgroundColor: '#3A3A3C',
+    width: 36, // Reduced from 40
+    height: 36, // Reduced from 40
+    borderRadius: theme.borderRadius.circle,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: theme.spacing.sm,
   },
   cardTextContainer: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 15, // Reduced from theme.typography.body
+    fontWeight: theme.typography.weightSemiBold,
+    color: theme.colors.textPrimary,
   },
   cardValue: {
-    fontSize: 13,
-    color: '#6C6C6C',
+    fontSize: theme.typography.small,
+    color: theme.colors.textMuted,
     marginTop: 2,
   },
   switch: {
