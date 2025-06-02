@@ -2,8 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { getRefreshToken } from '@/src/Storage/tokenStorage';
 
-const API_BASE_URL = 'http://localhost:8000/api';
-// const API_BASE_URL = 'https://macrobuddybe.onrender.com/api';
+// const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'https://craveoff-production.up.railway.app/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

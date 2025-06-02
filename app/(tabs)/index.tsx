@@ -100,12 +100,13 @@ const getSmallerTimeUnits = (time: ReturnType<typeof formatTime>, largestUnit: s
 };
 
 // Helper function to get the date string for a specific day of the week
-const getDateStringForDay = (dayIndex: number): string => {
+const getDateStringForDay = (dayIndex: number, weekOffset: number = 0): string => {
   const today = new Date();
   const currentDayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
   
   // Calculate the difference between the target day and current day
-  const diff = dayIndex - currentDayOfWeek;
+  // Add weekOffset * 7 to move to previous/next weeks
+  const diff = dayIndex - currentDayOfWeek + (weekOffset * 7);
   
   // Create a new date by adding the difference
   const targetDate = new Date(today);
@@ -136,6 +137,11 @@ export default function HomeScreen() {
   
   // State for week logs status
   const [weekLogsStatus, setWeekLogsStatus] = useState<Array<'clean' | 'not-clean' | 'no-log'>>([
+    'no-log', 'no-log', 'no-log', 'no-log', 'no-log', 'no-log', 'no-log'
+  ]);
+  
+  // State for previous week's logs status
+  const [previousWeekLogsStatus, setPreviousWeekLogsStatus] = useState<Array<'clean' | 'not-clean' | 'no-log'>>([
     'no-log', 'no-log', 'no-log', 'no-log', 'no-log', 'no-log', 'no-log'
   ]);
   
@@ -352,9 +358,18 @@ export default function HomeScreen() {
       return logMap.get(dateStr) ? 'clean' : 'not-clean';
     });
     
+    // Calculate previous week's status
+    const previousWeekStatus = Array(7).fill('no-log').map((_, index) => {
+      const dateStr = getDateStringForDay(index, -1); // -1 week offset
+      if (!logMap.has(dateStr)) return 'no-log';
+      return logMap.get(dateStr) ? 'clean' : 'not-clean';
+    });
+    
     console.log('New week status:', newWeekStatus);
+    console.log('Previous week status:', previousWeekStatus);
     
     setWeekLogsStatus(newWeekStatus as Array<'clean' | 'not-clean' | 'no-log'>);
+    setPreviousWeekLogsStatus(previousWeekStatus as Array<'clean' | 'not-clean' | 'no-log'>);
   }, [logs]);
   
   // Effects
@@ -532,7 +547,10 @@ export default function HomeScreen() {
         </View>
         
         {/* Calendar săptămânal */}
-        <WeekBar weekLogsStatus={weekLogsStatus} />
+        <WeekBar 
+          weekLogsStatus={weekLogsStatus} 
+          previousWeekLogsStatus={previousWeekLogsStatus} 
+        />
         
         {/* Widgets container */}
         <View style={styles.widgetsContainer}>

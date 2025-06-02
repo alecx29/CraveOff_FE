@@ -1,19 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useContext } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { useNotifications } from '@/src/context/NotificationsContext';
+import { AuthContext } from '@/src/context/AuthContext';
+import AButton from '@/src/components/AButton/AButton';
 
 import SettingCard from './SettingsCard';
 
 const SettingsScreen = () => {
   const { theme } = useTheme();
   const { isNotificationsEnabled, setNotificationsEnabled } = useNotifications();
+  const { signOut } = useContext(AuthContext);
   const styles = createStyles(theme);
 
   const handleNotificationToggle = async (enabled: boolean) => {
     await setNotificationsEnabled(enabled);
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    router.push('/login');
   };
 
   return (
@@ -77,8 +86,14 @@ const SettingsScreen = () => {
         iconComponent={Ionicons}
       />
 
-      {/* Logout Button (hidden for now) */}
-      {/* <AButton customStyles={{ button: styles.logoutButton }} title="Log Out" onPress={() => router.push('/login')} /> */}
+      {/* Logout Button */}
+      <AButton 
+        customStyles={{ button: styles.logoutButton }} 
+        title="Log Out" 
+        onPress={handleLogout}
+        variant="outline" 
+        leftIcon={<Ionicons name="log-out-outline" size={20} color={theme.colors.primary} />}
+      />
     </ScrollView>
   );
 };
