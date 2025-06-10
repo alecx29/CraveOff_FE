@@ -26,6 +26,7 @@ export default function TabLayout() {
           fontWeight: '500',
           marginTop: 3,
         },
+        tabBarLabelPosition: 'below-icon',
         tabBarInactiveTintColor: theme.colors.textMuted,
       }}
     >
@@ -39,6 +40,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="analytics"
+        options={{
+          title: 'Analytics',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} color={color} size={22} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="journal"
         options={{
           title: 'Journal',
@@ -48,7 +58,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="analytics"
+        name="community"
         options={{
           title: 'Community',
           tabBarIcon: ({ color, focused }) => (

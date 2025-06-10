@@ -57,6 +57,15 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Close button */}
+        <TouchableOpacity 
+          style={styles.closeButton}
+          onPress={onClose}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="close" size={24} color="#fff" />
+        </TouchableOpacity>
+        
         <View style={styles.contentContainer}>
           {/* Header Section */}
           <View style={styles.headerSection}>
@@ -328,6 +337,19 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: topPadding + 10,
+    right: 20,
+    padding: 10,
+    zIndex: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

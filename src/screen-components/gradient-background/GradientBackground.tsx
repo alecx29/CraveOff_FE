@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
@@ -10,6 +11,19 @@ import { useTheme } from '@/src/context/ThemeProvider';
 
 const GradientBackground = ({ children }: any) => {
   const { theme } = useTheme();
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      position: 'relative',
+    },
+    stopButton: {
+      backgroundColor: theme.colors.cardBackground,
+      borderWidth: 1,
+      borderColor: theme.colors.emergency,
+    },
+  });
 
   return (
     <View style={styles.container}>
@@ -21,12 +35,5 @@ const GradientBackground = ({ children }: any) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    position: 'relative',
-  },
-});
 
 export default GradientBackground;

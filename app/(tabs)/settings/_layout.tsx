@@ -12,6 +12,8 @@ export default function SettingsLayout() {
         headerShown: false,
         headerStyle: { backgroundColor: theme.colors.backgroundDeep },
         headerTintColor: theme.colors.textPrimary,
+        headerShadowVisible: true,
+        headerBottomBorderColor: theme.colors.borderLight,
       }}
     >
       <Stack.Screen name="index" />
@@ -22,6 +24,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="edit-birthdate" />
       <Stack.Screen name="edit-gender" />
       <Stack.Screen name="edit-macro-goals" />
+      <Stack.Screen name="notifications" />
     </Stack>
   );
 }

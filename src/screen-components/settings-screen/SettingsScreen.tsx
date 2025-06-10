@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { useNotifications } from '@/src/context/NotificationsContext';
@@ -12,17 +13,29 @@ import SettingCard from './SettingsCard';
 
 const SettingsScreen = () => {
   const { theme } = useTheme();
-  const { isNotificationsEnabled, setNotificationsEnabled } = useNotifications();
+  const { isNotificationsEnabled, setNotificationsEnabled, requestPermissions } = useNotifications();
   const { signOut } = useContext(AuthContext);
   const styles = createStyles(theme);
-
-  const handleNotificationToggle = async (enabled: boolean) => {
-    await setNotificationsEnabled(enabled);
-  };
 
   const handleLogout = async () => {
     await signOut();
     router.push('/login');
+  };
+
+  const navigateToNotifications = () => {
+    router.push('/settings/notifications');
+  };
+
+  const openPrivacyPolicy = async () => {
+    await WebBrowser.openBrowserAsync('https://www.craveoff.app/privacy-policy');
+  };
+
+  const openSupport = async () => {
+    await WebBrowser.openBrowserAsync('https://www.craveoff.app/support');
+  };
+
+  const openTermsOfService = async () => {
+    await WebBrowser.openBrowserAsync('https://www.craveoff.app/terms-of-service');
   };
 
   return (
@@ -70,19 +83,29 @@ const SettingsScreen = () => {
       <SettingCard
         icon="notifications-outline"
         title="Notifications"
-        onPress={() => {}}
+        value={isNotificationsEnabled ? "Enabled" : "Disabled"}
+        onPress={navigateToNotifications}
         iconComponent={Ionicons}
+        variant="primary"
       />
       <SettingCard
         icon="shield-outline"
         title="Privacy & Security"
-        onPress={() => {}}
+        value="Privacy Policy & Terms"
+        onPress={openPrivacyPolicy}
         iconComponent={Ionicons}
       />
       <SettingCard
         icon="help-circle-outline"
         title="Support"
-        onPress={() => {}}
+        value="Get Help"
+        onPress={openSupport}
+        iconComponent={Ionicons}
+      />
+      <SettingCard
+        icon="document-text-outline"
+        title="Terms of Service"
+        onPress={openTermsOfService}
         iconComponent={Ionicons}
       />
 

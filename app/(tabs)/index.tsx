@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, FlatList, SafeAreaView, TextInput, ActivityIndicator, TouchableWithoutFeedback } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
@@ -14,9 +14,12 @@ import RelapsedModal from '@/src/components/RelapsedModal';
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
 import WeekBar from '@/src/components/WeekBar';
+import oriaService from '@/src/services/oriaService';
+import quotesService from '@/src/services/quotesService';
+import { OriaChat, OriaChatWithMessages } from '@/src/types/oria';
 
 // Helper function to format time with more precision
-const formatTime = (seconds: number) => {
+const formatTimeCounter = (seconds: number) => {
   // Ensure we're working with a positive number
   seconds = Math.max(0, seconds);
   
@@ -34,7 +37,7 @@ const formatTime = (seconds: number) => {
 };
 
 // Helper to determine which time units to display
-const getVisibleTimeUnits = (time: ReturnType<typeof formatTime>) => {
+const getVisibleTimeUnits = (time: ReturnType<typeof formatTimeCounter>) => {
   if (time.days > 0) {
     // If we have days, show days and hours
     return { showDays: true, showHours: true, showMinutes: true, showSeconds: false };
@@ -48,7 +51,7 @@ const getVisibleTimeUnits = (time: ReturnType<typeof formatTime>) => {
 };
 
 // Get the largest time unit to display at the top
-const getLargestTimeUnit = (time: ReturnType<typeof formatTime>) => {
+const getLargestTimeUnit = (time: ReturnType<typeof formatTimeCounter>) => {
   if (time.days > 0) {
     return { 
       unit: 'days', 
@@ -77,7 +80,7 @@ const getLargestTimeUnit = (time: ReturnType<typeof formatTime>) => {
 };
 
 // Get smaller time units to display in the bubble
-const getSmallerTimeUnits = (time: ReturnType<typeof formatTime>, largestUnit: string) => {
+const getSmallerTimeUnits = (time: ReturnType<typeof formatTimeCounter>, largestUnit: string) => {
   const units = [];
   
   if (largestUnit !== 'days' && time.days > 0) {
@@ -135,6 +138,29 @@ export default function HomeScreen() {
   // State for showing the relapsed modal
   const [showRelapsedModal, setShowRelapsedModal] = useState(false);
   
+  // State for showing the Oria chat modal
+  const [showOriaModal, setShowOriaModal] = useState(false);
+  
+  // State for selected conversation
+  const [selectedChat, setSelectedChat] = useState<OriaChatWithMessages | null>(null);
+  
+  // State for chats list
+  const [chats, setChats] = useState<OriaChat[]>([]);
+  
+  // State for loading states
+  const [isLoadingChats, setIsLoadingChats] = useState(false);
+  const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  
+  // State for tracking if response is being generated
+  const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
+  
+  // State for new message
+  const [newMessage, setNewMessage] = useState('');
+  
   // State for week logs status
   const [weekLogsStatus, setWeekLogsStatus] = useState<Array<'clean' | 'not-clean' | 'no-log'>>([
     'no-log', 'no-log', 'no-log', 'no-log', 'no-log', 'no-log', 'no-log'
@@ -150,7 +176,45 @@ export default function HomeScreen() {
   
   // State for timer - updated based on last relapse
   const [timerSeconds, setTimerSeconds] = useState(0);
-  const formattedTime = formatTime(timerSeconds);
+  const formattedTime = formatTimeCounter(timerSeconds);
+  
+  // State for quote
+  const [quote, setQuote] = useState("Progress, not perfection, is the goal.");
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+  
+  // Animated values for the loading indicator
+  const loadingScale = useSharedValue(1);
+  const loadingOpacity = useSharedValue(1);
+  
+  // Initialize loading animation
+  useEffect(() => {
+    // Create pulsing animation for the loading indicator
+    loadingScale.value = withRepeat(
+      withSequence(
+        withTiming(1.2, { duration: 600, easing: Easing.ease }),
+        withTiming(0.8, { duration: 600, easing: Easing.ease })
+      ),
+      -1,
+      true
+    );
+    
+    loadingOpacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 600, easing: Easing.ease }),
+        withTiming(0.5, { duration: 600, easing: Easing.ease })
+      ),
+      -1,
+      true
+    );
+  }, []);
+  
+  // Animated style for loading indicator
+  const loadingIndicatorStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: loadingScale.value }],
+      opacity: loadingOpacity.value,
+    };
+  });
   
   // Log the formatted time for debugging
   useEffect(() => {
@@ -197,7 +261,7 @@ export default function HomeScreen() {
           const diffSeconds = Math.floor(diffTimeMs / 1000);
           
           // Calculate days based on seconds (1 day = 24 hours = 86400 seconds)
-          const diffDays = Math.floor(diffSeconds / (24 * 3600));
+          const diffDays = Math.floor(diffTimeMs / (24 * 3600 * 1000));
           
           console.log(`Setting timer: ${diffDays} days, ${diffSeconds} seconds`);
           setCleanDays(diffDays);
@@ -251,7 +315,7 @@ export default function HomeScreen() {
             setTimerSeconds(diffSeconds);
             
             // Calculate days based on seconds (1 day = 24 hours = 86400 seconds)
-            const diffDays = Math.floor(diffSeconds / (24 * 3600));
+            const diffDays = Math.floor(diffTimeMs / (24 * 3600 * 1000));
             setCleanDays(diffDays);
           }
         }, 1000);
@@ -280,9 +344,6 @@ export default function HomeScreen() {
   // Determine current day
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-  
-  // State pentru quote motivațional
-  const [quote, setQuote] = useState("Progress, not perfection, is the goal.");
   
   // State pentru widget activ
   const [activeWidgetIndex, setActiveWidgetIndex] = useState(0);
@@ -376,6 +437,9 @@ export default function HomeScreen() {
   useEffect(() => {
     // Fetch logs when the home screen mounts
     fetchLogs();
+    
+    // Fetch daily quote
+    fetchDailyQuote();
   }, []);
   
   // Widget indicators style
@@ -397,7 +461,7 @@ export default function HomeScreen() {
   
   // Calculate brain rewiring progress (percentage towards 21 days)
   const calculateBrainRewiring = () => {
-    const GOAL_HOURS = 21 * 24; // 21 days in hours
+    const GOAL_HOURS = 90 * 24; // 90 days in hours
     const currentHours = timerSeconds / 3600; // Convert seconds to hours
     
     // Calculate percentage (0 to 100)
@@ -442,13 +506,6 @@ export default function HomeScreen() {
       -1,
       true
     );
-    
-    // Add animation for the moving dot in the progress bar
-    movingDot.value = withRepeat(
-      withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      false // Don't reverse - will reset to 0 and start again
-    );
   }, [brainRewiring]);
   
   // Animated pulse effect for progress bar
@@ -474,16 +531,6 @@ export default function HomeScreen() {
     };
   });
   
-  const shimmerAnimatedStyle = useAnimatedStyle(() => {
-    // Improved shimmer animation that moves across the entire progress bar
-    return {
-      transform: [{ translateX: movingDot.value * 100 }],
-      opacity: 0.5 + (progressShimmer.value * 0.3),
-      left: -40, // Start off-screen
-      width: 40, // Make it a visible dot
-    };
-  });
-  
   // Active growing indicator - small dot at the end of the progress bar
   const growingIndicatorStyle = useAnimatedStyle(() => {
     const shadowOpacityValue = 0.5 + (growingGlow.value * 0.5);
@@ -505,18 +552,460 @@ export default function HomeScreen() {
 
   // Handle relapse and reset counter
   const handleResetCounter = () => {
-    // Call API to record a relapse
-    apiClient.patch('/profile/last-relapse', { 
-      last_relapse_date: new Date().toISOString() 
-    })
+    // Create today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Create log entry for relapse
+    const logEntry = {
+      date: today,
+      is_clean: false,
+      notes: 'Relapse recorded from Reset button'
+    };
+    
+    // Call API to add a log entry for the relapse
+    apiClient.post(BackendRoutes.LOGS, logEntry)
       .then(response => {
-        console.log('Relapse recorded:', response.data);
+        console.log('Relapse log added:', response.data);
         // Refresh logs and counters
         fetchLogs();
       })
       .catch(error => {
-        console.error('Error recording relapse:', error);
+        console.error('Error recording relapse log:', error);
       });
+  };
+
+  // Ref for chat scrolling
+  const chatScrollRef = useRef<FlatList>(null);
+  const titleInputRef = useRef<TextInput>(null);
+  
+  // Function to format timestamp for chat messages
+  const formatChatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  // Function to format date
+  const formatDate = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  
+  // Function to fetch all chats
+  const fetchChats = async () => {
+    try {
+      setIsLoadingChats(true);
+      const chatsList = await oriaService.getAllChats();
+      setChats(chatsList);
+    } catch (error) {
+      console.error('Error fetching chats:', error);
+    } finally {
+      setIsLoadingChats(false);
+    }
+  };
+  
+  // Function to fetch a specific chat
+  const fetchChat = async (chatId: string) => {
+    try {
+      setIsLoadingChat(true);
+      const chat = await oriaService.getChat(chatId);
+      setSelectedChat(chat);
+    } catch (error) {
+      console.error(`Error fetching chat ${chatId}:`, error);
+    } finally {
+      setIsLoadingChat(false);
+    }
+  };
+  
+  // Function to send a message
+  const sendMessage = async () => {
+    if (!selectedChat || !newMessage.trim()) return;
+    
+    try {
+      const messageContent = newMessage.trim();
+      setNewMessage('');
+      
+      // Immediately add the user message to the chat UI
+      const tempUserMessage = {
+        id: `temp-${Date.now()}`,
+        role: 'user' as "user",
+        content: messageContent,
+        created_at: new Date().toISOString(),
+      };
+      
+      // Add the temporary user message to the UI
+      setSelectedChat(prevChat => {
+        if (!prevChat) return prevChat;
+        return {
+          ...prevChat,
+          messages: [...prevChat.messages, tempUserMessage]
+        };
+      });
+      
+      // Scroll to bottom to show the message
+      setTimeout(() => {
+        chatScrollRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+      
+      // Set states to indicate response generation
+      setIsSendingMessage(true);
+      setIsGeneratingResponse(true);
+      
+      // Create a temporary placeholder for the assistant's response with loading indicator
+      const tempAssistantMessage = {
+        id: `temp-assistant-${Date.now()}`,
+        role: 'assistant' as "assistant",
+        content: "",
+        created_at: new Date().toISOString(),
+        isLoading: true, // Flag to indicate this is a loading message
+      };
+      
+      // Add the empty assistant message to the UI with loading indicator
+      setSelectedChat(prevChat => {
+        if (!prevChat) return prevChat;
+        return {
+          ...prevChat,
+          messages: [...prevChat.messages, tempAssistantMessage]
+        };
+      });
+      
+      // Set up a timeout to detect if no response is received
+      const responseTimeoutId = setTimeout(() => {
+        // If we still have a loading message, update it with an error
+        setSelectedChat(prevChat => {
+          if (!prevChat) return prevChat;
+          
+          const updatedMessages = [...prevChat.messages];
+          const lastIndex = updatedMessages.length - 1;
+          
+          // Check if the last message is still loading
+          if (updatedMessages[lastIndex].isLoading) {
+            updatedMessages[lastIndex] = {
+              ...updatedMessages[lastIndex],
+              isLoading: false,
+              content: "I couldn't generate a response at this time. Please try again.",
+            };
+          }
+          
+          return {
+            ...prevChat,
+            messages: updatedMessages,
+          };
+        });
+        
+        setIsGeneratingResponse(false);
+        setIsSendingMessage(false);
+      }, 15000); // 15 seconds timeout
+      
+      // Send the message to the API - may return an EventSource for streaming or a regular response
+      const response = await oriaService.sendMessage(selectedChat.id, { 
+        content: messageContent,
+        chat_id: selectedChat.id
+      });
+      
+      // Clear the timeout since we received a response
+      clearTimeout(responseTimeoutId);
+      
+      // Check if we got an EventSource (streaming mode) or a regular response
+      if (response instanceof EventSource) {
+        // This is streaming mode
+        let assistantMessageContent = '';
+        let hasReceivedFirstChunk = false;
+        
+        // Listen for message events
+        response.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            // Mark that we've received at least one chunk
+            hasReceivedFirstChunk = true;
+            
+            // Append the new chunk to the full message
+            assistantMessageContent += data.content;
+            
+            // Update the message in the UI
+            setSelectedChat(prevChat => {
+              if (!prevChat) return prevChat;
+              
+              const updatedMessages = [...prevChat.messages];
+              const lastIndex = updatedMessages.length - 1;
+              
+              // Update the last message if it's from the assistant
+              if (updatedMessages[lastIndex].role === 'assistant') {
+                updatedMessages[lastIndex] = {
+                  ...updatedMessages[lastIndex],
+                  content: assistantMessageContent,
+                  isLoading: false, // Once we get content, it's no longer loading
+                };
+              }
+              
+              return {
+                ...prevChat,
+                messages: updatedMessages,
+              };
+            });
+            
+            // Scroll to bottom as content arrives
+            setTimeout(() => {
+              chatScrollRef.current?.scrollToEnd({ animated: true });
+            }, 50);
+            
+            // If this is the last chunk, clean up
+            if (data.done) {
+              setIsGeneratingResponse(false);
+              setIsSendingMessage(false);
+              response.close();
+              
+              // Fetch the updated chat to ensure we have the correct IDs
+              fetchChat(selectedChat.id);
+            }
+          } catch (error) {
+            console.error('Error processing streaming message:', error);
+            
+            // Update the message to show an error
+            setSelectedChat(prevChat => {
+              if (!prevChat) return prevChat;
+              
+              const updatedMessages = [...prevChat.messages];
+              const lastIndex = updatedMessages.length - 1;
+              
+              if (updatedMessages[lastIndex].role === 'assistant') {
+                updatedMessages[lastIndex] = {
+                  ...updatedMessages[lastIndex],
+                  isLoading: false,
+                  content: assistantMessageContent || "Error processing response. Please try again.",
+                };
+              }
+              
+              return {
+                ...prevChat,
+                messages: updatedMessages,
+              };
+            });
+            
+            setIsGeneratingResponse(false);
+            setIsSendingMessage(false);
+            response.close();
+          }
+        };
+        
+        // Handle errors
+        response.onerror = (error) => {
+          console.error('EventSource error:', error);
+          
+          // Update the UI with an error message if we haven't received any chunks yet
+          if (!hasReceivedFirstChunk) {
+            setSelectedChat(prevChat => {
+              if (!prevChat) return prevChat;
+              
+              const updatedMessages = [...prevChat.messages];
+              const lastIndex = updatedMessages.length - 1;
+              
+              if (updatedMessages[lastIndex].role === 'assistant') {
+                updatedMessages[lastIndex] = {
+                  ...updatedMessages[lastIndex],
+                  isLoading: false,
+                  content: "Connection error. Please try again.",
+                };
+              }
+              
+              return {
+                ...prevChat,
+                messages: updatedMessages,
+              };
+            });
+          }
+          
+          setIsGeneratingResponse(false);
+          setIsSendingMessage(false);
+          response.close();
+        };
+        
+        // Implement the stop generation functionality for streaming mode
+        globalStopGenerationSource.current = response;
+      } else {
+        // Non-streaming mode - fetch the updated chat to get the response
+        const updatedChat = await oriaService.getChat(selectedChat.id);
+        
+        // Replace the loading message with the actual response
+        setSelectedChat(prevChat => {
+          if (!prevChat) return prevChat;
+          
+          // Find the last message and replace it with the actual response from updatedChat
+          const lastMessage = updatedChat.messages[updatedChat.messages.length - 1];
+          
+          return {
+            ...updatedChat,
+            messages: updatedChat.messages.map((msg) => ({
+              ...msg,
+              isLoading: false, // Ensure no messages have loading state
+            })),
+          };
+        });
+        
+        setIsGeneratingResponse(false);
+        setIsSendingMessage(false);
+      }
+      
+      // Scroll to bottom again after response
+      setTimeout(() => {
+        chatScrollRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      
+      // Update the UI to show an error message
+      setSelectedChat(prevChat => {
+        if (!prevChat) return prevChat;
+        
+        const updatedMessages = [...prevChat.messages];
+        const lastIndex = updatedMessages.length - 1;
+        
+        // If the last message is from the assistant and is loading, show an error
+        if (lastIndex >= 0 && 
+            updatedMessages[lastIndex].role === 'assistant' && 
+            updatedMessages[lastIndex].isLoading) {
+          updatedMessages[lastIndex] = {
+            ...updatedMessages[lastIndex],
+            isLoading: false,
+            content: "Error sending message. Please try again.",
+          };
+        }
+        
+        return {
+          ...prevChat,
+          messages: updatedMessages,
+        };
+      });
+      
+      setIsGeneratingResponse(false);
+      setIsSendingMessage(false);
+    }
+  };
+  
+  // Reference to the current EventSource for stopping generation
+  const globalStopGenerationSource = useRef<EventSource | null>(null);
+  
+  // Function to stop response generation
+  const stopResponseGeneration = () => {
+    if (globalStopGenerationSource.current) {
+      // Close the event source to stop streaming
+      globalStopGenerationSource.current.close();
+      globalStopGenerationSource.current = null;
+      
+      // Update the loading message to show that generation was stopped
+      setSelectedChat(prevChat => {
+        if (!prevChat) return prevChat;
+        
+        const updatedMessages = [...prevChat.messages];
+        const lastIndex = updatedMessages.length - 1;
+        
+        // If the last message is from the assistant and is loading, mark it as stopped
+        if (lastIndex >= 0 && 
+            updatedMessages[lastIndex].role === 'assistant') {
+          // If there's no content yet, show a message that generation was stopped
+          if (!updatedMessages[lastIndex].content.trim()) {
+            updatedMessages[lastIndex] = {
+              ...updatedMessages[lastIndex],
+              isLoading: false,
+              content: "Response generation stopped.",
+            };
+          } else {
+            // If there's already some content, just mark it as not loading
+            updatedMessages[lastIndex] = {
+              ...updatedMessages[lastIndex],
+              isLoading: false,
+            };
+          }
+        }
+        
+        return {
+          ...prevChat,
+          messages: updatedMessages,
+        };
+      });
+    }
+    
+    // Update UI states
+    setIsGeneratingResponse(false);
+    setIsSendingMessage(false);
+  };
+
+  // Function to create a new chat
+  const createNewChat = async () => {
+    try {
+      setIsLoadingChat(true);
+      const newChat = await oriaService.createChat();
+      await fetchChats(); // Refresh the list
+      setSelectedChat(await oriaService.getChat(newChat.id)); // Load the new chat
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+    } finally {
+      setIsLoadingChat(false);
+    }
+  };
+
+  // Load chats when the modal opens
+  useEffect(() => {
+    if (showOriaModal) {
+      fetchChats();
+    }
+  }, [showOriaModal]);
+
+  // Function to toggle title editing
+  const startEditingTitle = () => {
+    if (selectedChat) {
+      setEditedTitle(selectedChat.title);
+      setIsEditingTitle(true);
+      // Focus the input after a short delay to ensure it's rendered
+      setTimeout(() => {
+        titleInputRef.current?.focus();
+      }, 100);
+    }
+  };
+  
+  // Function to save the updated title
+  const saveTitle = async () => {
+    if (!selectedChat || !editedTitle.trim() || editedTitle === selectedChat.title) {
+      setIsEditingTitle(false);
+      return;
+    }
+    
+    try {
+      setIsSavingTitle(true);
+      await oriaService.updateChatTitle(selectedChat.id, { title: editedTitle });
+      
+      // Update the selected chat
+      const updatedChat = await oriaService.getChat(selectedChat.id);
+      setSelectedChat(updatedChat);
+      
+      // Update the chat in the list
+      setChats(prevChats => 
+        prevChats.map(chat => 
+          chat.id === selectedChat.id ? { ...chat, title: editedTitle } : chat
+        )
+      );
+    } catch (error) {
+      console.error('Error updating chat title:', error);
+      // Revert to original title
+      setEditedTitle(selectedChat.title);
+    } finally {
+      setIsSavingTitle(false);
+      setIsEditingTitle(false);
+    }
+  };
+
+  // Function to fetch daily quote
+  const fetchDailyQuote = async () => {
+    try {
+      setIsLoadingQuote(true);
+      const quoteData = await quotesService.getDailyQuote();
+      setQuote(quoteData.message);
+    } catch (error) {
+      console.error('Error fetching daily quote:', error);
+      // Keep the default quote if there's an error
+    } finally {
+      setIsLoadingQuote(false);
+    }
   };
 
   return (
@@ -534,6 +1023,13 @@ export default function HomeScreen() {
           </View>
           
           <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={[styles.petButton, {marginRight: 10}]}
+              activeOpacity={0.8}
+              onPress={() => setShowOriaModal(true)}
+            >
+              <Ionicons name="chatbubble-outline" size={22} color={theme.colors.textPrimary} />
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.petButton}
               onPress={animatePet}
@@ -635,8 +1131,6 @@ export default function HomeScreen() {
           <View style={styles.progressBarContainer}>
             <View style={styles.progressBarBackground}>
               <Animated.View style={[styles.progressBarFill, progressAnimatedStyle]}>
-                {/* Moving dot in the progress bar */}
-                <Animated.View style={[styles.progressBarShimmer, shimmerAnimatedStyle]} />
                 {/* Growing indicator at the end of the progress bar */}
                 {brainRewiring.percentage > 0 && (
                   <Animated.View style={[styles.growingIndicator, growingIndicatorStyle]} />
@@ -644,34 +1138,42 @@ export default function HomeScreen() {
               </Animated.View>
             </View>
           </View>
-          <Text style={styles.brainRewireGoalText}>Goal: 21 days porn-free</Text>
+          <Text style={styles.brainRewireGoalText}>Goal: 90 days porn-free</Text>
         </View>
         
         {/* Action Buttons */}
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity 
-            style={styles.actionButton}
+            style={styles.actionButtonWrapper}
             onPress={() => setShowPledgeModal(true)}
           >
-            <Ionicons name="hand-left-outline" size={24} color={theme.colors.textPrimary} />
+            <View style={styles.actionButton}>
+              <Ionicons name="hand-left-outline" size={24} color={theme.colors.textPrimary} />
+            </View>
             <Text style={styles.actionButtonLabel}>Pledge</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="sparkles-outline" size={22} color={theme.colors.textPrimary} />
-            <Text style={styles.actionButtonLabel}>Oria AI</Text>
+          <TouchableOpacity style={styles.actionButtonWrapper}>
+            <View style={styles.actionButton}>
+              <Ionicons name="leaf-outline" size={22} color={theme.colors.textPrimary} />
+            </View>
+            <Text style={styles.actionButtonLabel}>Deep Breathing</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={styles.actionButton}
+            style={styles.actionButtonWrapper}
             onPress={() => setShowReflectionModal(true)}
           >
-            <Ionicons name="flower-outline" size={22} color={theme.colors.textPrimary} />
+            <View style={styles.actionButton}>
+              <Ionicons name="flower-outline" size={22} color={theme.colors.textPrimary} />
+            </View>
             <Text style={styles.actionButtonLabel}>Meditate</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={styles.actionButton}
+            style={styles.actionButtonWrapper}
             onPress={() => setShowRelapsedModal(true)}
           >
-            <Ionicons name="refresh-outline" size={22} color={theme.colors.textPrimary} />
+            <View style={styles.actionButton}>
+              <Ionicons name="refresh-outline" size={22} color={theme.colors.textPrimary} />
+            </View>
             <Text style={styles.actionButtonLabel}>Reset</Text>
           </TouchableOpacity>
         </View>
@@ -689,7 +1191,7 @@ export default function HomeScreen() {
         <View style={styles.challengeRow}>
           <TouchableOpacity style={styles.challengeCard}>
             <View style={styles.challengeContent}>
-              <Text style={styles.challengeNumber}>21</Text>
+              <Text style={styles.challengeNumber}>90</Text>
               <View style={styles.challengeTextContainer}>
                 <Text style={styles.challengeTitle}>Day Challenge</Text>
                 <Text style={styles.challengeSubtext}>Day 0</Text>
@@ -706,10 +1208,35 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
         
+        {/* Speak to Oria Section */}
+        <View style={styles.oriaCard}>
+          <View style={styles.oriaHeader}>
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.colors.textPrimary} />
+            <Text style={styles.oriaTitle}>Speak to Oria</Text>
+          </View>
+          <Text style={styles.oriaDescription}>
+            24/7 therapist specialized in porn addiction
+          </Text>
+          <TouchableOpacity 
+            style={styles.oriaButton}
+            onPress={() => setShowOriaModal(true)}
+          >
+            <Text style={styles.oriaButtonText}>Start Chat</Text>
+            <Ionicons name="arrow-forward" size={16} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.oriaHint}>Also accessible from the chat icon in the header</Text>
+        </View>
+        
         {/* Card motivațional */}
         <View style={styles.motivationCard}>
           <Text style={styles.sectionTitle}>Daily Motivation</Text>
-          <Text style={styles.quoteText}>&quot;{quote}&quot;</Text>
+          {isLoadingQuote ? (
+            <View style={styles.quoteLoadingContainer}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            </View>
+          ) : (
+            <Text style={styles.quoteText}>&quot;{quote}&quot;</Text>
+          )}
         </View>
       </ScrollView>
       
@@ -751,6 +1278,224 @@ export default function HomeScreen() {
         onClose={() => setShowRelapsedModal(false)}
         onResetCounter={handleResetCounter}
       />
+      
+      {/* Oria Chat Modal */}
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={showOriaModal}
+        onRequestClose={() => {
+          setSelectedChat(null);
+          setShowOriaModal(false);
+        }}
+      >
+        <SafeAreaView style={styles.oriaModalContainer}>
+          {!selectedChat ? (
+            // Conversation list view
+            <View style={styles.oriaModalContainer}>
+              <View style={styles.oriaModalHeader}>
+                <TouchableOpacity
+                  onPress={() => setShowOriaModal(false)}
+                  style={styles.oriaModalCloseButton}
+                >
+                  <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
+                </TouchableOpacity>
+                <View style={styles.oriaModalTitleContainer}>
+                  <Text style={styles.oriaModalTitle}>Oria AI</Text>
+                  <View style={styles.oriaModalStatusContainer}>
+                    <View style={styles.oriaModalStatusDot} />
+                    <Text style={styles.oriaModalStatusText}>Online</Text>
+                  </View>
+                </View>
+              </View>
+              
+              {isLoadingChats ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={theme.colors.primary} />
+                  <Text style={styles.loadingText}>Loading conversations...</Text>
+                </View>
+              ) : chats.length === 0 ? (
+                <View style={styles.emptyStateContainer}>
+                  <Ionicons name="chatbubble-outline" size={48} color={theme.colors.textMuted} />
+                  <Text style={styles.emptyStateTitle}>No conversations yet</Text>
+                  <Text style={styles.emptyStateDescription}>
+                    Start a new chat with Oria to get help with your recovery journey
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={chats}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.conversationListContainer}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity 
+                      style={styles.conversationItem}
+                      onPress={() => fetchChat(item.id)}
+                    >
+                      <View style={styles.conversationIcon}>
+                        <Ionicons name="chatbubble-outline" size={22} color={theme.colors.primary} />
+                      </View>
+                      <View style={styles.conversationContent}>
+                        <Text style={styles.conversationTitle}>{item.title}</Text>
+                        <Text style={styles.conversationPreview}>
+                          Tap to view conversation
+                        </Text>
+                      </View>
+                      <Text style={styles.conversationDate}>{formatDate(item.updated_at)}</Text>
+                    </TouchableOpacity>
+                  )}
+                  ItemSeparatorComponent={() => <View style={styles.conversationSeparator} />}
+                />
+              )}
+              
+              <TouchableOpacity 
+                style={styles.newChatButton}
+                onPress={createNewChat}
+                disabled={isLoadingChat}
+              >
+                {isLoadingChat ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="add" size={24} color="#fff" />
+                    <Text style={styles.newChatButtonText}>New Chat</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            // Chat view
+            <View style={styles.chatContainer}>
+              <View style={styles.chatHeader}>
+                <TouchableOpacity
+                  onPress={() => setSelectedChat(null)}
+                  style={styles.chatBackButton}
+                >
+                  <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
+                </TouchableOpacity>
+                
+                {isEditingTitle ? (
+                  <View style={styles.titleEditContainer}>
+                    <TextInput
+                      ref={titleInputRef}
+                      style={styles.titleInput}
+                      value={editedTitle}
+                      onChangeText={setEditedTitle}
+                      onBlur={saveTitle}
+                      onSubmitEditing={saveTitle}
+                      returnKeyType="done"
+                      autoCapitalize="sentences"
+                      maxLength={50}
+                    />
+                    {isSavingTitle ? (
+                      <ActivityIndicator size="small" color={theme.colors.primary} style={styles.titleSaveIndicator} />
+                    ) : (
+                      <TouchableOpacity onPress={saveTitle} style={styles.titleSaveButton}>
+                        <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ) : (
+                  <TouchableWithoutFeedback onPress={startEditingTitle}>
+                    <View style={styles.chatTitleContainer}>
+                      <Text style={styles.chatTitle}>{selectedChat.title}</Text>
+                      <Ionicons name="pencil-outline" size={16} color={theme.colors.textSecondary} style={styles.editTitleIcon} />
+                    </View>
+                  </TouchableWithoutFeedback>
+                )}
+              </View>
+              
+              {isLoadingChat ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={theme.colors.primary} />
+                  <Text style={styles.loadingText}>Loading conversation...</Text>
+                </View>
+              ) : (
+                <FlatList
+                  ref={chatScrollRef}
+                  data={selectedChat.messages}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.messagesContainer}
+                  renderItem={({ item }) => (
+                    <View style={[
+                      styles.messageWrapper,
+                      item.role === 'user' ? styles.userMessageWrapper : styles.oriaMessageWrapper
+                    ]}>
+                      <View style={[
+                        styles.messageBubble,
+                        item.role === 'user' ? styles.userMessageBubble : styles.oriaMessageBubble
+                      ]}>
+                        {item.isLoading ? (
+                          <Animated.View 
+                            style={[
+                              styles.loadingIndicator,
+                              loadingIndicatorStyle
+                            ]}
+                          />
+                        ) : (
+                          <Text style={[
+                            styles.messageText,
+                            item.role === 'user' ? styles.userMessageText : styles.oriaMessageText
+                          ]}>
+                            {item.content}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={styles.messageTime}>{formatChatTime(item.created_at)}</Text>
+                    </View>
+                  )}
+                  onLayout={() => {
+                    // Scroll to bottom on initial render
+                    setTimeout(() => {
+                      chatScrollRef.current?.scrollToEnd({ animated: false });
+                    }, 100);
+                  }}
+                />
+              )}
+              
+              <View style={styles.chatInputContainer}>
+                <View style={styles.chatInputWrapper}>
+                  <TextInput
+                    style={styles.chatInput}
+                    placeholder="Type a message..."
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={newMessage}
+                    onChangeText={setNewMessage}
+                    multiline
+                    returnKeyType="send"
+                    onSubmitEditing={sendMessage}
+                    editable={!isSendingMessage}
+                  />
+                </View>
+                <TouchableOpacity 
+                  style={[
+                    styles.sendButton,
+                    newMessage.trim() || isGeneratingResponse ? styles.sendButtonActive : {}
+                  ]}
+                  onPress={isGeneratingResponse ? stopResponseGeneration : sendMessage}
+                  disabled={(!newMessage.trim() && !isGeneratingResponse) || (isSendingMessage && !isGeneratingResponse)}
+                >
+                  {isSendingMessage && !isGeneratingResponse ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                  ) : isGeneratingResponse ? (
+                    <Ionicons 
+                      name="square" 
+                      size={18} 
+                      color={theme.colors.emergency} 
+                    />
+                  ) : (
+                    <Ionicons 
+                      name="send" 
+                      size={20} 
+                      color={newMessage.trim() ? theme.colors.primary : theme.colors.textMuted} 
+                    />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </SafeAreaView>
+      </Modal>
     </GradientBackground>
   );
 }
@@ -846,28 +1591,300 @@ const createStyles = (theme: any) => StyleSheet.create({
     padding: 16,
     marginBottom: 80,
   },
-  quoteText: {
-    fontSize: 16,
-    fontStyle: 'italic',
-    color: theme.colors.textPrimary,
-    lineHeight: 24,
+  oriaCard: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.borderRadius.medium,
+    padding: 16,
+    marginBottom: 16,
   },
-  headerButtons: {
+  oriaHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: 8,
   },
-  petButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+  oriaTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    marginLeft: 8,
+  },
+  oriaDescription: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    paddingLeft: 28,
+    marginBottom: 12,
+  },
+  oriaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.backgroundDeep,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  oriaButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: theme.colors.primary,
+  },
+  oriaModalContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  oriaModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.cardBackground,
+  },
+  oriaModalCloseButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  oriaModalTitleContainer: {
+    flex: 1,
+  },
+  oriaModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    marginBottom: 2,
+  },
+  oriaModalStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  oriaModalStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4CAF50',
+    marginRight: 6,
+  },
+  oriaModalStatusText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 30,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptyStateDescription: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  conversationListContainer: {
+    padding: 16,
+  },
+  conversationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  conversationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: theme.colors.cardBackground,
     justifyContent: 'center',
     alignItems: 'center',
-    ...theme.shadows.light,
+    marginRight: 12,
   },
-  petEmoji: {
-    fontSize: 26,
+  conversationContent: {
+    flex: 1,
+  },
+  conversationTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.colors.textPrimary,
+    marginBottom: 4,
+  },
+  conversationPreview: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+  },
+  conversationDate: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginLeft: 8,
+  },
+  conversationSeparator: {
+    height: 1,
+    backgroundColor: theme.colors.cardBackground,
+    marginVertical: 2,
+  },
+  newChatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.medium,
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  newChatButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginLeft: 8,
+  },
+  chatContainer: {
+    flex: 1,
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.cardBackground,
+  },
+  chatBackButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  chatTitleContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chatTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    flex: 1,
+  },
+  editTitleIcon: {
+    marginLeft: 8,
+    opacity: 0.6,
+  },
+  titleEditContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  titleInput: {
+    flex: 1,
+    fontSize: 16,
+    color: theme.colors.textPrimary,
+    paddingVertical: 4,
+  },
+  titleSaveButton: {
+    padding: 4,
+  },
+  titleSaveIndicator: {
+    marginHorizontal: 4,
+  },
+  messagesContainer: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+  messageWrapper: {
+    marginBottom: 16,
+    maxWidth: '80%',
+  },
+  userMessageWrapper: {
+    alignSelf: 'flex-end',
+  },
+  oriaMessageWrapper: {
+    alignSelf: 'flex-start',
+  },
+  messageBubble: {
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  userMessageBubble: {
+    backgroundColor: theme.colors.primary,
+  },
+  oriaMessageBubble: {
+    backgroundColor: theme.colors.cardBackground,
+  },
+  messageText: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  userMessageText: {
+    color: '#fff',
+  },
+  oriaMessageText: {
+    color: theme.colors.textPrimary,
+  },
+  messageTime: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: 4,
+    alignSelf: 'flex-end',
+  },
+  chatInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.cardBackground,
+  },
+  chatInputWrapper: {
+    flex: 1,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    marginRight: 12,
+  },
+  chatInput: {
+    fontSize: 16,
+    color: theme.colors.textPrimary,
+    paddingVertical: 10,
+    maxHeight: 100,
+  },
+  chatInputPlaceholder: {
+    fontSize: 16,
+    color: theme.colors.textMuted,
+  },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.cardBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonActive: {
+    backgroundColor: theme.colors.cardBackground,
   },
   widgetsContainer: {
     marginBottom: 16,
@@ -909,7 +1926,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   timerBubble: {
     backgroundColor: theme.colors.cardBackground,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 6,
     marginTop: 12,
@@ -978,14 +1995,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: 3,
     position: 'relative',
   },
-  progressBarShimmer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 3,
-  },
   growingIndicator: {
     position: 'absolute',
     right: -4,
@@ -1002,18 +2011,21 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 10,
   },
+  actionButtonWrapper: {
+    alignItems: 'center',
+  },
   actionButton: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: theme.colors.cardBackground,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 6,
     ...theme.shadows.light,
   },
   actionButtonLabel: {
     fontSize: 10,
-    marginTop: 4,
     color: theme.colors.textSecondary,
     textAlign: 'center',
   },
@@ -1101,5 +2113,53 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 8,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  petButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: theme.colors.cardBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.shadows.light,
+  },
+  petEmoji: {
+    fontSize: 26,
+  },
+  quoteText: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: theme.colors.textPrimary,
+    lineHeight: 24,
+  },
+  quoteLoadingContainer: {
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  oriaHint: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  loadingIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#fff',
+    alignSelf: 'flex-start',
+    marginVertical: 6,
+    marginHorizontal: 4,
+    shadowColor: '#fff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });
