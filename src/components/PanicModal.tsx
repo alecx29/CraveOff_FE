@@ -44,7 +44,7 @@ const PanicModal = ({ visible, onClose }: PanicModalProps) => {
   const [displayedSentences, setDisplayedSentences] = useState<string[]>([]);
   const [typingText, setTypingText] = useState("");
   const cursorOpacity = useRef(new RNAnimated.Value(1)).current;
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<number | null>(null);
   const currentSentenceRef = useRef(0);
   const typingPositionRef = useRef(0);
   

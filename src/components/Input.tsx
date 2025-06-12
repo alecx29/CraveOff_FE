@@ -18,7 +18,7 @@ const Input: React.FC<InputProps> = ({ label, error, style, ...props }) => {
       <TextInput
         style={[styles.input, style, error && styles.inputError]}
         {...props}
-        placeholderTextColor={theme.colors.textPlaceholder}
+        placeholderTextColor={theme.colors.inputPlaceholder}
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
@@ -27,7 +27,7 @@ const Input: React.FC<InputProps> = ({ label, error, style, ...props }) => {
 
 export default Input;
 
-const createStyles = (theme) => StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     width: '100%',
     marginBottom: theme.spacing.md,

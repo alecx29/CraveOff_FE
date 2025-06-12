@@ -18,6 +18,13 @@ import Animated, {
 import { useTheme } from '@/src/context/ThemeProvider';
 import { JournalEntry } from '@/src/context/JournalContext';
 
+// Helper function to safely access theme colors
+const getColor = (theme: any, colorName: string, fallbackColor: string): string => {
+  const colors = theme.colors as Record<string, string>;
+  if (colorName in colors) return colors[colorName];
+  return fallbackColor;
+};
+
 interface JournalEntryDetailProps {
   entry: JournalEntry;
   onEdit: () => void;
@@ -95,7 +102,7 @@ const JournalEntryDetail: React.FC<JournalEntryDetailProps> = ({
           color: theme.colors.textMuted,
           label: 'Unknown',
           backgroundColor: 'transparent',
-          borderColor: theme.colors.borderLight
+          borderColor: getColor(theme, 'borderLight', '#e2e8f0')
         };
     }
   };
@@ -139,7 +146,7 @@ const JournalEntryDetail: React.FC<JournalEntryDetailProps> = ({
             <Ionicons 
               name="warning-outline" 
               size={48} 
-              color={theme.colors.emergency} 
+              color={getColor(theme, 'emergency', '#ef4444')} 
               style={styles.modalIcon}
             />
             
@@ -189,7 +196,7 @@ const JournalEntryDetail: React.FC<JournalEntryDetailProps> = ({
               activeOpacity={0.6}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="trash-outline" size={24} color={theme.colors.emergency} />
+              <Ionicons name="trash-outline" size={24} color={getColor(theme, 'emergency', '#ef4444')} />
             </TouchableOpacity>
           </View>
         </View>
@@ -340,7 +347,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexWrap: 'wrap',
   },
   tag: {
-    backgroundColor: theme.colors.cardInteractive,
+    backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -404,11 +411,11 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   modalButtonCancel: {
-    backgroundColor: theme.colors.cardInteractive,
+    backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
     marginRight: 8,
   },
   modalButtonDelete: {
-    backgroundColor: theme.colors.emergency,
+    backgroundColor: getColor(theme, 'emergency', '#ef4444'),
   },
   modalButtonCancelText: {
     color: theme.colors.textPrimary,

@@ -5,6 +5,13 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingVi
 import { useTheme } from '@/src/context/ThemeProvider';
 import { JournalEntry } from '@/src/context/JournalContext';
 
+// Helper function to safely access theme colors
+const getColor = (theme: any, colorName: string, fallbackColor: string): string => {
+  const colors = theme.colors as Record<string, string>;
+  if (colorName in colors) return colors[colorName];
+  return fallbackColor;
+};
+
 type MoodOption = 'great' | 'good' | 'okay' | 'difficult';
 
 interface JournalEntryFormProps {
@@ -71,7 +78,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
           color: theme.colors.textMuted,
           label: 'Select',
           backgroundColor: 'transparent',
-          borderColor: theme.colors.borderLight
+          borderColor: getColor(theme, 'borderLight', '#e2e8f0')
         };
     }
   };
@@ -254,7 +261,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(200, 200, 200, 0.3)',
-    backgroundColor: theme.colors.backgroundDeep,
+    backgroundColor: getColor(theme, 'backgroundDeep', '#1a1c20'),
   },
   mainContainer: {
     flex: 1,

@@ -7,6 +7,13 @@ import { useTheme } from '@/src/context/ThemeProvider';
 export default function TabLayout() {
   const { theme } = useTheme();
   
+  // Helper function to safely access theme colors
+  const getColor = (colorName: string, fallbackColor: string): string => {
+    const colors = theme.colors as Record<string, string>;
+    if (colorName in colors) return colors[colorName];
+    return fallbackColor;
+  };
+  
   return (
     <Tabs
       screenOptions={{
@@ -16,9 +23,9 @@ export default function TabLayout() {
           height: 76,
           paddingBottom: 14,
           paddingTop: 8,
-          backgroundColor: theme.colors.backgroundDeep,
+          backgroundColor: getColor('backgroundDeep', theme.colors.background),
           borderTopWidth: 1,
-          borderTopColor: theme.colors.borderLight,
+          borderTopColor: getColor('borderLight', '#e2e8f0'),
           ...theme.shadows.medium
         },
         tabBarLabelStyle: {

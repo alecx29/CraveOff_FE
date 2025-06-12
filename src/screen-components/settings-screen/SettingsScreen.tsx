@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -16,6 +16,13 @@ const SettingsScreen = () => {
   const { isNotificationsEnabled, setNotificationsEnabled, requestPermissions } = useNotifications();
   const { signOut } = useContext(AuthContext);
   const styles = createStyles(theme);
+
+  // Helper function to get the flame color safely
+  const getFlameColor = (): string => {
+    if ('flame' in theme.colors) return theme.colors.flame as string;
+    if ('accentOrange' in theme.colors) return theme.colors.accentOrange as string;
+    return theme.colors.accent as string || '#f97316'; // Default orange
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -62,7 +69,7 @@ const SettingsScreen = () => {
         {/* Clean Days */}
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>7</Text>
-          <Ionicons name="flame" size={16} color={theme.colors.flame} style={styles.statIcon} />
+          <Ionicons name="flame" size={16} color={getFlameColor()} style={styles.statIcon} />
           <Text style={styles.statLabel}>Days Clean</Text>
         </View>
         

@@ -1,0 +1,4 @@
+# EAS Build specific .gitignore
+# Ignore all the Android/iOS build files
+/android
+/ios 

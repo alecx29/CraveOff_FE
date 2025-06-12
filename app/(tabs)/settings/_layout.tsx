@@ -10,20 +10,13 @@ export default function SettingsLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        headerStyle: { backgroundColor: theme.colors.backgroundDeep },
+        headerStyle: { backgroundColor: theme.colors.background },
         headerTintColor: theme.colors.textPrimary,
         headerShadowVisible: true,
-        headerBottomBorderColor: theme.colors.borderLight,
       }}
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="personal-details" />
-      <Stack.Screen name="edit-weight-goal" />
-      <Stack.Screen name="edit-current-weight" />
-      <Stack.Screen name="edit-height" />
-      <Stack.Screen name="edit-birthdate" />
-      <Stack.Screen name="edit-gender" />
-      <Stack.Screen name="edit-macro-goals" />
       <Stack.Screen name="notifications" />
     </Stack>
   );

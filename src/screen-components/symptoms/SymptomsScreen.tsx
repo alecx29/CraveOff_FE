@@ -19,7 +19,11 @@ interface SymptomCategory {
   symptoms: SymptomItem[];
 }
 
-const SymptomsScreen = () => {
+interface SymptomsScreenProps {
+  onComplete?: () => void;
+}
+
+const SymptomsScreen: React.FC<SymptomsScreenProps> = ({ onComplete }) => {
   const { theme } = useTheme();
   const router = useRouter();
   const styles = createStyles(theme);
@@ -89,8 +93,13 @@ const SymptomsScreen = () => {
   );
 
   const handleRebootPress = () => {
-    // Navigăm către ecranul de obiective în loc de tab-uri
-    router.push('/goals');
+    // Call the onComplete callback if provided
+    if (onComplete) {
+      onComplete();
+    } else {
+      // Fallback to default navigation if no callback provided
+      router.push('/goals');
+    }
   };
   
   const handleBackPress = () => {

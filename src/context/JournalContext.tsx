@@ -10,7 +10,7 @@ export interface JournalEntry {
   entry_date?: string;
   title: string;
   content: string;
-  mood: 'great' | 'good' | 'okay' | 'difficult';
+  mood: 'great' | 'good' | 'okay' | 'difficult' | 'neutral';
   tags: string[];
   createdAt: string;
   updatedAt: string;
@@ -21,8 +21,8 @@ interface JournalContextType {
   isLoading: boolean;
   error: string | null;
   fetchEntries: () => Promise<void>;
-  addEntry: (entry: Omit<JournalEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateEntry: (id: string, entry: Partial<JournalEntry>) => Promise<void>;
+  addEntry: (entry: Omit<JournalEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<JournalEntry>;
+  updateEntry: (id: string, entry: Partial<JournalEntry>) => Promise<JournalEntry>;
   deleteEntry: (id: string) => Promise<void>;
   getEntryById: (id: string) => Promise<JournalEntry | undefined>;
   clearError: () => void;
@@ -33,8 +33,8 @@ const JournalContext = createContext<JournalContextType>({
   isLoading: false,
   error: null,
   fetchEntries: async () => {},
-  addEntry: async () => {},
-  updateEntry: async () => {},
+  addEntry: async () => ({} as JournalEntry),
+  updateEntry: async () => ({} as JournalEntry),
   deleteEntry: async () => {},
   getEntryById: async () => undefined,
   clearError: () => {},
@@ -82,9 +82,12 @@ export const JournalProvider = ({ children }: { children: ReactNode }) => {
         } else if (typeof response.data === 'object') {
           // If it's an object with values we can extract
           console.warn('Unexpected API response format, attempting to convert to array');
-          const entriesArray = Object.values(response.data).filter(item => 
-            item && typeof item === 'object'
-          );
+          const entriesArray = Object.values(response.data)
+            .filter(item => item && typeof item === 'object')
+            .filter(item => 
+              typeof (item as any).id === 'string' && 
+              (typeof (item as any).title === 'string' || typeof (item as any).content === 'string')
+            ) as JournalEntry[];
           setEntries(entriesArray);
         } else {
           // If we can't handle the format, set empty array and log error

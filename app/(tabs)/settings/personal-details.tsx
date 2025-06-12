@@ -1,6 +1,5 @@
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { router } from 'expo-router';
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 
@@ -16,6 +15,17 @@ export default function PersonalDetailsScreen() {
 
   const styles = createStyles(theme);
 
+  // Helper function for safe color access
+  const getIconColor = (): string => {
+    if ('icon' in theme.colors) return theme.colors.icon as string;
+    return theme.colors.textSecondary as string || '#6B7280';
+  };
+
+  const getIconBackButtonColor = (): string => {
+    if ('iconBackButton' in theme.colors) return theme.colors.iconBackButton as string;
+    return theme.colors.textPrimary as string || '#FFFFFF';
+  };
+
   return (
     <GradientBackground>
       <SafeAreaView style={styles.container}>
@@ -27,7 +37,7 @@ export default function PersonalDetailsScreen() {
             style={styles.backButton} 
             onPress={() => navigation.goBack()}
           >
-            <Feather name="arrow-left" size={theme.sizes.iconLarge} color={theme.colors.iconBackButton} />
+            <Feather name="arrow-left" size={theme.sizes.iconLarge} color={getIconBackButtonColor()} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Personal Details</Text>
         </View>
@@ -39,7 +49,10 @@ export default function PersonalDetailsScreen() {
               <Text style={styles.fieldLabel}>Goal Weight</Text>
               <Text style={styles.fieldValue}>{user?.goalWeight ?? '--'} kg</Text>
             </View>
-            <AButton title="Change Goal" onPress={() => {router.push('/settings/edit-weight-goal');}} />
+            <AButton title="Change Goal" onPress={() => {
+              // This route no longer exists
+              // router.push('/settings/edit-weight-goal' as any);
+            }} />
           </View>
         
           {/* Details Card */}
@@ -49,8 +62,11 @@ export default function PersonalDetailsScreen() {
               <Text style={styles.detailLabel}>Current weight</Text>
               <View style={styles.valueContainer}>
                 <Text style={styles.detailValue}>{user?.weight ?? '--'} kg</Text>
-                <TouchableOpacity onPress={() => router.push('/settings/edit-current-weight')}>
-                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={theme.colors.icon} />
+                <TouchableOpacity onPress={() => {
+                  // This route no longer exists
+                  // router.push('/settings/edit-current-weight' as any)
+                }}>
+                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={getIconColor()} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -62,8 +78,11 @@ export default function PersonalDetailsScreen() {
               <Text style={styles.detailLabel}>Height</Text>
               <View style={styles.valueContainer}>
                 <Text style={styles.detailValue}>{user?.height ?? '--'} cm</Text>
-                <TouchableOpacity onPress={() => router.push('/settings/edit-height')}>
-                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={theme.colors.icon} />
+                <TouchableOpacity onPress={() => {
+                  // This route no longer exists
+                  // router.push('/settings/edit-height' as any)
+                }}>
+                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={getIconColor()} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -75,8 +94,11 @@ export default function PersonalDetailsScreen() {
               <Text style={styles.detailLabel}>Date of birth</Text>
               <View style={styles.valueContainer}>
                 <Text style={styles.detailValue}>{user?.birthdate ?? '--'}</Text>
-                <TouchableOpacity onPress={() => router.push('/settings/edit-birthdate')}>
-                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={theme.colors.icon} />
+                <TouchableOpacity onPress={() => {
+                  // This route no longer exists
+                  // router.push('/settings/edit-birthdate' as any)
+                }}>
+                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={getIconColor()} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -88,8 +110,11 @@ export default function PersonalDetailsScreen() {
               <Text style={styles.detailLabel}>Gender</Text>
               <View style={styles.valueContainer}>
                 <Text style={styles.detailValue}>{user?.gender ?? '--'}</Text>
-                <TouchableOpacity onPress={() => router.push('/settings/edit-gender')}>
-                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={theme.colors.icon} />
+                <TouchableOpacity onPress={() => {
+                  // This route no longer exists
+                  // router.push('/settings/edit-gender' as any)
+                }}>
+                  <Feather name="edit-2" size={theme.sizes.iconMedium} color={getIconColor()} />
                 </TouchableOpacity>
               </View>
             </View>

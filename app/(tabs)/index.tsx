@@ -216,11 +216,6 @@ export default function HomeScreen() {
     };
   });
   
-  // Log the formatted time for debugging
-  useEffect(() => {
-    console.log('Formatted time for display:', formattedTime);
-  }, [formattedTime]);
-  
   // Calculate clean days and timer based on last relapse date
   useEffect(() => {
     console.log('lastRelapseData in timer calculation:', JSON.stringify(lastRelapseData, null, 2));
@@ -1008,6 +1003,19 @@ export default function HomeScreen() {
     }
   };
 
+  // Helper function to get the flame color safely
+  const getFlameColor = (): string => {
+    if ('flame' in theme.colors) return theme.colors.flame as string;
+    if ('accentOrange' in theme.colors) return theme.colors.accentOrange as string;
+    return theme.colors.accent as string || '#f97316'; // Default orange
+  };
+  
+  // Helper function to get the emergency color safely
+  const getEmergencyColor = (): string => {
+    if ('emergency' in theme.colors) return theme.colors.emergency as string;
+    return theme.colors.accent as string || '#dc2626'; // Default red
+  };
+
   return (
     <GradientBackground>
       <ScrollView style={styles.container}>
@@ -1093,13 +1101,13 @@ export default function HomeScreen() {
             <View style={[styles.widgetCard, { width: screenWidth - 40 }]}>
               <View style={styles.cleanDaysContent}>
                 <Text style={styles.cleanDaysNumber}>{cleanDays}</Text>
-                <Ionicons name="flame" size={28} color={theme.colors.flame} style={styles.flameIcon} />
+                <Ionicons name="flame" size={28} color={getFlameColor()} style={styles.flameIcon} />
               </View>
               <Text style={styles.cleanDaysText}>Clean Days</Text>
               {cleanDays === 0 ? (
                 <Text style={styles.cleanDaysSubtext}>Keep going! Enter the streak</Text>
               ) : (
-                <Text style={styles.cleanDaysSubtext}>Keep going! You&apos;re on fire <Ionicons name="flame" size={14} color={theme.colors.flame} /></Text>
+                <Text style={styles.cleanDaysSubtext}>Keep going! You&apos;re on fire <Ionicons name="flame" size={14} color={getFlameColor()} /></Text>
               )}
             </View>
           </Animated.ScrollView>
@@ -1481,7 +1489,7 @@ export default function HomeScreen() {
                     <Ionicons 
                       name="square" 
                       size={18} 
-                      color={theme.colors.emergency} 
+                      color={getEmergencyColor()} 
                     />
                   ) : (
                     <Ionicons 

@@ -215,7 +215,7 @@ export default function JournalScreen() {
   );
 }
 
-const createStyles = (theme) => StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 16,

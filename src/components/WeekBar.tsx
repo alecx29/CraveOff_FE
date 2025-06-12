@@ -3,6 +3,13 @@ import { View, Text, StyleSheet, PanResponder, Animated, Platform } from 'react-
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/context/ThemeProvider';
 
+// Helper function to safely access theme colors
+const getColor = (theme: any, colorName: string, fallbackColor: string): string => {
+  const colors = theme.colors as Record<string, string>;
+  if (colorName in colors) return colors[colorName];
+  return fallbackColor;
+};
+
 // DayCircle component with proper types
 interface DayCircleProps {
   day: string;
@@ -23,7 +30,7 @@ const DayCircle = ({ day, text, isToday, logStatus }: DayCircleProps) => {
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: theme.colors.cardInteractive,
+      backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 4,

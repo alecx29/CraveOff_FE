@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
+import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 
@@ -19,6 +19,12 @@ const NotificationsScreen = () => {
   const [permissionStatus, setPermissionStatus] = useState<string>('');
   
   const styles = createStyles(theme);
+
+  // Helper function for safe color access
+  const getCardInteractiveColor = (): string => {
+    if ('cardInteractive' in theme.colors) return theme.colors.cardInteractive as string;
+    return theme.colors.cardBackgroundAlt as string || theme.colors.neutral200 as string || '#F5F5F5';
+  };
 
   // Get current permission status
   useEffect(() => {
@@ -41,6 +47,10 @@ const NotificationsScreen = () => {
     await setNotificationsEnabled(enabled);
   };
 
+  const openAppSettings = async () => {
+    await Linking.openSettings();
+  };
+
   const sendTestNotification = async () => {
     if (!isNotificationsEnabled) {
       Alert.alert(
@@ -54,7 +64,7 @@ const NotificationsScreen = () => {
     await scheduleNotification(
       'Test Notification',
       'This is a test notification from CraveOff. If you can see this, notifications are working correctly!',
-      { seconds: 2 }
+      { seconds: 2, type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL }
     );
     
     Alert.alert(
@@ -71,10 +81,9 @@ const NotificationsScreen = () => {
         headerShown: true,
         headerBackTitle: 'Settings',
         headerStyle: {
-          backgroundColor: theme.colors.backgroundDeep,
+          backgroundColor: theme.colors.background,
         },
         headerShadowVisible: true,
-        headerBottomBorderColor: theme.colors.borderLight,
       }} />
       
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -97,7 +106,7 @@ const NotificationsScreen = () => {
             {permissionStatus === 'denied' && (
               <TouchableOpacity 
                 style={styles.openSettingsButton} 
-                onPress={() => Notifications.presentPermissionsRequestAsync()}
+                onPress={openAppSettings}
               >
                 <Text style={styles.openSettingsText}>Open Settings</Text>
               </TouchableOpacity>
@@ -105,7 +114,7 @@ const NotificationsScreen = () => {
             <Switch
               value={isNotificationsEnabled}
               onValueChange={handleMainToggle}
-              trackColor={{ false: theme.colors.cardInteractive, true: `${theme.colors.primary}30` }}
+              trackColor={{ false: getCardInteractiveColor(), true: `${theme.colors.primary}30` }}
               thumbColor={isNotificationsEnabled ? theme.colors.primary : theme.colors.textSecondary}
             />
           </View>
@@ -129,7 +138,7 @@ const NotificationsScreen = () => {
         
         {/* Help text */}
         <Text style={styles.helpText}>
-          Notifications help you stay on track with your goals. You'll receive reminders and achievement notifications when enabled.
+          Notifications help you stay on track with your goals. You&apos;ll receive reminders and achievement notifications when enabled.
         </Text>
       </ScrollView>
     </GradientBackground>

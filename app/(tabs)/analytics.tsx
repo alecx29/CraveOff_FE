@@ -13,10 +13,24 @@ import GradientBackground from '@/src/screen-components/gradient-background/Grad
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const screenWidth = Dimensions.get('window').width;
 
+// Helper function to safely access theme colors
+const getColor = (theme: any, colorName: string, fallbackColor: string): string => {
+  const colors = theme.colors as Record<string, string>;
+  if (colorName in colors) return colors[colorName];
+  return fallbackColor;
+};
+
 export default function AnalyticsScreen() {
   const { theme } = useTheme();
   const { lastRelapseData, fetchLogs, isLoading, logs } = useLogs();
-  const styles = createStyles(theme);
+  const styles = createStyles(theme, getColor);
+  
+  // Helper function to safely access theme colors - component version
+  const getComponentColor = (colorName: string, fallbackColor: string): string => {
+    const colors = theme.colors as Record<string, string>;
+    if (colorName in colors) return colors[colorName];
+    return fallbackColor;
+  };
   
   // State for clean days progress
   const [cleanDays, setCleanDays] = useState(0);
@@ -668,7 +682,7 @@ export default function AnalyticsScreen() {
                 cx={size / 2}
                 cy={size / 2}
                 r={radius}
-                stroke={theme.colors.cardInteractive}
+                stroke={getComponentColor('cardInteractive', '#F1F5F9')}
                 strokeWidth={strokeWidth}
                 fill="transparent"
               />
@@ -785,7 +799,7 @@ export default function AnalyticsScreen() {
   );
 }
 
-const createStyles = (theme: any) => StyleSheet.create({
+const createStyles = (theme: any, getColor: (theme: any, colorName: string, fallbackColor: string) => string) => StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
@@ -910,9 +924,10 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   progressBar: {
     height: 8,
-    backgroundColor: theme.colors.cardInteractive,
+    backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
     borderRadius: 4,
     overflow: 'hidden',
+    marginTop: 8,
   },
   progressFill: {
     height: '100%',
@@ -929,15 +944,18 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingRight: 12,
   },
   chartDescription: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
-    paddingHorizontal: 4,
+    marginTop: 16,
+    padding: 8,
+    backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
+    borderRadius: theme.borderRadius.small,
   },
   trendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.cardInteractive,
+    backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,

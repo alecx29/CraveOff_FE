@@ -5,11 +5,8 @@ import Animated, {
   useAnimatedStyle, 
   withTiming, 
   withRepeat,
-  interpolate,
-  Extrapolate,
   Easing,
   FadeIn,
-  useAnimatedProps
 } from 'react-native-reanimated';
 import { Svg, Circle, G } from 'react-native-svg';
 
@@ -98,6 +95,12 @@ const CustomPlanLoadingScreen = ({
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   
+  // Helper function to get background circle color
+  const getBackgroundColor = (): string => {
+    if ('cardInteractive' in theme.colors) return theme.colors.cardInteractive;
+    return theme.colors.cardBackgroundAlt || theme.colors.neutral400 || '#E0E0E0';
+  };
+  
   return (
     <Animated.View 
       style={styles.container}
@@ -113,7 +116,7 @@ const CustomPlanLoadingScreen = ({
               cx={size / 2}
               cy={size / 2}
               r={radius}
-              stroke={theme.colors.cardInteractive}
+              stroke={getBackgroundColor()}
               strokeWidth={strokeWidth}
               fill="transparent"
             />

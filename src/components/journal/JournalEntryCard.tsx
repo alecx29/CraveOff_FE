@@ -5,6 +5,13 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/src/context/ThemeProvider';
 import { JournalEntry } from '@/src/context/JournalContext';
 
+// Helper function to safely access theme colors
+const getColor = (theme: any, colorName: string, fallbackColor: string): string => {
+  const colors = theme.colors as Record<string, string>;
+  if (colorName in colors) return colors[colorName];
+  return fallbackColor;
+};
+
 interface JournalEntryCardProps {
   entry: JournalEntry;
   onPress: (id: string) => void;
@@ -12,7 +19,7 @@ interface JournalEntryCardProps {
 
 const JournalEntryCard: React.FC<JournalEntryCardProps> = ({ entry, onPress }) => {
   const { theme } = useTheme();
-  const styles = createStyles(theme);
+  const styles = createStyles(theme, getColor);
 
   // Format the date
   const formattedDate = React.useMemo(() => {
@@ -25,6 +32,13 @@ const JournalEntryCard: React.FC<JournalEntryCardProps> = ({ entry, onPress }) =
       return 'Invalid date';
     }
   }, [entry.date, entry.entry_date]);
+
+  // Helper function for component-level color access
+  const getComponentColor = (colorName: string, fallbackColor: string): string => {
+    const colors = theme.colors as Record<string, string>;
+    if (colorName in colors) return colors[colorName];
+    return fallbackColor;
+  };
 
   // Get mood emoji
   const getMoodEmoji = () => {
@@ -67,7 +81,7 @@ const JournalEntryCard: React.FC<JournalEntryCardProps> = ({ entry, onPress }) =
           color: theme.colors.textMuted,
           label: 'Unknown',
           backgroundColor: 'transparent',
-          borderColor: theme.colors.borderLight
+          borderColor: getComponentColor('borderLight', '#e2e8f0')
         };
     }
   };
@@ -118,76 +132,78 @@ const JournalEntryCard: React.FC<JournalEntryCardProps> = ({ entry, onPress }) =
   );
 };
 
-const createStyles = (theme: any) => StyleSheet.create({
-  card: {
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    ...theme.shadows.light,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  dateContainer: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: theme.colors.cardInteractive,
-  },
-  date: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-  },
-  moodContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 2,
-    paddingHorizontal: 10,
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 4,
-  },
-  emoji: {
-    fontSize: 14,
-  },
-  moodLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    marginBottom: 6,
-  },
-  content: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: 6,
-    lineHeight: 20,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  tag: {
-    backgroundColor: theme.colors.cardInteractive,
-    borderRadius: 14,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 6,
-  },
-  tagText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  }
-});
+const createStyles = (theme: any, getColor: (theme: any, colorName: string, fallbackColor: string) => string) => {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: theme.colors.cardBackground,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 12,
+      ...theme.shadows.light,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    dateContainer: {
+      borderWidth: 1,
+      borderColor: getColor(theme, 'borderLight', '#e2e8f0'),
+      borderRadius: 16,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
+    },
+    date: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+    },
+    moodContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 2,
+      paddingHorizontal: 10,
+      borderRadius: 24,
+      borderWidth: 1,
+      gap: 4,
+    },
+    emoji: {
+      fontSize: 14,
+    },
+    moodLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      lineHeight: 16,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.colors.textPrimary,
+      marginBottom: 6,
+    },
+    content: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginBottom: 6,
+      lineHeight: 20,
+    },
+    tagsContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    tag: {
+      backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
+      borderRadius: 14,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      marginRight: 6,
+    },
+    tagText: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+    }
+  });
+};
 
 export default JournalEntryCard; 

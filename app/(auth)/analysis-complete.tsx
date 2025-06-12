@@ -13,6 +13,13 @@ export default function AnalysisComplete() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   
+  // Helper functions to safely access theme colors
+  const getColor = (colorName: string, fallbackColor: string): string => {
+    const colors = theme.colors as Record<string, string>;
+    if (colorName in colors) return colors[colorName];
+    return fallbackColor;
+  };
+  
   // Data for the graph
   const userDependencyLevel = 53; // Over 50%
   const averageDependencyLevel = 23; // Average is 23%
@@ -40,7 +47,7 @@ export default function AnalysisComplete() {
               <Ionicons 
                 name="checkmark-circle" 
                 size={80} 
-                color={theme.colors.success || '#34C759'} 
+                color={getColor('success', '#34C759')} 
               />
             </View>
             
@@ -74,7 +81,7 @@ export default function AnalysisComplete() {
                       styles.bar, 
                       { 
                         height: `${userDependencyLevel}%`,
-                        backgroundColor: theme.colors.error || '#FF3B30' 
+                        backgroundColor: getColor('error', '#FF3B30')
                       }
                     ]}>
                       <Text style={styles.barPercentage}>{userDependencyLevel}%</Text>
@@ -90,7 +97,7 @@ export default function AnalysisComplete() {
                       styles.bar, 
                       { 
                         height: `${averageDependencyLevel}%`,
-                        backgroundColor: theme.colors.cardInteractive 
+                        backgroundColor: getColor('cardInteractive', '#F1F5F9')
                       }
                     ]}>
                       <Text style={styles.barPercentage}>{averageDependencyLevel}%</Text>

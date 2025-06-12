@@ -1,13 +1,7 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  withSequence,
-  withDelay,
   Easing,
-  runOnJS,
   FadeIn,
   FadeOut,
   SlideInDown,
@@ -41,7 +35,7 @@ const CustomAlert = ({
   
   // Close the alert automatically after duration
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: number;
     
     if (visible && autoClose) {
       timeoutId = setTimeout(() => {
@@ -74,18 +68,38 @@ const CustomAlert = ({
   };
   
   // Get background color based on alert type
-  const getBackgroundColor = () => {
+  const getBackgroundColor = (): string => {
+    const defaultColors = {
+      error: '#FF3B30',
+      success: '#34C759',
+      warning: '#FF9500',
+      info: '#007AFF'
+    };
+    
+    // Safe property check function
+    const getThemeColor = (keys: string[]): string => {
+      for (const key of keys) {
+        if (key in theme.colors) {
+          return (theme.colors as any)[key] as string;
+        }
+      }
+      return type === 'error' ? defaultColors.error : 
+             type === 'success' ? defaultColors.success :
+             type === 'warning' ? defaultColors.warning : 
+             defaultColors.info;
+    };
+    
     switch (type) {
       case 'error':
-        return theme.colors.error || '#FF3B30';
+        return getThemeColor(['buttonEmergency', 'emergency', 'error']);
       case 'success':
-        return theme.colors.success || '#34C759';
+        return getThemeColor(['success', 'primary']);
       case 'warning':
-        return theme.colors.warning || '#FF9500';
+        return getThemeColor(['warning', 'accentOrange', 'accent']);
       case 'info':
-        return theme.colors.info || '#007AFF';
+        return getThemeColor(['info', 'accentBlue', 'accent']);
       default:
-        return theme.colors.error || '#FF3B30';
+        return getThemeColor(['buttonEmergency', 'emergency', 'error']);
     }
   };
   

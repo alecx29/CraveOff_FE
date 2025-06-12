@@ -5,11 +5,11 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { useTheme } from '@/src/context/ThemeProvider';
 
 interface ThemeType {
-  colors: any;
+  colors: Record<string, string>;
   spacing: any;
   typography: any;
   borderRadius: any;
-  shadows: any;
+  shadows: Record<string, any>;
   sizes: any;
 }
 
@@ -42,23 +42,37 @@ const AButton: React.FC<AButtonProps> = ({
   children,
 }) => {
   const { theme } = useTheme();
-  const styles = createStyles(theme);
+  const styles = createStyles(theme as ThemeType);
+
+  // Helper functions to safely access theme properties
+  const getColor = (colorName: string, fallbackColor?: string): string => {
+    const colors = theme.colors as Record<string, string>;
+    return colorName in colors ? colors[colorName] : (fallbackColor || colors.primary);
+  };
+
+  const getShadow = (shadowName: string): any => {
+    const shadows = theme.shadows as Record<string, any>;
+    return shadowName in shadows ? shadows[shadowName] : shadows.medium;
+  };
 
   // Determine gradient colors based on variant
-  const getGradientColors = () => {
-    if (disabled) return [theme.colors.cardInteractive, theme.colors.cardInteractive];
+  const getGradientColors = (): [string, string] => {
+    if (disabled) {
+      const cardInteractive = getColor('cardInteractive', '#F1F5F9');
+      return [cardInteractive, cardInteractive];
+    }
     
     switch (variant) {
       case 'primary':
-        return [theme.colors.primaryLight, theme.colors.primary];
+        return [getColor('primaryLight', '#818CF8'), getColor('primary', '#4F46E5')];
       case 'emergency':
-        return [theme.colors.emergencyLight, theme.colors.emergency];
+        return [getColor('emergencyLight', '#FCA5A5'), getColor('emergency', '#DC2626')];
       case 'secondary':
-        return [theme.colors.cardInteractive, theme.colors.cardBackground];
+        return [getColor('cardInteractive', '#F1F5F9'), getColor('cardBackground', '#FFFFFF')];
       case 'outline':
         return ['transparent', 'transparent'];
       default:
-        return [theme.colors.primaryLight, theme.colors.primary];
+        return [getColor('primaryLight', '#818CF8'), getColor('primary', '#4F46E5')];
     }
   };
 
@@ -81,8 +95,8 @@ const AButton: React.FC<AButtonProps> = ({
 
   // Get shadow style
   const shadowStyle = disabled ? {} : (
-    variant === 'primary' ? theme.shadows.indigoGlow :
-    variant === 'emergency' ? theme.shadows.redGlow :
+    variant === 'primary' ? getShadow('indigoGlow') :
+    variant === 'emergency' ? getShadow('redGlow') :
     theme.shadows.medium
   );
 
@@ -100,7 +114,7 @@ const AButton: React.FC<AButtonProps> = ({
         style={buttonStyle}>
         
         {loading ? (
-          <ActivityIndicator size="small" color={variant === 'outline' ? theme.colors.primary : theme.colors.textPrimary} />
+          <ActivityIndicator size="small" color={variant === 'outline' ? getColor('primary') : getColor('textPrimary')} />
         ) : (
           <>
             {leftIcon && <View style={styles.iconContainer}>{leftIcon}</View>}

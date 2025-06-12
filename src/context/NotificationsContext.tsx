@@ -36,6 +36,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -46,8 +48,8 @@ interface NotificationsProviderProps {
 export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ children }) => {
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState<boolean>(false);
   const [hasAskedForPermission, setHasAskedForPermission] = useState<boolean>(false);
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
+  const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
 
   useEffect(() => {
     // Load notification settings from storage
@@ -147,7 +149,7 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
             { text: 'Later', style: 'cancel' },
             { 
               text: 'Settings', 
-              onPress: () => Notifications.presentPermissionsRequestAsync() 
+              onPress: () => Notifications.requestPermissionsAsync() 
             }
           ]
         );

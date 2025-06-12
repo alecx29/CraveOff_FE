@@ -58,7 +58,7 @@ const Card: React.FC<CardProps> = ({
   );
 };
 
-const createStyles = (theme) => StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   card: {
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.borderRadius.medium,

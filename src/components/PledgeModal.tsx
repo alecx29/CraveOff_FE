@@ -126,9 +126,8 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
             >
               <AntDesign name="close" size={22} color={theme.colors.textSecondary} />
             </TouchableOpacity>
-            
             <Text style={styles.title} selectable={false}>Pledge Sobriety Today</Text>
-            <View style={{ width: 40 }} /> {/* Spacer for alignment */}
+            <View style={{ width: 40 }} />
           </View>
           
           <View style={styles.contentContainer}>

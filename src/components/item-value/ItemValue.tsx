@@ -37,6 +37,13 @@ const ItemValue: React.FC<InputProps> = ({
   const { theme } = useTheme();
   const styles = createStyles(theme);
   
+  // Get flame color based on theme
+  const getFlameColor = (): string => {
+    if ('flame' in theme.colors) return theme.colors.flame as string;
+    if ('accentOrange' in theme.colors) return theme.colors.accentOrange as string;
+    return (theme.colors.accent as string) || '#f97316'; // Default orange
+  };
+
   const showedTime = useMemo(
     () => new Date(time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
     [time],
@@ -108,7 +115,12 @@ const ItemValue: React.FC<InputProps> = ({
             </View>
             <View>
               <View style={styles.flexRow}>
-                <MaterialCommunityIcons name="fire" size={12} style={styles.flameIcon} color={theme.colors.flame} />
+                <MaterialCommunityIcons 
+                  name="fire" 
+                  size={12} 
+                  style={styles.flameIcon} 
+                  color={getFlameColor()} 
+                />
                 <Text style={styles.calories}>{data}</Text>
               </View>
               <Text style={[styles.foodMacros, styles.time]}>{showedTime}</Text>
@@ -125,7 +137,7 @@ export default ItemValue;
 
 const { width } = Dimensions.get('window');
 
-const createStyles = (theme) => StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     marginVertical: theme.spacing.sm,
     width: '100%',

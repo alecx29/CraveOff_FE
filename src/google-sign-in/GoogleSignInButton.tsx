@@ -2,7 +2,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { useContext, useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import AButton from '@/src/components/AButton/AButton';
@@ -19,26 +19,26 @@ interface SignInButtonProps {
   signInCallback: (idToken: string) => Promise<void>; // Function type
 }
 
+WebBrowser.maybeCompleteAuthSession();
+
 export default function GoogleSignInButton({signInCallback}: SignInButtonProps) {
   const { theme } = useTheme();
   const { user, signIn } = useContext(AuthContext);
   const styles = createStyles(theme);
 
-  // ✅ Definim `redirectUri` corect în funcție de mediu
-  const redirectUri2 = AuthSession.makeRedirectUri(
-    // scheme: 'com.usualsuspect29.macrobuddyfe', // Trebuie să fie același ca `package` din `app.json`
-    // preferLocalhost: true, // ✅ Folosește `localhost` în simulatoare
-    // path: 'oauthredirect', // ✅ Asigură-te că îl ai aicis
-  );
+  const isWeb = Platform.OS === 'web';
 
   // const redirectUri = "http://localhost:8081";
-  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'com.usualsuspect29.macrobuddyfe' });
+  const redirectUri = AuthSession.makeRedirectUri({ 
+    scheme: 'craveoffapp'
+  });
   // const redirectUri = "https://auth.expo.io/@usualsuspect29/macrobuddyfe";
 
   console.log('🔍 Redirect URI utilizat în cod:', redirectUri);
 
   const [request, response, promptAsync] = Google.useAuthRequest({ 
-    webClientId: '353269821618-po6jqf5dd68ifae2ogqaorp9ic7foebl.apps.googleusercontent.com',
+    // webClientId: '353269821618-po6jqf5dd68ifae2ogqaorp9ic7foebl.apps.googleusercontent.com',
+    webClientId: '353269821618-6jc2smfddu3hvhil6beq7uc735ptujkd.apps.googleusercontent.com', //craveoff
     androidClientId: '353269821618-ini63479ot2ohbq07ke0b2sqa0c5vik6.apps.googleusercontent.com',
     iosClientId: '353269821618-n3s13eq5edvpar4nh2j0f0pcjfr9tlpg.apps.googleusercontent.com',
     redirectUri,

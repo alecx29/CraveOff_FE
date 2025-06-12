@@ -33,12 +33,24 @@ const SettingCard: React.FC<SettingCardProps> = ({
   const styles = createStyles(theme);
   const IconComponent = iconComponent || (type === 'ion-icons' ? Ionicons : AntDesign);
 
+  // Helper functions for safe color access
+  const getEmergencyColor = (): string => {
+    if ('emergency' in theme.colors) return theme.colors.emergency as string;
+    if ('buttonEmergency' in theme.colors) return theme.colors.buttonEmergency as string;
+    return theme.colors.error as string || '#ef4444';
+  };
+
+  const getCardInteractiveColor = (): string => {
+    if ('cardInteractive' in theme.colors) return theme.colors.cardInteractive as string;
+    return theme.colors.cardBackgroundAlt as string || theme.colors.neutral200 as string || '#F5F5F5';
+  };
+
   const getIconColor = () => {
     switch (variant) {
       case 'primary':
         return theme.colors.primary;
       case 'emergency':
-        return theme.colors.emergency;
+        return getEmergencyColor();
       default:
         return theme.colors.textSecondary;
     }
@@ -52,7 +64,7 @@ const SettingCard: React.FC<SettingCardProps> = ({
       activeOpacity={0.7}
   >
     <View style={styles.cardContent}>
-        <View style={[styles.cardIcon, { backgroundColor: variant === 'default' ? theme.colors.cardInteractive : `${getIconColor()}20` }]}>
+        <View style={[styles.cardIcon, { backgroundColor: variant === 'default' ? getCardInteractiveColor() : `${getIconColor()}20` }]}>
           <IconComponent name={icon} size={22} color={getIconColor()} />
       </View>
       <View style={styles.cardTextContainer}>
@@ -63,7 +75,7 @@ const SettingCard: React.FC<SettingCardProps> = ({
         <Switch
           value={isActive}
           onValueChange={onToggle}
-            trackColor={{ false: theme.colors.cardInteractive, true: `${theme.colors.primary}30` }}
+            trackColor={{ false: getCardInteractiveColor(), true: `${theme.colors.primary}30` }}
             thumbColor={isActive ? theme.colors.primary : theme.colors.textSecondary}
           style={styles.switch}
         />
