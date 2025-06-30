@@ -18,6 +18,20 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Native source files
+*.h
+*.cpp
+*.mm
+*.c
+*.java
+*.kt
+*.swift
+*.m
+*.o
+*.a
+*.so
+*.dylib
+
 # Metro
 .metro-health-check*
 
@@ -41,3 +55,10 @@ app-example
 # Prebuild folders
 /android
 /ios
+
+/android/app/my-release-key.keystore
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision

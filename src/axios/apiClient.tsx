@@ -1,101 +1,280 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { getRefreshToken } from '@/src/Storage/tokenStorage';
+import { getTokens, saveTokens, getRefreshToken } from '@/src/Storage/tokenStorage';
+import { baseURL } from '@/src/config-files/constants/backend-url';
 
-const API_BASE_URL = 'http://localhost:8000/api';
-// const API_BASE_URL = 'https://craveoff-production.up.railway.app/api';
+// Create a lock mechanism to prevent multiple simultaneous refresh attempts
+let isRefreshing = false;
+let refreshPromise: Promise<any> | null = null;
+let refreshSubscribers: Array<(token: string) => void> = [];
 
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+// Function to add callbacks to the queue
+const addRefreshSubscriber = (callback: (token: string) => void) => {
+  refreshSubscribers.push(callback);
+};
+
+// Function to notify all subscribers with a new token
+const onRefreshSuccess = (newToken: string) => {
+  refreshSubscribers.forEach((callback) => callback(newToken));
+  refreshSubscribers = [];
+};
+
+// Create Axios instance
+export const apiClient = axios.create({
+  baseURL: baseURL,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add a request interceptor to inject the access token
-apiClient.interceptors.request.use(
-  async config => {
-    const accessToken = await AsyncStorage.getItem('accessToken');
-    console.log('[Request Interceptor] Access Token:', accessToken ? 'Token exists' : 'No token');
-    
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-      console.log('[Request Interceptor] Authorization header set');
-    } else {
-      console.log('[Request Interceptor] No Authorization header set - missing token');
-    }
-    
-    console.log('[Request Interceptor] URL:', config.url);
-    return config;
-  },
-  error => {
-    console.log('[Request Interceptor] Error:', error);
-    return Promise.reject(error);
-  },
-);
-
-// Add a response interceptor to handle token refresh
-apiClient.interceptors.response.use(
-  response => {
-    console.log('[Response Interceptor] Success for URL:', response.config.url);
-    return response;
-  },
-  async error => {
-    console.log('[Response Interceptor] Error status:', error.response?.status);
-    console.log('[Response Interceptor] Error URL:', error.config?.url);
-    
-    const originalRequest = error.config;
-
-    // If access token expired, try to refresh it
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true; // Prevent infinite loops
-      try {
-        // Obținem refreshToken din Keychain în loc de AsyncStorage
-        const refreshToken = await getRefreshToken();
-        console.log('[Response Interceptor] Refresh Token exists:', !!refreshToken);
-        
-        if (refreshToken) {
-          console.log('[Response Interceptor] Attempting to refresh token...');
-          
-          // Verificăm structura așteptată pentru refresh token
-          console.log('[Response Interceptor] Payload pentru refresh:', JSON.stringify({ refreshToken }));
-          
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken,
-          });
-          
-          console.log('[Response Interceptor] Refresh response:', response.data);
-          const newAccessToken = response.data.accessToken || response.data.access_token;
-          console.log('[Response Interceptor] Token refreshed successfully');
-
-          // Save new access token and retry the original request
-          await AsyncStorage.setItem('accessToken', newAccessToken);
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          console.log('[Response Interceptor] Retrying original request with new token');
-          return apiClient(originalRequest);
-        } else {
-          console.log('[Response Interceptor] No refresh token available');
-        }
-      } catch (refreshError: any) {
-        console.error('[Response Interceptor] Error refreshing token:', refreshError);
-        console.error('[Response Interceptor] Error details:', refreshError.response?.data);
-        await AsyncStorage.removeItem('accessToken');
-      }
-    }
-    return Promise.reject(error);
-  },
-);
-
-const apiClientImage = axios.create({
-  baseURL: API_BASE_URL,
+export const apiClientImage = axios.create({
+  baseURL: baseURL,
+  timeout: 10000,
   headers: {
-    Accept: 'application/json',
+    'Content-Type': 'multipart/form-data',
   },
 });
+
+// Request interceptor
+apiClient.interceptors.request.use(
+  async (config) => {
+    try {
+      // Check if token is about to expire and refresh if needed
+      const { accessToken, expiresAt } = await getTokens();
+      
+      if (accessToken) {
+        // Check if token is expired or about to expire (within 1 minute)
+        const now = Math.floor(Date.now() / 1000);
+        const shouldRefresh = expiresAt && expiresAt - now < 60;
+        
+        if (shouldRefresh && config.url !== '/auth/refresh') {
+          console.log('Token about to expire, refreshing before request');
+          try {
+            const newToken = await refreshTokenManually();
+            if (newToken) {
+              config.headers.Authorization = `Bearer ${newToken}`;
+              return config;
+            }
+          } catch (error) {
+            console.error('Error refreshing token before request:', error);
+          }
+        }
+        
+        // Set the token in the header
+        config.headers.Authorization = `Bearer ${accessToken}`;
+      }
+      return config;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor
+apiClient.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If the error is not 401 or the request has already been retried, reject
+    if (!error.response || error.response.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error);
+    }
+    
+    originalRequest._retry = true;
+    
+    // If a refresh is already in progress, wait for it to complete
+    if (isRefreshing) {
+      try {
+        // Wait for the current refresh to complete
+        const newToken = await new Promise<string>((resolve) => {
+          addRefreshSubscriber((token: string) => {
+            resolve(token);
+          });
+        });
+        
+        // Update the request with the new token
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        return Promise.reject(refreshError);
+      }
+    }
+    
+    // Start a new refresh process
+    isRefreshing = true;
+    
+    try {
+      // Get the refresh token
+      const { refreshToken, refreshExpiresAt } = await getTokens();
+      
+      // Check if refresh token is expired
+      const now = Math.floor(Date.now() / 1000);
+      if (refreshExpiresAt && refreshExpiresAt <= now) {
+        console.log('Refresh token expired, logging out');
+        // Clear tokens and reject
+        await AsyncStorage.clear();
+        isRefreshing = false;
+        return Promise.reject(new Error('Refresh token expired'));
+      }
+      
+      if (!refreshToken) {
+        isRefreshing = false;
+        return Promise.reject(new Error('No refresh token available'));
+      }
+      
+      // Create the refresh promise
+      refreshPromise = apiClient.post('/auth/refresh', { refresh_token: refreshToken });
+      
+      // Wait for the response
+      const response = await refreshPromise;
+      const userData = response.data;
+      
+      // Save the new tokens
+      await saveTokens(
+        userData.access_token,
+        userData.refresh_token || refreshToken,
+        userData.expires_at,
+        userData.refresh_expires_at
+      );
+      
+      // Update the default headers for future requests
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${userData.access_token}`;
+      apiClientImage.defaults.headers.common['Authorization'] = `Bearer ${userData.access_token}`;
+      
+      // Notify all subscribers
+      onRefreshSuccess(userData.access_token);
+      
+      // Update the current request
+      originalRequest.headers.Authorization = `Bearer ${userData.access_token}`;
+      
+      // Reset the refresh state
+      isRefreshing = false;
+      refreshPromise = null;
+      
+      // Retry the original request
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      // Reset the refresh state
+      isRefreshing = false;
+      refreshPromise = null;
+      
+      // Clear tokens on refresh failure
+      await AsyncStorage.clear();
+      
+      return Promise.reject(refreshError);
+    }
+  }
+);
+
+// Check if token is expired (or about to expire)
+export const isTokenExpired = async (): Promise<boolean> => {
+  try {
+    const { expiresAt } = await getTokens();
+    
+    if (!expiresAt) {
+      return true; // If we don't have an expiration time, assume it's expired
+    }
+    
+    const now = Math.floor(Date.now() / 1000);
+    const isExpired = expiresAt - now < 60; // Consider expired if less than 1 minute left
+    
+    return isExpired;
+  } catch (error) {
+    console.error('[API Client] Error checking token expiration:', error);
+    return true; // Assume expired on error
+  }
+};
+
+// Function to manually refresh token
+export const refreshTokenManually = async (): Promise<string | null> => {
+  // If a refresh is already in progress, wait for it to complete
+  if (isRefreshing && refreshPromise) {
+    try {
+      const response = await refreshPromise;
+      return response.data.access_token;
+    } catch (error) {
+      return null;
+    }
+  }
+  
+  // Start a new refresh process
+  isRefreshing = true;
+  
+  try {
+    // Get the refresh token
+    const { refreshToken, refreshExpiresAt } = await getTokens();
+    
+    // Check if refresh token is expired
+    const now = Math.floor(Date.now() / 1000);
+    if (refreshExpiresAt && refreshExpiresAt <= now) {
+      console.log('Refresh token expired during manual refresh');
+      await AsyncStorage.clear();
+      isRefreshing = false;
+      return null;
+    }
+    
+    if (!refreshToken) {
+      isRefreshing = false;
+      return null;
+    }
+    
+    // Create the refresh promise
+    refreshPromise = apiClient.post('/auth/refresh', { refresh_token: refreshToken });
+    
+    // Wait for the response
+    const response = await refreshPromise;
+    const userData = response.data;
+    
+    // Save the new tokens
+    await saveTokens(
+      userData.access_token,
+      userData.refresh_token || refreshToken,
+      userData.expires_at,
+      userData.refresh_expires_at
+    );
+    
+    // Update the default headers for future requests
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${userData.access_token}`;
+    apiClientImage.defaults.headers.common['Authorization'] = `Bearer ${userData.access_token}`;
+    
+    // Reset the refresh state
+    isRefreshing = false;
+    refreshPromise = null;
+    
+    return userData.access_token;
+  } catch (error) {
+    console.error('Error refreshing token manually:', error);
+    
+    // Reset the refresh state
+    isRefreshing = false;
+    refreshPromise = null;
+    
+    return null;
+  }
+};
 
 // Add a request interceptor to inject the access token
 apiClientImage.interceptors.request.use(
   async config => {
+    // Skip token refresh for refresh token requests to avoid loops
+    if (config.url?.includes('/auth/refresh')) {
+      return config;
+    }
+    
+    // Check if token is expired and refresh if needed
+    const tokenExpired = await isTokenExpired();
+    if (tokenExpired) {
+      console.log('[Image Request Interceptor] Token expired, attempting refresh before request');
+      await refreshTokenManually();
+    }
+    
     const accessToken = await AsyncStorage.getItem('accessToken');
     console.log('[Image Request Interceptor] Access Token:', accessToken ? 'Token exists' : 'No token');
     
@@ -131,14 +310,28 @@ apiClientImage.interceptors.response.use(
         
         if (refreshToken) {
           console.log('[Image Response Interceptor] Attempting to refresh token...');
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken,
+          
+          // Send refresh_token in the format expected by the backend
+          const response = await axios.post(`${baseURL}/auth/refresh`, {
+            refresh_token: refreshToken,
           });
-          const newAccessToken = response.data.accessToken || response.data.access_token;
+          
+          // Handle the token format from the backend (access_token instead of accessToken)
+          const newAccessToken = response.data.access_token;
+          const newRefreshToken = response.data.refresh_token;
+          const expiresAt = response.data.expires_at;
+          const refreshExpiresAt = response.data.refresh_expires_at;
+          
           console.log('[Image Response Interceptor] Token refreshed successfully');
 
-          // Save new access token and retry the original request
-          await AsyncStorage.setItem('accessToken', newAccessToken);
+          // Save tokens using the tokenStorage function
+          await saveTokens(newAccessToken, newRefreshToken, expiresAt, refreshExpiresAt);
+          
+          // Update default headers for all future requests
+          apiClient.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+          apiClientImage.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+          console.log('[Image Response Interceptor] API client default headers updated with new token');
+          
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           console.log('[Image Response Interceptor] Retrying original request with new token');
           return apiClientImage(originalRequest);
@@ -154,5 +347,3 @@ apiClientImage.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
-export { apiClient, apiClientImage };

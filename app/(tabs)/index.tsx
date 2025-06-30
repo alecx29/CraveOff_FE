@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, FlatList, SafeAreaView, TextInput, ActivityIndicator, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, FlatList, SafeAreaView, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
@@ -14,9 +14,12 @@ import RelapsedModal from '@/src/components/RelapsedModal';
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
 import WeekBar from '@/src/components/WeekBar';
-import oriaService from '@/src/services/oriaService';
+import oriaService, { StreamEventSource } from '@/src/services/oriaService';
 import quotesService from '@/src/services/quotesService';
 import { OriaChat, OriaChatWithMessages } from '@/src/types/oria';
+import { usePledge } from '@/src/context/PledgeContext';
+import PetComingSoonModal from '@/src/components/PetComingSoonModal';
+import DeepBreathingComingSoonModal from '@/src/components/DeepBreathingComingSoonModal';
 
 // Helper function to format time with more precision
 const formatTimeCounter = (seconds: number) => {
@@ -119,12 +122,25 @@ const getDateStringForDay = (dayIndex: number, weekOffset: number = 0): string =
   return targetDate.toISOString().split('T')[0];
 };
 
+// Interface for pledge data
+interface PledgeData {
+  id: string;
+  user_id: string;
+  check_in_at: string;
+}
+
+interface PledgeHistoryResponse {
+  pledges: PledgeData[];
+}
+
 export default function HomeScreen() {
   const { theme } = useTheme();
   const { user } = useUser();
   const { logs, lastRelapseData, fetchLogs, isLoading } = useLogs();
   const styles = createStyles(theme);
   const screenWidth = Dimensions.get('window').width;
+  const cardWidth = screenWidth - 40; // Define card width as a constant
+  const cardTotalWidth = cardWidth + 40; // Total width including margins
   
   // State for showing the pledge modal
   const [showPledgeModal, setShowPledgeModal] = useState(false);
@@ -140,6 +156,12 @@ export default function HomeScreen() {
   
   // State for showing the Oria chat modal
   const [showOriaModal, setShowOriaModal] = useState(false);
+  
+  // State for showing the coming soon modal for Deep Breathing
+  const [showDeepBreathingModal, setShowDeepBreathingModal] = useState(false);
+  
+  // State pentru showing the coming soon modal for Pet
+  const [showPetModal, setShowPetModal] = useState(false);
   
   // State for selected conversation
   const [selectedChat, setSelectedChat] = useState<OriaChatWithMessages | null>(null);
@@ -211,6 +233,9 @@ export default function HomeScreen() {
   // Animated style for loading indicator
   const loadingIndicatorStyle = useAnimatedStyle(() => {
     return {
+      width: '100%',
+      height: '100%',
+      borderRadius: 6,
       transform: [{ scale: loadingScale.value }],
       opacity: loadingOpacity.value,
     };
@@ -378,13 +403,13 @@ export default function HomeScreen() {
     onScroll: (event) => {
       scrollX.value = event.contentOffset.x;
       // Calculate current index based on scroll position
-      const currentIndex = Math.round(event.contentOffset.x / screenWidth);
+      const currentIndex = Math.round(event.contentOffset.x / cardTotalWidth);
       if (currentIndex !== activeWidgetIndex) {
         runOnJS(setActiveWidgetIndex)(currentIndex);
       }
     },
     onMomentumEnd: (event) => {
-      const index = Math.round(event.contentOffset.x / screenWidth);
+      const index = Math.round(event.contentOffset.x / cardTotalWidth);
       runOnJS(setActiveWidgetIndex)(index);
     },
   });
@@ -428,14 +453,6 @@ export default function HomeScreen() {
     setPreviousWeekLogsStatus(previousWeekStatus as Array<'clean' | 'not-clean' | 'no-log'>);
   }, [logs]);
   
-  // Effects
-  useEffect(() => {
-    // Fetch logs when the home screen mounts
-    fetchLogs();
-    
-    // Fetch daily quote
-    fetchDailyQuote();
-  }, []);
   
   // Widget indicators style
   const getIndicatorStyle = (index: number) => {
@@ -450,7 +467,7 @@ export default function HomeScreen() {
   
   // Navigate to specific widget
   const navigateToWidget = (index: number) => {
-    flatListRef.current?.scrollTo({ x: index * screenWidth, animated: true });
+    flatListRef.current?.scrollTo({ x: index * cardTotalWidth, animated: true });
     setActiveWidgetIndex(index);
   };
   
@@ -537,11 +554,8 @@ export default function HomeScreen() {
       transform: [
         { scale: 0.9 + (growingGlow.value * 0.4) }
       ],
-      shadowColor: theme.colors.primary,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: shadowOpacityValue,
-      shadowRadius: shadowRadiusValue,
-      elevation: elevationValue,
+      // Eliminăm proprietățile de umbră din stilul animat
+      // Acestea vor fi aplicate prin stilul static styles.growingIndicator
     };
   });
 
@@ -553,8 +567,7 @@ export default function HomeScreen() {
     // Create log entry for relapse
     const logEntry = {
       date: today,
-      is_clean: false,
-      notes: 'Relapse recorded from Reset button'
+      is_clean: false
     };
     
     // Call API to add a log entry for the relapse
@@ -701,7 +714,7 @@ export default function HomeScreen() {
       clearTimeout(responseTimeoutId);
       
       // Check if we got an EventSource (streaming mode) or a regular response
-      if (response instanceof EventSource) {
+      if ('onmessage' in response && 'close' in response) {
         // This is streaming mode
         let assistantMessageContent = '';
         let hasReceivedFirstChunk = false;
@@ -878,7 +891,7 @@ export default function HomeScreen() {
   };
   
   // Reference to the current EventSource for stopping generation
-  const globalStopGenerationSource = useRef<EventSource | null>(null);
+  const globalStopGenerationSource = useRef<StreamEventSource | null>(null);
   
   // Function to stop response generation
   const stopResponseGeneration = () => {
@@ -1016,6 +1029,37 @@ export default function HomeScreen() {
     return theme.colors.accent as string || '#dc2626'; // Default red
   };
 
+  const { pledgeHistory, canMakePledge, activePledgeTimeRemaining, activePledgeStartTime, activePledgeEndTime, isLoadingPledgeHistory, fetchPledgeHistory } = usePledge();
+
+  // Handle pledge button press
+  const handlePledgeButtonPress = () => {
+    if (canMakePledge) {
+      setShowPledgeModal(true);
+    } else {
+      Alert.alert(
+        "Active Pledge In Progress",
+        `You've already committed to 24 hours of sobriety. Your pledge is active until ${activePledgeEndTime}.\n\nStay strong! You can make a new pledge in ${activePledgeTimeRemaining}.`,
+        [{ text: "Got it", style: "default" }]
+      );
+    }
+  };
+
+  // Handle successful pledge
+  const handleSuccessfulPledge = async () => {
+    try {
+      // Make API call to /pledge/ with current timestamp
+      await apiClient.post(BackendRoutes.PLEDGE, { 
+        check_in_at: new Date().toISOString() 
+      });
+      console.log('Pledge successful');
+      // Refresh pledge history to update the UI
+      await fetchPledgeHistory();
+    } catch (error) {
+      console.error('Error during pledge:', error);
+      // You can add error handling here
+    }
+  };
+
   return (
     <GradientBackground>
       <ScrollView style={styles.container}>
@@ -1040,7 +1084,10 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.petButton}
-              onPress={animatePet}
+              onPress={() => {
+                animatePet();
+                setShowPetModal(true);
+              }}
               activeOpacity={0.8}
             >
               <Animated.View style={petAnimatedStyle}>
@@ -1066,9 +1113,14 @@ export default function HomeScreen() {
             onScroll={onScrollHandler}
             scrollEventThrottle={16}
             style={styles.widgetsScrollView}
+            contentContainerStyle={styles.widgetsContentContainer}
+            snapToInterval={cardTotalWidth}
+            snapToAlignment="start"
+            disableIntervalMomentum={true}
+            decelerationRate="fast"
           >
             {/* Card timer */}
-            <View style={[styles.widgetCard, { width: screenWidth - 40 }]}>
+            <View style={[styles.widgetCard, { width: cardWidth, marginRight: 20 }]}>
               <View style={styles.timerContainer}>
                 <View style={styles.timerRow}>
                   {/* Display only the largest time unit */}
@@ -1098,7 +1150,7 @@ export default function HomeScreen() {
             </View>
             
             {/* Card zile curate */}
-            <View style={[styles.widgetCard, { width: screenWidth - 40 }]}>
+            <View style={[styles.widgetCard, { width: cardWidth, marginLeft: 20 }]}>
               <View style={styles.cleanDaysContent}>
                 <Text style={styles.cleanDaysNumber}>{cleanDays}</Text>
                 <Ionicons name="flame" size={28} color={getFlameColor()} style={styles.flameIcon} />
@@ -1153,14 +1205,33 @@ export default function HomeScreen() {
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity 
             style={styles.actionButtonWrapper}
-            onPress={() => setShowPledgeModal(true)}
+            onPress={handlePledgeButtonPress}
+            activeOpacity={canMakePledge ? 0.7 : 1}
           >
-            <View style={styles.actionButton}>
-              <Ionicons name="hand-left-outline" size={24} color={theme.colors.textPrimary} />
+            <View style={[
+              styles.actionButton,
+              !canMakePledge && styles.disabledActionButton
+            ]}>
+              {!canMakePledge ? (
+                <Ionicons name="shield-checkmark" size={24} color={theme.colors.success || '#4ade80'} />
+              ) : (
+                <Ionicons name="hand-left-outline" size={24} color={theme.colors.textPrimary} />
+              )}
             </View>
-            <Text style={styles.actionButtonLabel}>Pledge</Text>
+            <Text style={[
+              styles.actionButtonLabel,
+              !canMakePledge && styles.activeActionButtonLabel
+            ]}>{!canMakePledge ? 'Active' : 'Pledge'}</Text>
+            {!canMakePledge && (
+              <View style={styles.pledgeTimerBadge}>
+                <Text style={styles.pledgeTimerText}>{activePledgeTimeRemaining}</Text>
+              </View>
+            )}
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButtonWrapper}>
+          <TouchableOpacity 
+            style={styles.actionButtonWrapper}
+            onPress={() => setShowDeepBreathingModal(true)}
+          >
             <View style={styles.actionButton}>
               <Ionicons name="leaf-outline" size={22} color={theme.colors.textPrimary} />
             </View>
@@ -1202,15 +1273,18 @@ export default function HomeScreen() {
               <Text style={styles.challengeNumber}>90</Text>
               <View style={styles.challengeTextContainer}>
                 <Text style={styles.challengeTitle}>Day Challenge</Text>
-                <Text style={styles.challengeSubtext}>Day 0</Text>
+                <Text style={styles.challengeSubtext}>{cleanDays}/90</Text>
               </View>
             </View>
             <View style={styles.challengeProgressBar}>
-              <View style={[styles.challengeProgress, { width: '0%' }]} />
+              <View style={[styles.challengeProgress, { width: `${Math.min(100, (cleanDays / 90) * 100)}%` }]} />
             </View>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.petCard}>
+          <TouchableOpacity 
+            style={styles.petCard}
+            onPress={() => setShowPetModal(true)}
+          >
             <Text style={styles.petEmoji}>🐶</Text>
             <Text style={styles.petCardText}>Your buddy</Text>
           </TouchableOpacity>
@@ -1246,26 +1320,34 @@ export default function HomeScreen() {
             <Text style={styles.quoteText}>&quot;{quote}&quot;</Text>
           )}
         </View>
+        
+        {/* Active Pledge Banner */}
+        {!canMakePledge && activePledgeTimeRemaining && (
+          <View style={styles.activePledgeBanner}>
+            <View style={styles.activePledgeIconContainer}>
+              <Ionicons name="shield-checkmark" size={24} color="#fff" />
+            </View>
+            <View style={styles.activePledgeContent}>
+              <Text style={styles.activePledgeTitle}>Pledge Active</Text>
+              <Text style={styles.activePledgeText}>
+                You&apos;ve committed to 24 hours of sobriety.
+              </Text>
+              <View style={styles.activePledgeTimerContainer}>
+                <Ionicons name="time-outline" size={14} color="#fff" style={styles.activePledgeTimerIcon} />
+                <Text style={styles.activePledgeTimerText}>
+                  {activePledgeTimeRemaining} remaining
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
       </ScrollView>
       
       {/* Pledge Modal */}
       <PledgeModal 
         visible={showPledgeModal}
         onClose={() => setShowPledgeModal(false)}
-        onPledge={() => {
-          // Handle pledge success by making API call to /api/pledge with current timestamp
-          apiClient.post(BackendRoutes.PLEDGE, { 
-            check_in_at: new Date().toISOString() 
-          })
-            .then(response => {
-              console.log('Pledge successful:', response.data);
-              // You can add additional logic here, like showing a success message
-            })
-            .catch(error => {
-              console.error('Error during pledge:', error);
-              // You can add error handling here
-            });
-        }}
+        onPledge={handleSuccessfulPledge}
       />
       
       {/* Panic Modal */}
@@ -1434,12 +1516,11 @@ export default function HomeScreen() {
                         item.role === 'user' ? styles.userMessageBubble : styles.oriaMessageBubble
                       ]}>
                         {item.isLoading ? (
-                          <Animated.View 
-                            style={[
-                              styles.loadingIndicator,
-                              loadingIndicatorStyle
-                            ]}
-                          />
+                          <View style={styles.loadingIndicator}>
+                            <Animated.View 
+                              style={loadingIndicatorStyle}
+                            />
+                          </View>
                         ) : (
                           <Text style={[
                             styles.messageText,
@@ -1504,6 +1585,18 @@ export default function HomeScreen() {
           )}
         </SafeAreaView>
       </Modal>
+      
+      {/* Deep Breathing Coming Soon Modal */}
+      <DeepBreathingComingSoonModal
+        visible={showDeepBreathingModal}
+        onClose={() => setShowDeepBreathingModal(false)}
+      />
+      
+      {/* Pet Coming Soon Modal */}
+      <PetComingSoonModal
+        visible={showPetModal}
+        onClose={() => setShowPetModal(false)}
+      />
     </GradientBackground>
   );
 }
@@ -1512,7 +1605,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 40,
   },
   header: {
     flexDirection: 'row',
@@ -1597,7 +1690,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.borderRadius.medium,
     padding: 16,
-    marginBottom: 80,
+    marginBottom: 20,
   },
   oriaCard: {
     backgroundColor: theme.colors.cardBackground,
@@ -1900,6 +1993,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   widgetsScrollView: {
     overflow: 'visible',
   },
+  widgetsContentContainer: {
+    paddingHorizontal: 0,
+  },
   widgetCard: {
     backgroundColor: theme.colors.backgroundDeep,
     borderRadius: theme.borderRadius.medium,
@@ -2012,6 +2108,11 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: 5,
     backgroundColor: theme.colors.primary,
     zIndex: 2,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 3,
   },
   actionButtonsContainer: {
     flexDirection: 'row',
@@ -2169,5 +2270,137 @@ const createStyles = (theme: any) => StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  comingSoonModal: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.large,
+    padding: 24,
+    width: '85%',
+    maxWidth: 340,
+    ...theme.shadows.medium,
+  },
+  comingSoonContent: {
+    alignItems: 'center',
+  },
+  comingSoonIconContainer: {
+    backgroundColor: `${theme.colors.primary}15`,
+    borderRadius: 30,
+    padding: 16,
+    marginBottom: 20,
+  },
+  comingSoonTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: 4,
+  },
+  comingSoonSubtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.primary,
+    marginBottom: 16,
+  },
+  comingSoonDescription: {
+    fontSize: 15,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  comingSoonButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    marginTop: 8,
+  },
+  comingSoonButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  petModalEmoji: {
+    fontSize: 36,
+  },
+  disabledActionButton: {
+    opacity: 0.9,
+    position: 'relative',
+    backgroundColor: 'rgba(74, 222, 128, 0.15)', // Light green background
+    borderWidth: 1,
+    borderColor: theme.colors.success || '#4ade80',
+  },
+  activeActionButtonLabel: {
+    color: theme.colors.success || '#4ade80',
+    fontWeight: '600',
+  },
+  pledgeTimerBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: theme.colors.success || '#4ade80',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pledgeTimerText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  activePledgeBanner: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.success || '#4ade80',
+    borderRadius: 12,
+    marginBottom: 16,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  activePledgeIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activePledgeContent: {
+    flex: 1,
+  },
+  activePledgeTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  activePledgeText: {
+    fontSize: 14,
+    color: '#fff',
+    marginBottom: 6,
+  },
+  activePledgeTimerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activePledgeTimerIcon: {
+    marginRight: 4,
+  },
+  activePledgeTimerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

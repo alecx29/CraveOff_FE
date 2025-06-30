@@ -126,7 +126,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 40,
     paddingBottom: 40,
   },
   title: {

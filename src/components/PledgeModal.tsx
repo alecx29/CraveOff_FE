@@ -6,17 +6,16 @@ import {
   TouchableOpacity, 
   Dimensions, 
   ImageBackground, 
-  Platform,
-  Animated as RNAnimated
+  StatusBar,
+  Animated as RNAnimated,
+  ScrollView
 } from 'react-native';
 import { Ionicons, AntDesign, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { 
   FadeIn, 
-  FadeOut, 
-  SlideInUp, 
-  SlideOutDown 
+  FadeOut
 } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
@@ -28,8 +27,8 @@ interface PledgeModalProps {
 }
 
 const { height, width } = Dimensions.get('window');
-const MODAL_HEIGHT = Math.min(450, height * 0.6);
 const IS_SMALL_SCREEN = height < 700;
+const MODAL_MAX_HEIGHT = Math.min(height - 40, 600); // max 600px sau cât încape pe ecran
 
 const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
   const { theme } = useTheme();
@@ -37,48 +36,33 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
   const [isPledging, setIsPledging] = useState(false);
   
   // Animation values
-  const scaleAnim = useRef(new RNAnimated.Value(0.9)).current;
   const opacityAnim = useRef(new RNAnimated.Value(0)).current;
   
   // Adjust for safe areas
   const bottomPadding = Math.max(insets.bottom, 20);
+  const topPadding = Math.max(insets.top, 20);
   
   useEffect(() => {
     if (visible) {
       // Reset animation values
-      scaleAnim.setValue(0.9);
       opacityAnim.setValue(0);
       
       // Start animations
-      RNAnimated.parallel([
-        RNAnimated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      RNAnimated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     }
   }, [visible]);
   
   const handleClose = () => {
     // Animate out
-    RNAnimated.parallel([
-      RNAnimated.timing(scaleAnim, {
-        toValue: 0.9,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      RNAnimated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    RNAnimated.timing(opacityAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
       onClose();
     });
   };
@@ -96,7 +80,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
   
   if (!visible) return null;
   
-  const styles = createStyles(theme, bottomPadding);
+  const styles = createStyles(theme, bottomPadding, topPadding);
   
   return (
     <Animated.View 
@@ -104,194 +88,179 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
       entering={FadeIn.duration(300)}
       exiting={FadeOut.duration(200)}
     >
-      <RNAnimated.View 
-        style={[
-          styles.modalContainer,
-          {
-            opacity: opacityAnim,
-            transform: [{ scale: scaleAnim }]
-          }
-        ]}
-      >
-        <ImageBackground
-          source={require('@/assets/images/star_background.png')}
-          style={[styles.backgroundImage, { backgroundColor: 'rgb(4 9 21 / 95%)' }]}
-          imageStyle={{ opacity: 0.1 }}
+      <StatusBar barStyle="light-content" />
+      
+      <View style={styles.backgroundImage}>
+        <RNAnimated.View 
+          style={[
+            styles.fullScreenContainer,
+            { opacity: opacityAnim, justifyContent: 'center', alignItems: 'center' }
+          ]}
         >
-          <View style={styles.headerContainer}>
-            <TouchableOpacity 
-              style={styles.closeButton} 
-              onPress={handleClose}
-              activeOpacity={0.7}
+          {/* X Button at the top */}
+          <TouchableOpacity 
+            style={styles.closeButton} 
+            onPress={handleClose}
+            activeOpacity={0.7}
+          >
+            <AntDesign name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={[styles.modalBox, { maxHeight: MODAL_MAX_HEIGHT, minWidth: 320, width: '90%' }]}> 
+            <ScrollView
+              contentContainerStyle={styles.contentContainer}
+              showsVerticalScrollIndicator={false}
             >
-              <AntDesign name="close" size={22} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-            <Text style={styles.title} selectable={false}>Pledge Sobriety Today</Text>
-            <View style={{ width: 40 }} />
-          </View>
-          
-          <View style={styles.contentContainer}>
-            <View style={styles.iconContainer}>
-              <LinearGradient
-                colors={['rgb(175, 15, 81)', 'rgb(93, 107, 250)']}
-                style={styles.iconBackground}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Ionicons name="hand-right" size={36} color="#fff" />
-              </LinearGradient>
-            </View>
-            
-            <Text style={styles.pledgeText} selectable={false}>
-              Commit to 24 hours of strength. You're stronger than the urge — and we'll be here to check in when you've won.
-            </Text>
-            
-            <View style={styles.optionsOuterContainer}>
-              <View style={styles.optionsContainer}>
-                <View style={styles.optionItem}>
-                  <View style={styles.optionContent}>
-                    <View style={styles.optionIconContainer}>
-                      <MaterialCommunityIcons 
-                        name="target" 
-                        size={16} 
-                        color={theme.colors.primary} 
-                      />
-                    </View>
-                    <View style={styles.optionTextContainer}>
-                      <Text style={styles.optionText} selectable={false}>
-                        Achievable goal
-                      </Text>
-                      <Text style={styles.optionSubtext} selectable={false}>Focus on small wins</Text>
+              <Text style={styles.title}>Pledge Sobriety Today</Text>
+              <View style={styles.iconContainer}>
+                <LinearGradient
+                  colors={['rgb(175, 15, 81)', 'rgb(93, 107, 250)']}
+                  style={styles.iconBackground}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name="hand-right" size={40} color="#fff" />
+                </LinearGradient>
+              </View>
+              <Text style={styles.pledgeText}>
+                Commit to 24 hours of strength. You're stronger than the urge — and we'll be here to check in when you've won.
+              </Text>
+              <View style={styles.optionsOuterContainer}>
+                <View style={styles.optionsContainer}>
+                  <View style={styles.optionItem}>
+                    <View style={styles.optionContent}>
+                      <View style={styles.optionIconContainer}>
+                        <MaterialCommunityIcons 
+                          name="target" 
+                          size={18} 
+                          color={theme.colors.primary} 
+                        />
+                      </View>
+                      <View style={styles.optionTextContainer}>
+                        <Text style={styles.optionText}>
+                          Achievable goal
+                        </Text>
+                        <Text style={styles.optionSubtext}>Focus on small wins</Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-                
-                <View style={styles.optionItem}>
-                  <View style={styles.optionContent}>
-                    <View style={styles.optionIconContainer}>
-                      <Feather 
-                        name="coffee" 
-                        size={16} 
-                        color={theme.colors.primary} 
-                      />
-                    </View>
-                    <View style={styles.optionTextContainer}>
-                      <Text style={styles.optionText} selectable={false}>
-                        Take it Easy
-                      </Text>
-                      <Text style={styles.optionSubtext} selectable={false}>One day at a time</Text>
+                  
+                  <View style={styles.optionItem}>
+                    <View style={styles.optionContent}>
+                      <View style={styles.optionIconContainer}>
+                        <Feather 
+                          name="coffee" 
+                          size={18} 
+                          color={theme.colors.primary} 
+                        />
+                      </View>
+                      <View style={styles.optionTextContainer}>
+                        <Text style={styles.optionText}>
+                          Take it Easy
+                        </Text>
+                        <Text style={styles.optionSubtext}>One day at a time</Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-                
-                <View style={styles.optionItem}>
-                  <View style={styles.optionContent}>
-                    <View style={styles.optionIconContainer}>
-                      <Ionicons 
-                        name="trophy-outline" 
-                        size={16} 
-                        color={theme.colors.primary} 
-                      />
-                    </View>
-                    <View style={styles.optionTextContainer}>
-                      <Text style={styles.optionText} selectable={false}>
-                        Success is Inevitable
-                      </Text>
-                      <Text style={styles.optionSubtext} selectable={false}>Embrace your potential</Text>
+                  
+                  <View style={styles.optionItem}>
+                    <View style={styles.optionContent}>
+                      <View style={styles.optionIconContainer}>
+                        <Ionicons 
+                          name="trophy-outline" 
+                          size={18} 
+                          color={theme.colors.primary} 
+                        />
+                      </View>
+                      <View style={styles.optionTextContainer}>
+                        <Text style={styles.optionText}>
+                          Success is Inevitable
+                        </Text>
+                        <Text style={styles.optionSubtext}>Embrace your potential</Text>
+                      </View>
                     </View>
                   </View>
                 </View>
               </View>
-            </View>
-          </View>
-          
-          <TouchableOpacity
-            style={[
-              styles.pledgeButton, 
-              styles.pledgeButtonEnabled
-            ]}
-            onPress={handlePledge}
-            activeOpacity={0.7}
-            disabled={isPledging}
-          >
-            <View style={styles.pledgeButtonContent}>
-              {isPledging ? (
-                <View style={styles.loadingContainer}>
-                  <Ionicons name="sync" size={22} color="#000000" style={{ transform: [{ rotate: '45deg' }] }} />
-                </View>
-              ) : (
-                <>
-                  <Ionicons name="warning" size={20} color="#000000" style={{ marginRight: 8 }} />
+              {/* Padding bottom pentru a nu fi acoperit de buton */}
+              <View style={{ height: 80 }} />
+            </ScrollView>
+            {/* Pledge Button la baza modalului, mereu vizibil */}
+            <TouchableOpacity
+              style={styles.pledgeButton}
+              onPress={handlePledge}
+              activeOpacity={0.7}
+              disabled={isPledging}
+            >
+              <View style={styles.pledgeButtonContent}>
+                {isPledging ? (
+                  <View style={styles.loadingContainer}>
+                    <Ionicons name="sync" size={22} color="#000000" style={{ transform: [{ rotate: '45deg' }] }} />
+                  </View>
+                ) : (
                   <Text style={styles.pledgeButtonText}>Pledge Now</Text>
-                </>
-              )}
-            </View>
-          </TouchableOpacity>
-        </ImageBackground>
-      </RNAnimated.View>
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
+        </RNAnimated.View>
+      </View>
     </Animated.View>
   );
 };
 
-const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
+const createStyles = (theme: any, bottomPadding: number, topPadding: number) => StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: '#000',
     zIndex: 1000,
-  },
-  modalContainer: {
-    width: '90%',
-    maxWidth: 360,
-    backgroundColor: theme.colors.modalBackground || theme.colors.cardBackground,
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 10,
   },
   backgroundImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
-    backgroundColor: 'rgb(4 9 21 / 95%)',
+    backgroundColor: '#000',
   },
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+  fullScreenContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    position: 'absolute',
+    top: topPadding,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.03)',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    zIndex: 10,
   },
   contentContainer: {
-    padding: 20,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+    paddingTop: topPadding + 40,
+    paddingBottom: 100, // Space for the button at bottom
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 30,
   },
   iconContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
   },
   iconBackground: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: 'rgb(175, 15, 81)',
@@ -301,13 +270,14 @@ const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
     elevation: 8,
   },
   pledgeText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: theme.colors.textPrimary,
+    fontSize: 18,
+    lineHeight: 26,
+    color: '#fff',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 30,
   },
   optionsOuterContainer: {
+    width: '100%',
     marginBottom: 24,
     borderRadius: 16,
     overflow: 'hidden',
@@ -319,16 +289,16 @@ const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
   },
   optionsContainer: {
     borderRadius: 16,
-    padding: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    backdropFilter: 'blur(10px)',
+    padding: 15,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backdropFilter: 'blur(0px)',
   },
   optionItem: {
     padding: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: 'transparent',
-    marginBottom: 8,
+    marginBottom: 10,
     borderWidth: 0,
   },
   optionContent: {
@@ -336,13 +306,13 @@ const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
     alignItems: 'center',
   },
   optionIconContainer: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -353,40 +323,45 @@ const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
     flex: 1,
   },
   optionText: {
-    fontSize: 14,
-    color: theme.colors.textPrimary,
+    fontSize: 16,
+    color: '#fff',
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   optionSubtext: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '400',
   },
+  modalBox: {
+    backgroundColor: 'rgba(20,20,30,0.98)',
+    borderRadius: 24,
+    paddingBottom: 0,
+    paddingTop: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    overflow: 'hidden',
+    position: 'relative',
+  },
   pledgeButton: {
-    margin: 20,
-    marginTop: 0,
-    marginBottom: bottomPadding,
-    borderRadius: 14,
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 20,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  pledgeButtonDisabled: {
-    backgroundColor: '#E5E5E5',
-    opacity: 0.7,
-  },
-  pledgeButtonEnabled: {
-    backgroundColor: '#FFFFFF',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
   pledgeButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 18,
   },
   pledgeButtonText: {
     color: '#000000',

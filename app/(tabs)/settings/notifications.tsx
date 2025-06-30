@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert, Li
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { useNotifications } from '@/src/context/NotificationsContext';
@@ -14,9 +15,13 @@ const NotificationsScreen = () => {
     isNotificationsEnabled, 
     setNotificationsEnabled, 
     requestPermissions,
-    scheduleNotification
+    scheduleNotification,
+    scheduleDailyCheckIn,
+    cancelDailyCheckIn
   } = useNotifications();
   const [permissionStatus, setPermissionStatus] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [checkInEnabled, setCheckInEnabled] = useState<boolean>(true);
   
   const styles = createStyles(theme);
 
@@ -29,6 +34,14 @@ const NotificationsScreen = () => {
   // Get current permission status
   useEffect(() => {
     checkPermissionStatus();
+    
+    // Load check-in notification status
+    const loadCheckInStatus = async () => {
+      const status = await AsyncStorage.getItem('CHECK_IN_NOTIFICATION_ENABLED');
+      setCheckInEnabled(status !== 'false');
+    };
+    
+    loadCheckInStatus();
   }, [isNotificationsEnabled]);
 
   const checkPermissionStatus = async () => {
@@ -37,14 +50,71 @@ const NotificationsScreen = () => {
   };
 
   const handleMainToggle = async (enabled: boolean) => {
-    if (enabled) {
-      const granted = await requestPermissions();
-      if (!granted) {
-        // If permissions weren't granted, don't update the UI state
-        return;
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    try {
+      if (enabled) {
+        // Explică utilizatorului de ce avem nevoie de permisiuni înainte de a le cere
+        if (permissionStatus !== 'granted') {
+          Alert.alert(
+            'Permite notificări',
+            'CraveOff folosește notificări pentru a te ajuta să rămâi motivat și pentru a-ți aminti să-ți înregistrezi progresul. Vrei să activezi notificările?',
+            [
+              { text: 'Nu acum', style: 'cancel', onPress: () => setIsLoading(false) },
+              { 
+                text: 'Activează', 
+                onPress: async () => {
+                  const granted = await requestPermissions();
+                  if (granted) {
+                    await setNotificationsEnabled(true);
+                    
+                    // If check-in is enabled, schedule it
+                    if (checkInEnabled) {
+                      await scheduleDailyCheckIn();
+                    }
+                  }
+                  setIsLoading(false);
+                }
+              }
+            ],
+            { cancelable: false }
+          );
+          return;
+        }
+        
+        await setNotificationsEnabled(true);
+      } else {
+        await setNotificationsEnabled(false);
       }
+    } finally {
+      setIsLoading(false);
     }
-    await setNotificationsEnabled(enabled);
+  };
+  
+  const handleCheckInToggle = async (enabled: boolean) => {
+    if (isLoading || !isNotificationsEnabled) return;
+    
+    setIsLoading(true);
+    try {
+      setCheckInEnabled(enabled);
+      await AsyncStorage.setItem('CHECK_IN_NOTIFICATION_ENABLED', enabled ? 'true' : 'false');
+      
+      if (enabled) {
+        await scheduleDailyCheckIn();
+        Alert.alert(
+          'Check-in Reminder Set',
+          'You will receive a daily reminder at 11:00 AM to check in with your progress.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        await cancelDailyCheckIn();
+      }
+    } catch (error) {
+      console.error('Error toggling check-in notification:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const openAppSettings = async () => {
@@ -54,32 +124,58 @@ const NotificationsScreen = () => {
   const sendTestNotification = async () => {
     if (!isNotificationsEnabled) {
       Alert.alert(
-        'Notifications Disabled',
-        'Please enable notifications first to receive a test notification.',
+        'Notificări dezactivate',
+        'Te rugăm să activezi notificările pentru a primi o notificare de test.',
         [{ text: 'OK' }]
       );
       return;
     }
 
     await scheduleNotification(
-      'Test Notification',
-      'This is a test notification from CraveOff. If you can see this, notifications are working correctly!',
+      'Notificare de test',
+      'Aceasta este o notificare de test de la CraveOff. Dacă o poți vedea, notificările funcționează corect!',
       { seconds: 2, type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL }
     );
     
     Alert.alert(
-      'Test Notification Sent',
-      'You should receive a notification in a few seconds.',
+      'Notificare de test trimisă',
+      'Ar trebui să primești o notificare în câteva secunde.',
       [{ text: 'OK' }]
     );
+  };
+
+  // Helper pentru a afișa statusul permisiunii într-un mod prietenos
+  const getPermissionStatusText = () => {
+    switch(permissionStatus) {
+      case 'granted':
+        return 'Permisiune acordată';
+      case 'denied':
+        return 'Permisiune refuzată';
+      case 'undetermined':
+        return 'Permisiune nesolicitată';
+      default:
+        return 'Necunoscut';
+    }
+  };
+
+  // Helper pentru a afișa culoarea statusului permisiunii
+  const getPermissionStatusColor = () => {
+    switch(permissionStatus) {
+      case 'granted':
+        return (theme.colors as any).success || '#22c55e';
+      case 'denied':
+        return (theme.colors as any).error || '#ef4444';
+      default:
+        return theme.colors.textMuted;
+    }
   };
 
   return (
     <GradientBackground>
       <Stack.Screen options={{ 
-        title: 'Notifications', 
+        title: 'Notificări', 
         headerShown: true,
-        headerBackTitle: 'Settings',
+        headerBackTitle: 'Setări',
         headerStyle: {
           backgroundColor: theme.colors.background,
         },
@@ -91,34 +187,78 @@ const NotificationsScreen = () => {
         <View style={styles.section}>
           <View style={styles.header}>
             <Ionicons name="notifications" size={24} color={theme.colors.primary} />
-            <Text style={styles.sectionTitle}>Notification Settings</Text>
+            <Text style={styles.sectionTitle}>Setări notificări</Text>
           </View>
           
           <View style={styles.permissionCard}>
-            <Text style={styles.permissionTitle}>Notifications {isNotificationsEnabled ? 'Enabled' : 'Disabled'}</Text>
-            <Text style={styles.permissionStatus}>
-              Status: {
-                permissionStatus === 'granted' ? 'Permission granted' :
-                permissionStatus === 'denied' ? 'Permission denied' :
-                'Not requested'
-              }
-            </Text>
+            <View style={styles.permissionContent}>
+              <View style={styles.permissionInfo}>
+                <Text style={styles.permissionTitle}>
+                  Notificări {isNotificationsEnabled ? 'activate' : 'dezactivate'}
+                </Text>
+                <View style={styles.statusContainer}>
+                  <View style={[styles.statusDot, { backgroundColor: getPermissionStatusColor() }]} />
+                  <Text style={[styles.permissionStatus, { color: getPermissionStatusColor() }]}>
+                    {getPermissionStatusText()}
+                  </Text>
+                </View>
+              </View>
+              
+              <Switch
+                value={isNotificationsEnabled}
+                onValueChange={handleMainToggle}
+                trackColor={{ false: getCardInteractiveColor(), true: `${theme.colors.primary}30` }}
+                thumbColor={isNotificationsEnabled ? theme.colors.primary : theme.colors.textSecondary}
+                disabled={isLoading}
+              />
+            </View>
+            
             {permissionStatus === 'denied' && (
-              <TouchableOpacity 
-                style={styles.openSettingsButton} 
-                onPress={openAppSettings}
-              >
-                <Text style={styles.openSettingsText}>Open Settings</Text>
-              </TouchableOpacity>
+              <View style={styles.settingsButtonContainer}>
+                <Text style={styles.settingsHelpText}>
+                  Pentru a primi notificări, trebuie să le activezi în setările dispozitivului.
+                </Text>
+                <TouchableOpacity 
+                  style={styles.openSettingsButton} 
+                  onPress={openAppSettings}
+                >
+                  <Text style={styles.openSettingsText}>Deschide Setări</Text>
+                </TouchableOpacity>
+              </View>
             )}
-            <Switch
-              value={isNotificationsEnabled}
-              onValueChange={handleMainToggle}
-              trackColor={{ false: getCardInteractiveColor(), true: `${theme.colors.primary}30` }}
-              thumbColor={isNotificationsEnabled ? theme.colors.primary : theme.colors.textSecondary}
-            />
           </View>
         </View>
+
+        {/* Daily Check-in Section */}
+        {isNotificationsEnabled && (
+          <View style={styles.section}>
+            <View style={styles.header}>
+              <Ionicons name="calendar-outline" size={24} color={theme.colors.primary} />
+              <Text style={styles.sectionTitle}>Daily Check-in</Text>
+            </View>
+            
+            <View style={styles.notificationTypeCard}>
+              <View style={styles.notificationTypeContent}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={styles.notificationTypeTitle}>
+                    Daily Check-in Reminder
+                  </Text>
+                  <Text style={styles.notificationTypeDescription}>
+                    Receive a daily reminder at 11:00 AM to check in with your progress
+                  </Text>
+                </View>
+                
+                <Switch
+                  value={checkInEnabled}
+                  onValueChange={handleCheckInToggle}
+                  trackColor={{ false: getCardInteractiveColor(), true: `${theme.colors.primary}30` }}
+                  thumbColor={checkInEnabled ? theme.colors.primary : theme.colors.textSecondary}
+                  disabled={isLoading || !isNotificationsEnabled}
+                />
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Test notification button */}
         <TouchableOpacity 
@@ -127,18 +267,18 @@ const NotificationsScreen = () => {
             !isNotificationsEnabled && styles.disabledButton
           ]} 
           onPress={sendTestNotification}
-          disabled={!isNotificationsEnabled}
+          disabled={!isNotificationsEnabled || isLoading}
         >
           <Ionicons name="paper-plane-outline" size={20} color={isNotificationsEnabled ? theme.colors.primary : theme.colors.textMuted} />
           <Text style={[
             styles.testButtonText,
             !isNotificationsEnabled && styles.disabledText
-          ]}>Send Test Notification</Text>
+          ]}>Trimite notificare de test</Text>
         </TouchableOpacity>
         
         {/* Help text */}
         <Text style={styles.helpText}>
-          Notifications help you stay on track with your goals. You&apos;ll receive reminders and achievement notifications when enabled.
+          Notificările te ajută să rămâi pe drumul cel bun cu obiectivele tale. Vei primi remindere și notificări de realizare când acestea sunt activate.
         </Text>
       </ScrollView>
     </GradientBackground>
@@ -150,8 +290,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 20,
-    paddingTop: 20,
+    padding: 16,
+    paddingBottom: 40,
   },
   section: {
     marginBottom: 24,
@@ -159,11 +299,11 @@ const createStyles = (theme: any) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.typography.subheading,
+    fontWeight: theme.typography.weightSemiBold,
     color: theme.colors.textPrimary,
     marginLeft: 8,
   },
@@ -171,56 +311,102 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.borderRadius.medium,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 8,
-    flexWrap: 'wrap',
   },
-  permissionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: theme.colors.textPrimary,
+  permissionContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  permissionInfo: {
     flex: 1,
   },
+  permissionTitle: {
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightMedium,
+    color: theme.colors.textPrimary,
+    marginBottom: 4,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
   permissionStatus: {
-    fontSize: 14,
-    color: theme.colors.textMuted,
-    marginRight: 16,
+    fontSize: theme.typography.small,
+    color: theme.colors.textSecondary,
+  },
+  settingsButtonContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderLight,
+  },
+  settingsHelpText: {
+    fontSize: theme.typography.small,
+    color: theme.colors.textSecondary,
+    marginBottom: 12,
   },
   testButton: {
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.borderRadius.medium,
-    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 16,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.borderRadius.medium,
+    padding: 14,
+    marginBottom: 16,
   },
   disabledButton: {
-    backgroundColor: `${theme.colors.cardBackground}80`,
+    opacity: 0.6,
   },
   testButtonText: {
-    fontSize: 16,
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightMedium,
     color: theme.colors.primary,
     marginLeft: 8,
-    fontWeight: '500',
   },
   disabledText: {
     color: theme.colors.textMuted,
   },
   helpText: {
-    fontSize: 14,
-    color: theme.colors.textMuted,
+    fontSize: theme.typography.small,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 24,
+    paddingHorizontal: 16,
+  },
+  notificationTypeCard: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.borderRadius.medium,
+    padding: 16,
+    marginBottom: 8,
+  },
+  notificationTypeContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  notificationTypeTitle: {
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightMedium,
+    color: theme.colors.textPrimary,
+    marginBottom: 4,
+  },
+  notificationTypeDescription: {
+    fontSize: theme.typography.small,
+    color: theme.colors.textSecondary,
+    maxWidth: '80%',
+    flexShrink: 1,
   },
   openSettingsButton: {
     backgroundColor: theme.colors.primary + '20',
     borderRadius: theme.borderRadius.small,
-    padding: 8,
-    marginVertical: 8,
+    padding: 10,
+    alignItems: 'center',
   },
   openSettingsText: {
     color: theme.colors.primary,

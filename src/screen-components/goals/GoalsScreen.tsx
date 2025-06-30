@@ -8,6 +8,7 @@ import { useTheme } from '@/src/context/ThemeProvider';
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
 import { CustomAlert } from '@/src/components/alert';
+import FixedBottomButton from '@/src/components/FixedBottomButton';
 
 interface Goal {
   id: string;
@@ -133,7 +134,7 @@ const GoalsScreen = ({ onComplete }: GoalsScreenProps) => {
   
   // Funcție pentru a naviga înapoi
   const handleBackPress = () => {
-    router.back();
+    router.push('/onboarding/drug');
   };
 
   return (
@@ -220,27 +221,17 @@ const GoalsScreen = ({ onComplete }: GoalsScreenProps) => {
           ))}
         </View>
         
-        <Animated.View 
-          entering={FadeInDown.duration(600).delay(1000)}
-          style={styles.footerContainer}
-        >
-          <TouchableOpacity 
-            style={[
-              styles.trackButton,
-              (!hasSelectedGoals || isLoading) && styles.disabledButton
-            ]}
-            onPress={handleTrackGoals}
-            disabled={!hasSelectedGoals || isLoading}
-            activeOpacity={0.8}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={theme.colors.cardBackground} size="small" />
-            ) : (
-              <Text style={styles.trackButtonText}>Track Your Goals</Text>
-            )}
-          </TouchableOpacity>
-        </Animated.View>
+        {/* Add padding at the bottom to ensure content is not hidden behind the fixed button */}
+        <View style={styles.bottomPadding} />
       </ScrollView>
+      
+      {/* Fixed bottom button */}
+      <FixedBottomButton
+        title="Track Your Goals"
+        onPress={handleTrackGoals}
+        disabled={!hasSelectedGoals || isLoading}
+        isLoading={isLoading}
+      />
       
       {/* Error Alert */}
       <CustomAlert
@@ -269,7 +260,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 30,
     backgroundColor: theme.colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
@@ -280,36 +271,36 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 10,
     paddingTop: 0,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: theme.colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: theme.colors.textSecondary,
-    marginBottom: 32,
-    lineHeight: 22,
+    marginBottom: 24,
+    lineHeight: 20,
   },
   goalsContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   goalItemWrapper: {
     width: '48%', // Pentru a afișa 2 pe rând cu spațiu între ele
-    marginBottom: 16,
+    marginBottom: 12,
   },
   goalItem: {
     backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.borderRadius.medium,
-    padding: 16,
-    height: 180, // Înălțime fixă pentru toate cardurile
+    borderRadius: 30,
+    padding: 14,
+    minHeight: 200,
     ...theme.shadows.light,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
@@ -323,12 +314,12 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -336,9 +327,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'flex-end',
   },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 30,
     borderWidth: 2,
     borderColor: theme.colors.borderLight,
     alignItems: 'center',
@@ -349,25 +340,25 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   goalTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: theme.colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   selectedGoalText: {
     color: theme.colors.primary,
   },
   goalDescription: {
-    fontSize: 14,
+    fontSize: 11,
     color: theme.colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 15,
   },
   footerContainer: {
     marginTop: 20,
   },
   trackButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: 30,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -381,6 +372,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.cardBackground,
     fontSize: 16,
     fontWeight: '600',
+  },
+  bottomPadding: {
+    height: 130, // Further increased padding at the bottom
   },
 });
 

@@ -2,24 +2,32 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
-import { saveTokens, clearTokens } from '@/src/Storage/tokenStorage';
+import { saveTokens, clearTokens, getRefreshToken, getTokens } from '@/src/Storage/tokenStorage';
+import { apiClient, apiClientImage, refreshTokenManually } from '@/src/axios/apiClient';
+import axios from 'axios';
 
 interface AuthContextProps {
   isAuthenticated: boolean;
   user: any;
   accessToken: string | null;
-  signIn: (userData: { accessToken: string; refreshToken: string }) => void;
-  signUp: (userData: { accessToken: string; refreshToken: string }) => void;
+  signIn: (userData: { accessToken: string; refreshToken: string; user?: any; expiresAt?: number; refreshExpiresAt?: number }) => Promise<void>;
+  signUp: (userData: { accessToken: string; refreshToken: string; user?: any; expiresAt?: number; refreshExpiresAt?: number }) => Promise<void>;
   signOut: () => void;
+  refreshToken: () => Promise<boolean>;
+  setAccessToken: (token: string | null) => void;
+  setIsAuthenticated: (value: boolean) => void;
 }
 
 export const AuthContext = createContext<AuthContextProps>({
   isAuthenticated: false,
   user: {},
   accessToken: null,
-  signIn: () => {},
-  signUp: () => {},
+  signIn: () => Promise.resolve(),
+  signUp: () => Promise.resolve(),
   signOut: () => {},
+  refreshToken: () => Promise.resolve(false),
+  setAccessToken: () => {},
+  setIsAuthenticated: () => {},
 });
 
 interface AuthProviderProps {
@@ -28,80 +36,120 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>({});
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
+  // Check for existing token on mount
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log('[AuthContext] Checking authentication status on startup');
-        const token = await AsyncStorage.getItem('accessToken');
-        console.log('[AuthContext] Token found:', token ? 'Yes' : 'No');
-        setAccessToken(token);
-        setIsAuthenticated(!!token);
+        const { accessToken } = await getTokens();
+        if (accessToken) {
+          setAccessToken(accessToken);
+          setIsAuthenticated(true);
+          console.log('[AuthContext] Existing token found, user is authenticated');
+          
+          // Set the token in the API client headers
+          apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+          apiClientImage.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+        } else {
+          console.log('[AuthContext] No token found, user is not authenticated');
+        }
       } catch (error) {
-        console.error('[AuthContext] Error checking auth token:', error);
+        console.error('[AuthContext] Error checking authentication:', error);
       }
     };
+    
     checkAuth();
   }, []);
 
-  const signIn = async (userData: { accessToken: string; refreshToken: string }) => {
+  const signIn = async (userData: { accessToken: string; refreshToken: string; user?: any; expiresAt?: number; refreshExpiresAt?: number }) => {
     try {
-      console.log('[AuthContext] SignIn called with tokens:');
-      console.log('[AuthContext] Access Token Length:', userData.accessToken?.length || 0);
-      console.log('[AuthContext] Refresh Token Length:', userData.refreshToken?.length || 0);
+      console.log('[AuthContext] Signing in user');
       
-      // Folosim funcția din tokenStorage pentru a salva tokenurile
-      await saveTokens(userData.accessToken, userData.refreshToken);
+      // Save tokens
+      await saveTokens(
+        userData.accessToken,
+        userData.refreshToken,
+        userData.expiresAt,
+        userData.refreshExpiresAt
+      );
       
-      // Setăm starea în context
+      // Update state
       setAccessToken(userData.accessToken);
       setIsAuthenticated(true);
-      setUser({ ...userData }); // Store user details if required
-      console.log('[AuthContext] Authentication state updated - isAuthenticated:', true);
+      
+      if (userData.user) {
+        setUser(userData.user);
+        console.log('[AuthContext] User data set');
+      }
+      
+      // Set the token in the API client headers
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${userData.accessToken}`;
+      apiClientImage.defaults.headers.common['Authorization'] = `Bearer ${userData.accessToken}`;
+      
+      console.log('[AuthContext] Sign in complete');
     } catch (error) {
-      console.error('[AuthContext] Error storing auth token:', error);
+      console.error('[AuthContext] Error during sign in:', error);
+    }
+  };
+
+  const signUp = async (userData: { accessToken: string; refreshToken: string; user?: any; expiresAt?: number; refreshExpiresAt?: number }) => {
+    try {
+      console.log('[AuthContext] Signing up user');
+      
+      // Use the same logic as signIn
+      await signIn(userData);
+      
+      console.log('[AuthContext] Sign up complete');
+    } catch (error) {
+      console.error('[AuthContext] Error during sign up:', error);
     }
   };
 
   const signOut = async () => {
     try {
-      console.log('[AuthContext] Signing out...');
-      // Ștergem tokenurile folosind funcția din tokenStorage
+      console.log('[AuthContext] Signing out user');
+      
+      // Clear tokens
       await clearTokens();
       
-      // Resetăm starea în context
+      // Clear state
       setAccessToken(null);
       setIsAuthenticated(false);
-      setUser(null);
-      console.log('[AuthContext] Authentication state reset');
+      setUser({});
+      
+      // Remove the token from the API client headers
+      delete apiClient.defaults.headers.common['Authorization'];
+      delete apiClientImage.defaults.headers.common['Authorization'];
+      
+      console.log('[AuthContext] Sign out complete');
     } catch (error) {
-      console.error('[AuthContext] Error removing auth token:', error);
+      console.error('[AuthContext] Error during sign out:', error);
     }
   };
 
-  const signUp = async (userData: { accessToken: string; refreshToken: string }) => {
+  const refreshToken = async (): Promise<boolean> => {
     try {
-      console.log('[AuthContext] SignUp called with tokens:');
-      console.log('[AuthContext] Access Token Length:', userData.accessToken?.length || 0);
-      console.log('[AuthContext] Refresh Token Length:', userData.refreshToken?.length || 0);
+      console.log('[AuthContext] Refreshing token');
       
-      // Folosim funcția din tokenStorage pentru a salva tokenurile
-      await saveTokens(userData.accessToken, userData.refreshToken);
+      const newToken = await refreshTokenManually();
       
-      // Setăm starea în context
-      setAccessToken(userData.accessToken);
-      setIsAuthenticated(true);
-      setUser({ ...userData });
-      console.log('[AuthContext] Authentication state updated for new user - isAuthenticated:', true);
+      if (newToken) {
+        setAccessToken(newToken);
+        return true;
+      } else {
+        console.log('[AuthContext] Token refresh failed');
+        return false;
+      }
     } catch (error) {
-      console.error('[AuthContext] Error storing auth token:', error);
+      console.error('[AuthContext] Error refreshing token:', error);
+      return false;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, signIn, signUp, signOut, user, accessToken }}>
+    <AuthContext.Provider value={{ isAuthenticated, signIn, signUp, signOut, user, accessToken, refreshToken, setAccessToken, setIsAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

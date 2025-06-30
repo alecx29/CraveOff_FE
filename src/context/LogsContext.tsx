@@ -8,7 +8,6 @@ export interface LogEntry {
   id: string;
   date: string;
   duration?: number; // Make duration optional - it's used for timer-based logs but not for daily check-ins
-  notes?: string;
   is_clean: boolean; // whether the day was clean or not
   // Add other fields as needed based on your API response
 }
@@ -30,6 +29,7 @@ interface LogsContextType {
   deleteLog: (id: string) => Promise<void>;
   updateLastRelapseDate: (date: string) => Promise<void>;
   clearError: () => void;
+  resetLogs: () => void;
 }
 
 const LogsContext = createContext<LogsContextType>({
@@ -43,6 +43,7 @@ const LogsContext = createContext<LogsContextType>({
   deleteLog: async () => {},
   updateLastRelapseDate: async () => {},
   clearError: () => {},
+  resetLogs: () => {},
 });
 
 export const LogsProvider = ({ children }: { children: ReactNode }) => {
@@ -51,8 +52,10 @@ export const LogsProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Removed the useEffect that automatically fetches logs
-  // This will now be controlled by the specific screens that need it
+  React.useEffect(() => {
+    fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchLogs = async () => {
     setIsLoading(true);
@@ -181,6 +184,11 @@ export const LogsProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
   };
 
+  const resetLogs = () => {
+    setLogs([]);
+    setLastRelapseData(null);
+  };
+
   return (
     <LogsContext.Provider 
       value={{ 
@@ -193,7 +201,8 @@ export const LogsProvider = ({ children }: { children: ReactNode }) => {
         addLog, 
         deleteLog,
         updateLastRelapseDate,
-        clearError
+        clearError,
+        resetLogs
       }}
     >
       {children}

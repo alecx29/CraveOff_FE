@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { JournalEntry } from '@/src/context/JournalContext';
@@ -36,6 +36,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
   const [mood, setMood] = useState<MoodOption>(entry?.mood as MoodOption || 'okay');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>(entry?.tags || []);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Get mood emoji and label
   const getMoodDetails = (moodOption: MoodOption) => {
@@ -101,6 +102,9 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
   
   // Handle form submission
   const handleSubmit = () => {
+    // Prevent double submission
+    if (isSaving) return;
+    
     if (!title.trim()) {
       Alert.alert('Error', 'Title is required');
       return;
@@ -111,13 +115,21 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
       return;
     }
     
-    onSave({
-      title: title.trim(),
-      content: content.trim(),
-      mood: mood,
-      tags,
-      date: entry?.date || today
-    });
+    setIsSaving(true);
+    
+    try {
+      onSave({
+        title: title.trim(),
+        content: content.trim(),
+        mood: mood,
+        tags,
+        date: entry?.date || today
+      });
+    } catch (error) {
+      console.error('Error saving journal entry:', error);
+      setIsSaving(false);
+      Alert.alert('Error', 'Failed to save journal entry');
+    }
   };
   
   return (
@@ -128,8 +140,12 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
     >
       {/* Header with navigation buttons */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={onCancel}>
-          <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
+        <TouchableOpacity 
+          style={styles.headerButton} 
+          onPress={onCancel}
+          disabled={isSaving}
+        >
+          <Ionicons name="chevron-back" size={24} color={isSaving ? theme.colors.textMuted : theme.colors.primary} />
         </TouchableOpacity>
         
         <Text style={styles.headerTitle}>
@@ -137,11 +153,19 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
         </Text>
         
         <TouchableOpacity 
-          style={styles.saveButton} 
+          style={[
+            styles.saveButton,
+            isSaving && styles.saveButtonDisabled
+          ]} 
           onPress={handleSubmit}
           activeOpacity={0.7}
+          disabled={isSaving}
         >
-          <Text style={styles.saveButtonText}>Save</Text>
+          {isSaving ? (
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+          ) : (
+            <Text style={styles.saveButtonText}>Save</Text>
+          )}
         </TouchableOpacity>
       </View>
       
@@ -155,6 +179,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
             onChangeText={setTitle}
             placeholder="Enter a title..."
             placeholderTextColor={theme.colors.textMuted}
+            editable={!isSaving}
           />
         </View>
         
@@ -173,16 +198,19 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                       borderColor: moodDetails.borderColor,
                       backgroundColor: moodDetails.backgroundColor
                     },
-                    mood === moodOption && styles.selectedMoodButton
+                    mood === moodOption && styles.selectedMoodButton,
+                    isSaving && styles.disabledButton
                   ]}
                   onPress={() => setMood(moodOption)}
+                  disabled={isSaving}
                 >
                   <Text style={styles.emoji}>{moodDetails.emoji}</Text>
                   <Text 
                     style={[
                       styles.moodLabel,
                       { color: moodDetails.color },
-                      mood === moodOption && styles.selectedMoodLabel
+                      mood === moodOption && styles.selectedMoodLabel,
+                      isSaving && styles.disabledText
                     ]}
                   >
                     {moodDetails.label}
@@ -203,6 +231,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
             placeholderTextColor={theme.colors.textMuted}
             multiline
             textAlignVertical="top"
+            editable={!isSaving}
           />
         </View>
         
@@ -217,12 +246,21 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
               placeholder="Add a tag..."
               placeholderTextColor={theme.colors.textMuted}
               onSubmitEditing={addTag}
+              editable={!isSaving}
             />
             <TouchableOpacity 
-              style={styles.addTagButton}
+              style={[
+                styles.addTagButton,
+                isSaving && styles.disabledButton
+              ]}
               onPress={addTag}
+              disabled={isSaving}
             >
-              <Ionicons name="add" size={24} color={theme.colors.primary} />
+              <Ionicons 
+                name="add" 
+                size={24} 
+                color={isSaving ? theme.colors.textMuted : theme.colors.primary} 
+              />
             </TouchableOpacity>
           </View>
           
@@ -235,8 +273,13 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                   <TouchableOpacity
                     onPress={() => removeTag(index)}
                     style={styles.removeTagButton}
+                    disabled={isSaving}
                   >
-                    <Ionicons name="close-circle" size={16} color={theme.colors.textMuted} />
+                    <Ionicons 
+                      name="close-circle" 
+                      size={16} 
+                      color={isSaving ? theme.colors.textSecondary : theme.colors.textMuted} 
+                    />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -280,11 +323,23 @@ const createStyles = (theme: any) => StyleSheet.create({
   saveButton: {
     paddingVertical: 4,
     paddingHorizontal: 10,
+    minWidth: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
   },
   saveButtonText: {
     color: theme.colors.primary,
     fontSize: 14,
     fontWeight: '600',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  disabledText: {
+    opacity: 0.6,
   },
   inputContainer: {
     marginBottom: 10,

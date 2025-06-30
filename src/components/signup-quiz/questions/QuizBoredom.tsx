@@ -1,13 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
-
-interface BoredomOption {
-  value: string;
-  label: string;
-}
 
 interface QuizBoredomProps {
   selectedOption: string;
@@ -19,8 +13,8 @@ const QuizBoredom = ({ selectedOption, onSelectOption, questionNumber = 9 }: Qui
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
-  // Frequency options
-  const frequencyOptions: BoredomOption[] = [
+  // Options
+  const options = [
     { value: 'frequently', label: 'Frequently' },
     { value: 'occasionally', label: 'Occasionally' },
     { value: 'rarely', label: 'Rarely or never' },
@@ -28,26 +22,17 @@ const QuizBoredom = ({ selectedOption, onSelectOption, questionNumber = 9 }: Qui
 
   return (
     <View style={styles.container}>
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.questionNumber}
-      >
+      <Text style={styles.questionNumber}>
         Question {questionNumber}
-      </Animated.Text>
+      </Text>
       
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.title}
-      >
-        Do you watch pornography out of boredom?
-      </Animated.Text>
+      <Text style={styles.title}>
+        Do you use pornography when bored?
+      </Text>
       
       <View style={styles.optionsContainer}>
-        {frequencyOptions.map((option, index) => (
-          <Animated.View 
-            key={option.value}
-            entering={FadeIn.duration(400).delay(400 + index * 100)}
-          >
+        {options.map((option, index) => (
+          <View key={option.value}>
             <TouchableOpacity
               style={[
                 styles.option,
@@ -65,7 +50,7 @@ const QuizBoredom = ({ selectedOption, onSelectOption, questionNumber = 9 }: Qui
                 {option.label}
               </Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         ))}
       </View>
     </View>
@@ -95,7 +80,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 24,
   },
   option: {
-    padding: 20,
+    padding: 16,
     borderRadius: theme.borderRadius.medium,
     backgroundColor: theme.colors.cardBackground,
     marginBottom: 12,

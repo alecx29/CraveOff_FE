@@ -18,6 +18,7 @@ import Animated, {
   SlideInUp, 
   SlideOutDown 
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
@@ -47,6 +48,7 @@ const PanicModal = ({ visible, onClose }: PanicModalProps) => {
   const timeoutRef = useRef<number | null>(null);
   const currentSentenceRef = useRef(0);
   const typingPositionRef = useRef(0);
+  const hapticTimeoutRef = useRef<number | null>(null);
   
   // Adjust for safe areas
   const bottomPadding = Math.max(insets.bottom, 20);
@@ -57,7 +59,24 @@ const PanicModal = ({ visible, onClose }: PanicModalProps) => {
     return 70 + Math.random() * 50; // 70-120ms
   };
   
-  // Set up cursor blinking animation
+  // Function to trigger a haptic pattern: 3 x warning at 160ms, then 900ms pause, repeat
+  const triggerHapticPattern = () => {
+    let count = 0;
+    const doPattern = () => {
+      if (!visible) return;
+      if (count < 3) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        count++;
+        hapticTimeoutRef.current = setTimeout(doPattern, 300);
+      } else {
+        count = 0;
+        hapticTimeoutRef.current = setTimeout(doPattern, 900);
+      }
+    };
+    doPattern();
+  };
+  
+  // Set up cursor blinking animation and start haptic pattern
   useEffect(() => {
     const blinkAnimation = RNAnimated.loop(
       RNAnimated.sequence([
@@ -76,9 +95,16 @@ const PanicModal = ({ visible, onClose }: PanicModalProps) => {
     
     if (visible) {
       blinkAnimation.start();
+      triggerHapticPattern();
     }
     
-    return () => blinkAnimation.stop();
+    return () => {
+      blinkAnimation.stop();
+      if (hapticTimeoutRef.current) {
+        clearTimeout(hapticTimeoutRef.current);
+        hapticTimeoutRef.current = null;
+      }
+    };
   }, [visible, cursorOpacity]);
   
   // Reset state when modal closes
@@ -88,13 +114,15 @@ const PanicModal = ({ visible, onClose }: PanicModalProps) => {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
-      
+      if (hapticTimeoutRef.current) {
+        clearTimeout(hapticTimeoutRef.current);
+        hapticTimeoutRef.current = null;
+      }
       setDisplayedSentences([]);
       setTypingText("");
       currentSentenceRef.current = 0;
       typingPositionRef.current = 0;
     } else {
-      // Start typing after a delay when modal opens
       timeoutRef.current = setTimeout(() => {
         typeNextCharacter();
       }, 200);
@@ -110,8 +138,15 @@ const PanicModal = ({ visible, onClose }: PanicModalProps) => {
   
   // Main typing function
   const typeNextCharacter = () => {
-    // Make sure we haven't reached the end of all sentences
+    // Check if we've reached the end of all sentences
     if (currentSentenceRef.current >= MOTIVATIONAL_TEXT.length) {
+      // Reset to start over from the first sentence
+      currentSentenceRef.current = 0;
+      typingPositionRef.current = 0;
+      // Clear all displayed sentences to start fresh
+      setDisplayedSentences([]);
+      // Wait a bit longer before starting over
+      timeoutRef.current = setTimeout(typeNextCharacter, 1000);
       return;
     }
     

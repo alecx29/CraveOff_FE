@@ -11,6 +11,7 @@ import { useTheme } from '@/src/context/ThemeProvider';
 import GoogleSignInButton from '@/src/google-sign-in/GoogleSignInButton';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { saveTokens } from '@/src/Storage/tokenStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 const LoginScreen: React.FC = () => {
@@ -58,18 +59,32 @@ const LoginScreen: React.FC = () => {
       await saveTokens(accessToken, refreshToken);
       console.log('[Login] Tokens saved successfully');
       
-      // Check if the user is new and redirect accordingly
+      // Save authentication state
+      await signIn({
+        accessToken, 
+        refreshToken,
+        user
+      });
+      
+      // Add a small delay to ensure token is properly stored and available for subsequent requests
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check user status and redirect accordingly
       if (user.isNewUser) {
-        // For new users, redirect to signup flow
-        console.log('[Login] New user detected, redirecting to signup flow');
-        console.log('[Login] Calling signIn with tokens...');
-        signIn({accessToken, refreshToken});
+        // For new users, save the idToken for later use in signup-complete
+        console.log('[Login] New user detected, saving idToken for signup-complete');
+        await AsyncStorage.setItem('googleIdToken', idToken);
+        
+        // Redirect to signup flow
+        console.log('[Login] Redirecting to signup flow');
         router.push('/signup');
+      } else if (user.signup_complete === false) {
+        // For users who haven't completed signup, redirect to symptoms
+        console.log('[Login] Incomplete signup detected, redirecting to symptoms screen');
+        router.push('/(auth)/symptoms');
       } else {
-        // For existing users, redirect to home
-        console.log('[Login] Existing user, redirecting to home');
-        console.log('[Login] Calling signIn with tokens...');
-        signIn({accessToken, refreshToken});
+        // For existing users with completed signup, redirect to home
+        console.log('[Login] Existing user with completed signup, redirecting to home');
         router.push('/');
       }
     } catch (error: any) {
@@ -122,18 +137,6 @@ const LoginScreen: React.FC = () => {
           >
             <GoogleSignInButton signInCallback={googleLogin} />
           </Animated.View>
-          
-          <Animated.View
-            entering={FadeInDown.duration(800).delay(600)}
-            style={styles.signupLinkContainer}
-          >
-            <TouchableOpacity style={styles.signupLink}>
-              <Text style={styles.signupText}>Don&apos;t have an account? </Text>
-              <Link href="/signup" style={styles.signupLinkText}>
-                Sign Up
-              </Link>
-            </TouchableOpacity>
-          </Animated.View>
         </Animated.View>
       </View>
     </GradientBackground>
@@ -174,23 +177,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 40,
     textAlign: 'center',
     lineHeight: 24,
-  },
-  signupLinkContainer: {
-    marginTop: 30,
-    padding: 10,
-  },
-  signupLink: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  signupText: {
-    color: theme.colors.textSecondary,
-    fontSize: 16,
-  },
-  signupLinkText: {
-    color: theme.colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
   },
   dividerContainer: {
     flexDirection: 'row',

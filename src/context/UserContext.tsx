@@ -16,6 +16,7 @@ interface UserContextType {
   setUser: (user: UserProfile) => void;
   updateUser: (updates: Partial<UserProfile>) => void;
   fetchUserProfile: () => Promise<void>;
+  resetUser: () => void;
 }
 
 const UserContext = createContext<UserContextType>({
@@ -23,6 +24,7 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   updateUser: () => {},
   fetchUserProfile: async () => {},
+  resetUser: () => {},
 });
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
@@ -41,8 +43,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const resetUser = () => setUser(null);
+
   return (
-    <UserContext.Provider value={{ user, setUser, updateUser, fetchUserProfile }}>
+    <UserContext.Provider value={{ user, setUser, updateUser, fetchUserProfile, resetUser }}>
       {children}
     </UserContext.Provider>
   );

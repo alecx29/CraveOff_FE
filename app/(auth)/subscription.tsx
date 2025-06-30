@@ -1,21 +1,17 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 
 import SubscriptionScreen from '@/src/screen-components/subscription/SubscriptionScreen';
 import { useTheme } from '@/src/context/ThemeProvider';
-import { AuthContext } from '@/src/context/AuthContext';
 
 export default function Subscription() {
   const { theme } = useTheme();
-  const { signUp } = useContext(AuthContext);
   
-  // Add onComplete handler to finish signup
+  // Add onComplete handler to navigate to main app
   const handleComplete = () => {
-    // Here you would typically register the user with all the collected data
-    // For now, we'll simulate sign up completion and redirect to the main app
-    signUp({ accessToken: 'test-token', refreshToken: 'test-refresh-token' });
+    // Navigation to main app is now handled after authentication in FreeJourneyContent
     router.push('/(tabs)');
   };
   

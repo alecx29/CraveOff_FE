@@ -7,6 +7,9 @@ import * as WebBrowser from 'expo-web-browser';
 import { useTheme } from '@/src/context/ThemeProvider';
 import { useNotifications } from '@/src/context/NotificationsContext';
 import { AuthContext } from '@/src/context/AuthContext';
+import { useUser } from '@/src/context/UserContext';
+import { useLogs } from '@/src/context/LogsContext';
+import { useJournal } from '@/src/context/JournalContext';
 import AButton from '@/src/components/AButton/AButton';
 
 import SettingCard from './SettingsCard';
@@ -14,7 +17,10 @@ import SettingCard from './SettingsCard';
 const SettingsScreen = () => {
   const { theme } = useTheme();
   const { isNotificationsEnabled, setNotificationsEnabled, requestPermissions } = useNotifications();
-  const { signOut } = useContext(AuthContext);
+  const { signOut, user: authUser } = useContext(AuthContext);
+  const { resetUser } = useUser();
+  const { resetLogs } = useLogs();
+  const { resetJournal } = useJournal();
   const styles = createStyles(theme);
 
   // Helper function to get the flame color safely
@@ -26,6 +32,9 @@ const SettingsScreen = () => {
 
   const handleLogout = async () => {
     await signOut();
+    resetUser();
+    resetLogs();
+    resetJournal();
     router.push('/login');
   };
 
@@ -34,15 +43,15 @@ const SettingsScreen = () => {
   };
 
   const openPrivacyPolicy = async () => {
-    await WebBrowser.openBrowserAsync('https://www.craveoff.app/privacy-policy');
+    await WebBrowser.openBrowserAsync('https://www.craveoffapp.com/privacy-policy');
   };
 
   const openSupport = async () => {
-    await WebBrowser.openBrowserAsync('https://www.craveoff.app/support');
+    await WebBrowser.openBrowserAsync('https://www.craveoffapp.com/support');
   };
 
   const openTermsOfService = async () => {
-    await WebBrowser.openBrowserAsync('https://www.craveoff.app/terms-of-service');
+    await WebBrowser.openBrowserAsync('https://www.craveoffapp.com/terms-of-service');
   };
 
   return (
@@ -60,8 +69,8 @@ const SettingsScreen = () => {
         <View style={styles.avatarContainer}>
           <Ionicons name="person" size={40} color="#fff" />
         </View>
-        <Text style={styles.username}>Your Name</Text>
-        <Text style={styles.memberSince}>Member since January 2024</Text>
+        <Text style={styles.username}>{authUser?.name || 'Your Name'}</Text>
+        <Text style={styles.memberSince}>Member since 2025</Text>
       </View>
 
       {/* Stats Row */}
@@ -134,7 +143,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 20,
+    paddingTop: 40,
   },
   header: {
     flexDirection: 'row',

@@ -54,6 +54,7 @@ const Theme = {
     // Progress / Stats
     progressFill: "#60a5fa",
     flame: "#f97316",
+    success: "#4ade80",
 
     // Notification background
     notificationBackground: "#111827",

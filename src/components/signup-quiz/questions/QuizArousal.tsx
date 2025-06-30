@@ -1,13 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
-
-interface ArousalOption {
-  value: string;
-  label: string;
-}
 
 interface QuizArousalProps {
   selectedOption: string;
@@ -15,39 +9,30 @@ interface QuizArousalProps {
   questionNumber?: number;
 }
 
-const QuizArousal = ({ selectedOption, onSelectOption, questionNumber = 6 }: QuizArousalProps) => {
+const QuizArousal = ({ selectedOption, onSelectOption, questionNumber = 1 }: QuizArousalProps) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
-  // Frequency options
-  const frequencyOptions: ArousalOption[] = [
-    { value: 'frequently', label: 'Frequently' },
-    { value: 'occasionally', label: 'Occasionally' },
-    { value: 'rarely', label: 'Rarely or never' },
+  // Options
+  const options = [
+    { value: 'yes', label: 'Yes, I struggle with this' },
+    { value: 'sometimes', label: 'Sometimes' },
+    { value: 'no', label: 'No, not really' },
   ];
 
   return (
     <View style={styles.container}>
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.questionNumber}
-      >
+      <Text style={styles.questionNumber}>
         Question {questionNumber}
-      </Animated.Text>
+      </Text>
       
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.title}
-      >
-        Do you find it difficult to achieve sexual arousal without pornography or fantasy?
-      </Animated.Text>
+      <Text style={styles.title}>
+        Do you have difficulty becoming aroused without pornography?
+      </Text>
       
       <View style={styles.optionsContainer}>
-        {frequencyOptions.map((option, index) => (
-          <Animated.View 
-            key={option.value}
-            entering={FadeIn.duration(400).delay(400 + index * 100)}
-          >
+        {options.map((option, index) => (
+          <View key={option.value}>
             <TouchableOpacity
               style={[
                 styles.option,
@@ -65,7 +50,7 @@ const QuizArousal = ({ selectedOption, onSelectOption, questionNumber = 6 }: Qui
                 {option.label}
               </Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         ))}
       </View>
     </View>
@@ -95,7 +80,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 24,
   },
   option: {
-    padding: 20,
+    padding: 16,
     borderRadius: theme.borderRadius.medium,
     backgroundColor: theme.colors.cardBackground,
     marginBottom: 12,

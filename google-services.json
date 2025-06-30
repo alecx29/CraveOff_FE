@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "391159890839",
+    "project_id": "craveoff-app",
+    "storage_bucket": "craveoff-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:391159890839:android:abcdef1234567890",
+        "android_client_info": {
+          "package_name": "com.usualsuspect29.craveoffapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "391159890839-va2ga57lfrnfugnhn4mvm01jdug850rv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.usualsuspect29.craveoffapp",
+            "certificate_hash": "4B3BE59AB687AEB1F663386CC2FF01B7771748C6"
+          }
+        },
+        {
+          "client_id": "391159890839-orc2jub1onifvuqgtchj0tonpsd5jn61.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "your-api-key-here"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "391159890839-orc2jub1onifvuqgtchj0tonpsd5jn61.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "353269821618-n3s13eq5edvpar4nh2j0f0pcjfr9tlpg.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.usualsuspect29.craveoffapp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

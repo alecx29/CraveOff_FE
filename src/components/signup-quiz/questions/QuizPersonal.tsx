@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, ActivityIndicator } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
@@ -20,6 +19,9 @@ const QuizPersonal = ({ personalInfo, onUpdateInfo, onComplete, isLoading = fals
   const { theme } = useTheme();
   const styles = createStyles(theme);
   
+  // Reference for the age input field
+  const ageInputRef = useRef<TextInput>(null);
+  
   // Local state for form validation and focus
   const [isFormValid, setIsFormValid] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -38,22 +40,16 @@ const QuizPersonal = ({ personalInfo, onUpdateInfo, onComplete, isLoading = fals
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.finalLabel}
-      >
+      <Text style={styles.finalLabel}>
         Finally
-      </Animated.Text>
+      </Text>
       
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.title}
-      >
+      <Text style={styles.title}>
         A little more about you
-      </Animated.Text>
+      </Text>
       
       <View style={styles.formContainer}>
-        <Animated.View entering={FadeIn.duration(400).delay(300)}>
+        <View>
           <Text style={styles.inputLabel}>Name</Text>
           <TextInput
             style={[
@@ -66,12 +62,16 @@ const QuizPersonal = ({ personalInfo, onUpdateInfo, onComplete, isLoading = fals
             placeholderTextColor={theme.colors.textSecondary + '80'}
             onFocus={() => setFocusedField('name')}
             onBlur={() => setFocusedField(null)}
+            returnKeyType="next"
+            onSubmitEditing={() => ageInputRef.current?.focus()}
+            blurOnSubmit={false}
           />
-        </Animated.View>
+        </View>
         
-        <Animated.View entering={FadeIn.duration(400).delay(400)}>
+        <View>
           <Text style={styles.inputLabel}>Age</Text>
           <TextInput
+            ref={ageInputRef}
             style={[
               styles.textInput,
               focusedField === 'age' && styles.focusedInput
@@ -83,14 +83,13 @@ const QuizPersonal = ({ personalInfo, onUpdateInfo, onComplete, isLoading = fals
             keyboardType="number-pad"
             onFocus={() => setFocusedField('age')}
             onBlur={() => setFocusedField(null)}
+            returnKeyType="done"
+            onSubmitEditing={() => isFormValid && onComplete()}
           />
-        </Animated.View>
+        </View>
       </View>
       
-      <Animated.View 
-        entering={FadeIn.duration(400).delay(500)}
-        style={styles.buttonContainer}
-      >
+      <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[
             styles.completeButton,
@@ -106,7 +105,7 @@ const QuizPersonal = ({ personalInfo, onUpdateInfo, onComplete, isLoading = fals
             <Text style={styles.completeButtonText}>Complete Quiz</Text>
           )}
         </TouchableOpacity>
-      </Animated.View>
+      </View>
     </ScrollView>
   );
 };
@@ -116,7 +115,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 40,
+    paddingBottom: 60,
   },
   finalLabel: {
     fontSize: 14,
@@ -145,7 +144,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   textInput: {
     backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: 30,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
     paddingHorizontal: 16,
@@ -166,7 +165,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   completeButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: 30,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',

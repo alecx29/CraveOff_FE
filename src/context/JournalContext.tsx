@@ -26,6 +26,7 @@ interface JournalContextType {
   deleteEntry: (id: string) => Promise<void>;
   getEntryById: (id: string) => Promise<JournalEntry | undefined>;
   clearError: () => void;
+  resetJournal: () => void;
 }
 
 const JournalContext = createContext<JournalContextType>({
@@ -38,6 +39,7 @@ const JournalContext = createContext<JournalContextType>({
   deleteEntry: async () => {},
   getEntryById: async () => undefined,
   clearError: () => {},
+  resetJournal: () => {},
 });
 
 export const JournalProvider = ({ children }: { children: ReactNode }) => {
@@ -281,6 +283,8 @@ export const JournalProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
   };
 
+  const resetJournal = () => setEntries([]);
+
   return (
     <JournalContext.Provider 
       value={{ 
@@ -292,7 +296,8 @@ export const JournalProvider = ({ children }: { children: ReactNode }) => {
         updateEntry,
         deleteEntry,
         getEntryById,
-        clearError
+        clearError,
+        resetJournal
       }}
     >
       {children}

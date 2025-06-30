@@ -10,6 +10,14 @@ import {
   UpdateChatTitleResponse,
 } from "@/src/types/oria";
 
+// Define a custom streaming interface that mimics EventSource for compatibility
+export interface StreamEventSource {
+  onmessage?: (event: { data: string }) => void;
+  onerror?: (error: any) => void;
+  onopen?: () => void;
+  close: () => void;
+}
+
 // Debug the backend routes to ensure they're defined correctly
 console.log(
   "DEBUG - BackendRoutes.ORIA_MESSAGES_STREAM:",
@@ -92,13 +100,13 @@ export const oriaService = {
 
   /**
    * Send a message to a chat
-   * If streaming mode is enabled, returns an event source for streaming
+   * If streaming mode is enabled, returns a custom StreamEventSource for streaming
    * If streaming mode is disabled, returns a promise that resolves with the complete response
    */
   sendMessage: async (
     chatId: string,
     message: SendMessageRequest
-  ): Promise<SendMessageResponse | EventSource> => {
+  ): Promise<SendMessageResponse | StreamEventSource> => {
     try {
       // Make sure the chat_id is included in the request body
       const requestBody = {
@@ -117,7 +125,7 @@ export const oriaService = {
       );
 
       if (isStreamingMode) {
-        // In streaming mode, return an EventSource for SSE
+        // In streaming mode, return a custom streaming interface
         // First, get the access token using AsyncStorage
         const AsyncStorage = await import(
           "@react-native-async-storage/async-storage"
@@ -130,7 +138,7 @@ export const oriaService = {
 
         // For streaming, we need to use a different approach:
         // 1. First send the message with a POST request
-        // 2. Then create an EventSource to receive the streaming response
+        // 2. Then create a fetch request to receive the streaming response
 
         // Step 1: Send the message with POST
         const messageUrl = BackendRoutes.ORIA_MESSAGES(chatId);
@@ -141,29 +149,111 @@ export const oriaService = {
         // Step 2: Now connect to the streaming endpoint to receive the response
         const streamUrl = `/oria/chats/${chatId}/message/stream`;
 
-        // Add authorization token to the URL as a query parameter since EventSource doesn't support custom headers
-        const eventSourceUrl = `${
+        // Add authorization token to the URL as a query parameter
+        const streamingUrl = `${
           apiClient.defaults.baseURL
         }${streamUrl}?token=${encodeURIComponent(accessToken)}`;
 
         console.log("STREAM MODE DEBUGGING:");
         console.log(
           "  - Now connecting to stream URL (with auth token):",
-          eventSourceUrl
+          streamingUrl
         );
         console.log("  - API base URL:", apiClient.defaults.baseURL);
 
-        // Create the EventSource for receiving streaming responses
-        const eventSource = new EventSource(eventSourceUrl);
-
-        console.log("EventSource created successfully");
-
-        // Add an onopen handler to confirm connection
-        eventSource.onopen = () => {
-          console.log("EventSource connection opened successfully");
+        // Create our custom streaming interface that mimics EventSource
+        const customEventSource: StreamEventSource = {
+          close: () => {
+            // Will be defined below
+            console.log("Closing stream connection");
+          },
         };
 
-        return eventSource;
+        // Start the fetch request for streaming
+        (async () => {
+          try {
+            // Call onopen if defined (mimicking EventSource behavior)
+            if (customEventSource.onopen) {
+              customEventSource.onopen();
+            }
+
+            console.log(
+              "Using XMLHttpRequest for streaming (better React Native compatibility)"
+            );
+
+            // Use XMLHttpRequest which has better compatibility with React Native
+            const xhr = new XMLHttpRequest();
+            let buffer = "";
+            let isActive = true;
+
+            // Define the close method to abort the request
+            customEventSource.close = () => {
+              console.log("Closing XHR connection");
+              isActive = false;
+              xhr.abort();
+            };
+
+            // Set up the request
+            xhr.open("GET", streamingUrl);
+            xhr.setRequestHeader("Accept", "text/event-stream");
+
+            // Process chunks as they arrive
+            xhr.onprogress = () => {
+              if (!isActive) return;
+
+              // Get any new data
+              const newData = xhr.responseText.substring(buffer.length);
+              if (newData) {
+                buffer += newData;
+
+                // Process complete SSE messages
+                const lines = buffer.split("\n\n");
+                buffer = lines.pop() || ""; // Keep the last incomplete chunk in the buffer
+
+                for (const line of lines) {
+                  if (line.trim() && line.startsWith("data:")) {
+                    const data = line.substring(5).trim();
+
+                    // Call onmessage handler if defined
+                    if (customEventSource.onmessage && isActive) {
+                      customEventSource.onmessage({ data });
+                    }
+                  }
+                }
+              }
+            };
+
+            // Handle completion
+            xhr.onload = () => {
+              if (isActive) {
+                console.log("Stream complete");
+                isActive = false;
+              }
+            };
+
+            // Handle errors
+            xhr.onerror = (error) => {
+              console.error("XHR Stream error:", error);
+              if (customEventSource.onerror && isActive) {
+                customEventSource.onerror(error);
+              }
+              isActive = false;
+            };
+
+            // Start the request
+            xhr.send();
+          } catch (error) {
+            console.error("Stream setup error:", error);
+
+            // Call onerror handler if defined
+            if (customEventSource.onerror) {
+              customEventSource.onerror(error);
+            }
+          }
+        })();
+
+        console.log("Custom streaming interface created successfully");
+        return customEventSource;
       } else {
         // In regular mode, use axios as before
         const regularUrl = BackendRoutes.ORIA_MESSAGES(chatId);

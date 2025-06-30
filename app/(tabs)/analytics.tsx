@@ -4,11 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, Easing, useAnimatedProps } from 'react-native-reanimated';
 import { Svg, Circle, G } from 'react-native-svg';
 import { LineChart } from 'react-native-chart-kit';
-import { format, subDays, isAfter, parseISO } from 'date-fns';
+import { format, subDays, isAfter, parseISO, differenceInHours, differenceInMinutes } from 'date-fns';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { useLogs, LogEntry } from '@/src/context/LogsContext';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
+import { useUser } from '@/src/context/UserContext';
+import { apiClient } from '@/src/axios/apiClient';
+import { BackendRoutes } from '@/src/axios/backendRoutes';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const screenWidth = Dimensions.get('window').width;
@@ -22,7 +25,8 @@ const getColor = (theme: any, colorName: string, fallbackColor: string): string 
 
 export default function AnalyticsScreen() {
   const { theme } = useTheme();
-  const { lastRelapseData, fetchLogs, isLoading, logs } = useLogs();
+  const { lastRelapseData, isLoading, logs } = useLogs();
+  const { user } = useUser();
   const styles = createStyles(theme, getColor);
   
   // Helper function to safely access theme colors - component version
@@ -44,6 +48,13 @@ export default function AnalyticsScreen() {
   const [monthlyCleanDays, setMonthlyCleanDays] = useState(0);
   const [daysInMonth, setDaysInMonth] = useState(0);
   const [monthlyProgressPercentage, setMonthlyProgressPercentage] = useState(0);
+  
+  // Pledge states
+  const [canMakePledge, setCanMakePledge] = useState(true);
+  const [activePledgeTimeRemaining, setActivePledgeTimeRemaining] = useState<string | null>(null);
+  const [activePledgeStartTime, setActivePledgeStartTime] = useState<string | null>(null);
+  const [activePledgeEndTime, setActivePledgeEndTime] = useState<string | null>(null);
+  const [isCheckingPledge, setIsCheckingPledge] = useState(false);
   
   // Progress over time stats
   const [progressData, setProgressData] = useState({
@@ -71,7 +82,7 @@ export default function AnalyticsScreen() {
   
   // Calculate clean days and progress percentage based on last relapse date
   useEffect(() => {
-    fetchLogs();
+    // fetchLogs();
   }, []);
   
   // Calculate streak statistics from logs
@@ -81,6 +92,33 @@ export default function AnalyticsScreen() {
       calculateProgressOverTime(logs);
     }
   }, [logs]);
+  
+  // Check for active pledge when component mounts
+  useEffect(() => {
+    checkActivePledge();
+    
+    // Set up interval to update the remaining time
+    const interval = setInterval(() => {
+      if (!canMakePledge && activePledgeStartTime) {
+        const pledgeDate = new Date(activePledgeStartTime);
+        const now = new Date();
+        const diffHours = differenceInHours(now, pledgeDate);
+        
+        if (diffHours >= 24) {
+          // Pledge has expired
+          setCanMakePledge(true);
+          setActivePledgeTimeRemaining(null);
+        } else {
+          // Update remaining time
+          const remainingHours = 24 - diffHours;
+          const remainingMinutes = 60 - differenceInMinutes(now, pledgeDate) % 60;
+          setActivePledgeTimeRemaining(`${Math.floor(remainingHours)}h ${remainingMinutes}m`);
+        }
+      }
+    }, 60000); // Update every minute
+    
+    return () => clearInterval(interval);
+  }, [canMakePledge, activePledgeStartTime]);
   
   // Function to calculate streak statistics
   const calculateStreakStats = (logEntries: LogEntry[]) => {
@@ -666,13 +704,74 @@ export default function AnalyticsScreen() {
     }
   };
 
+  // Check if user has an active pledge
+  const checkActivePledge = async () => {
+    try {
+      setIsCheckingPledge(true);
+      // Get the user's most recent pledge
+      const response = await apiClient.get(BackendRoutes.PLEDGE_HISTORY);
+      
+      if (response.data && response.data.pledges && response.data.pledges.length > 0) {
+        // Sort pledges by date (newest first)
+        const sortedPledges = [...response.data.pledges].sort((a, b) => 
+          new Date(b.check_in_at).getTime() - new Date(a.check_in_at).getTime()
+        );
+        
+        // Check if the most recent pledge is within 24 hours
+        const latestPledge = sortedPledges[0];
+        const pledgeDate = new Date(latestPledge.check_in_at);
+        const now = new Date();
+        
+        const diffHours = differenceInHours(now, pledgeDate);
+        
+        if (diffHours < 24) {
+          // User has an active pledge
+          setCanMakePledge(false);
+          
+          // Calculate remaining time
+          const remainingHours = 24 - diffHours;
+          const remainingMinutes = 60 - differenceInMinutes(now, pledgeDate) % 60;
+          
+          setActivePledgeTimeRemaining(`${Math.floor(remainingHours)}h ${remainingMinutes}m`);
+          
+          // Format pledge times
+          setActivePledgeStartTime(formatPledgeTime(pledgeDate));
+          
+          const endDate = new Date(pledgeDate.getTime() + (24 * 60 * 60 * 1000));
+          setActivePledgeEndTime(formatPledgeTime(endDate));
+        } else {
+          setCanMakePledge(true);
+          setActivePledgeTimeRemaining(null);
+        }
+      } else {
+        setCanMakePledge(true);
+        setActivePledgeTimeRemaining(null);
+      }
+    } catch (error) {
+      console.error('Error checking pledge status:', error);
+      setCanMakePledge(true);
+    } finally {
+      setIsCheckingPledge(false);
+    }
+  };
+  
+  // Format pledge time in a user-friendly way
+  const formatPledgeTime = (date: Date): string => {
+    return date.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
     <GradientBackground>
-      <ScrollView style={styles.container}>
-        <Text style={styles.title}>Analytics</Text>
-        <Text style={styles.subtitle}>Track your progress and insights</Text>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <Text style={styles.screenTitle}>Analytics</Text>
+        <Text style={styles.screenSubtitle}>Track your progress and insights</Text>
         
-        {/* Days Until Clean Circle Progress */}
+        {/* Main progress circle */}
         <View style={styles.circleProgressCard}>
           <Text style={styles.circleTitle}>Days Until Clean</Text>
           <View style={styles.circleContainer}>
@@ -794,6 +893,7 @@ export default function AnalyticsScreen() {
             Evoluția recuperării de la instalarea aplicației, cu indicatori care reflectă progresul în timp, adaptată la streakuri și momente importante din călătoria ta.
           </Text>
         </View>
+      
       </ScrollView>
     </GradientBackground>
   );
@@ -803,18 +903,18 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 40,
   },
-  title: {
+  screenTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: theme.colors.textPrimary,
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
+  screenSubtitle: {
+    fontSize: 14,
     color: theme.colors.textSecondary,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   circleProgressCard: {
     backgroundColor: theme.colors.cardBackground,
@@ -964,5 +1064,53 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     fontSize: 14,
     fontWeight: 'bold',
     marginLeft: 2,
+  },
+  activePledgeBanner: {
+    flexDirection: 'row',
+    backgroundColor: getColor(theme, 'success', '#4ade80'),
+    borderRadius: 12,
+    marginHorizontal: 0,
+    marginBottom: 16,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  activePledgeIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activePledgeContent: {
+    flex: 1,
+  },
+  activePledgeTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  activePledgeText: {
+    fontSize: 14,
+    color: '#fff',
+    marginBottom: 6,
+  },
+  activePledgeTimerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activePledgeTimerIcon: {
+    marginRight: 4,
+  },
+  activePledgeTimerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

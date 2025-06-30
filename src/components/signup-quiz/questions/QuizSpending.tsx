@@ -1,13 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
-
-interface SpendingOption {
-  value: string;
-  label: string;
-}
 
 interface QuizSpendingProps {
   selectedOption: string;
@@ -19,34 +13,25 @@ const QuizSpending = ({ selectedOption, onSelectOption, questionNumber = 10 }: Q
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
-  // Yes/No options
-  const options: SpendingOption[] = [
-    { value: 'yes', label: 'Yes' },
-    { value: 'no', label: 'No' },
+  // Options
+  const options = [
+    { value: 'yes', label: 'Yes, I have' },
+    { value: 'no', label: 'No, never' },
   ];
 
   return (
     <View style={styles.container}>
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.questionNumber}
-      >
+      <Text style={styles.questionNumber}>
         Question {questionNumber}
-      </Animated.Text>
+      </Text>
       
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.title}
-      >
-        Have you ever spent money on accessing explicit content?
-      </Animated.Text>
+      <Text style={styles.title}>
+        Have you ever spent money on pornography or related services?
+      </Text>
       
       <View style={styles.optionsContainer}>
         {options.map((option, index) => (
-          <Animated.View 
-            key={option.value}
-            entering={FadeIn.duration(400).delay(400 + index * 100)}
-          >
+          <View key={option.value}>
             <TouchableOpacity
               style={[
                 styles.option,
@@ -64,7 +49,7 @@ const QuizSpending = ({ selectedOption, onSelectOption, questionNumber = 10 }: Q
                 {option.label}
               </Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         ))}
       </View>
     </View>
@@ -97,7 +82,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     gap: 20,
   },
   option: {
-    padding: 20,
+    padding: 16,
     borderRadius: theme.borderRadius.medium,
     backgroundColor: theme.colors.cardBackground,
     borderWidth: 1,

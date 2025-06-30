@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
@@ -29,26 +28,17 @@ const QuizActivity = ({ selectedActivity, onSelectActivity, questionNumber = 1 }
 
   return (
     <View style={styles.container}>
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.questionNumber}
-      >
+      <Text style={styles.questionNumber}>
         Question {questionNumber}
-      </Animated.Text>
+      </Text>
       
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.title}
-      >
+      <Text style={styles.title}>
         How often do you typically view pornography?
-      </Animated.Text>
+      </Text>
       
       <View style={styles.optionsContainer}>
         {frequencyOptions.map((option, index) => (
-          <Animated.View 
-            key={option.value}
-            entering={FadeIn.duration(400).delay(400 + index * 100)}
-          >
+          <View key={option.value}>
             <TouchableOpacity
               style={[
                 styles.option,
@@ -66,7 +56,7 @@ const QuizActivity = ({ selectedActivity, onSelectActivity, questionNumber = 1 }
                 {option.label}
               </Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         ))}
       </View>
     </View>
@@ -96,7 +86,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 24,
   },
   option: {
-    padding: 20,
+    padding: 16,
     borderRadius: theme.borderRadius.medium,
     backgroundColor: theme.colors.cardBackground,
     marginBottom: 12,

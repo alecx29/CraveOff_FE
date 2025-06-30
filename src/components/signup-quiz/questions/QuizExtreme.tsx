@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
@@ -14,34 +13,26 @@ const QuizExtreme = ({ selectedOption, onSelectOption, questionNumber = 4 }: Qui
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
-  // Yes/No options
+  // Options
   const options = [
-    { value: 'yes', label: 'Yes' },
-    { value: 'no', label: 'No' },
+    { value: 'frequently', label: 'Frequently' },
+    { value: 'occasionally', label: 'Occasionally' },
+    { value: 'rarely', label: 'Rarely or never' },
   ];
 
   return (
     <View style={styles.container}>
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.questionNumber}
-      >
+      <Text style={styles.questionNumber}>
         Question {questionNumber}
-      </Animated.Text>
+      </Text>
       
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.title}
-      >
-        Have you noticed a shift towards more extreme or graphic material?
-      </Animated.Text>
+      <Text style={styles.title}>
+        Do you find yourself seeking more extreme content over time?
+      </Text>
       
       <View style={styles.optionsContainer}>
         {options.map((option, index) => (
-          <Animated.View 
-            key={option.value}
-            entering={FadeIn.duration(400).delay(400 + index * 100)}
-          >
+          <View key={option.value}>
             <TouchableOpacity
               style={[
                 styles.option,
@@ -59,7 +50,7 @@ const QuizExtreme = ({ selectedOption, onSelectOption, questionNumber = 4 }: Qui
                 {option.label}
               </Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         ))}
       </View>
     </View>
@@ -87,17 +78,14 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   optionsContainer: {
     marginTop: 24,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
   },
   option: {
-    padding: 20,
+    padding: 16,
     borderRadius: theme.borderRadius.medium,
     backgroundColor: theme.colors.cardBackground,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
-    width: 120,
     ...theme.shadows.light,
   },
   selectedOption: {

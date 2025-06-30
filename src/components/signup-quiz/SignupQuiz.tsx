@@ -3,8 +3,6 @@ import { Link, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import Animated, { 
-  SlideInRight, 
-  SlideOutLeft,
   useAnimatedStyle, 
   useSharedValue, 
   withTiming 
@@ -179,174 +177,126 @@ const SignupQuiz = ({ onComplete, isLoading = false }: SignupQuizProps) => {
     switch (currentStep) {
       case 'welcome':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizWelcome
               onContinue={handleWelcomeContinue}
             />
-          </Animated.View>
+          </View>
         );
         
       case 'gender':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizGender 
               selectedGender={quizData.gender}
               onSelectGender={(gender: string) => handleDataUpdate('gender', gender)} 
               questionNumber={1}
             />
-          </Animated.View>
+          </View>
         );
         
       case 'activity':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizActivity 
               selectedActivity={quizData.pornFrequency}
               onSelectActivity={(activity: string) => handleDataUpdate('activity', activity)} 
               questionNumber={2}
             />
-          </Animated.View>
+          </View>
         );
         
       case 'goals':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizGoals 
               selectedGoal={quizData.referralSource}
               onSelectGoal={(goal: string) => handleDataUpdate('goals', goal)} 
               questionNumber={3}
             />
-          </Animated.View>
+          </View>
         );
         
       case 'extreme':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizExtreme 
               selectedOption={quizData.extremeContent}
               onSelectOption={(option: string) => handleDataUpdate('extreme', option)} 
               questionNumber={4}
             />
-          </Animated.View>
+          </View>
         );
         
       case 'duration':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizDuration 
               selectedDuration={quizData.struggleDuration}
               onSelectDuration={(duration: string) => handleDataUpdate('duration', duration)} 
               questionNumber={5}
             />
-          </Animated.View>
+          </View>
         );
         
       case 'arousal':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizArousal 
               selectedOption={quizData.arousalDifficulty}
               onSelectOption={(option: string) => handleDataUpdate('arousal', option)} 
               questionNumber={6}
             />
-          </Animated.View>
+          </View>
         );
         
       case 'coping':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizCoping 
               selectedOption={quizData.copingUse}
               onSelectOption={(option: string) => handleDataUpdate('coping', option)} 
               questionNumber={7}
             />
-          </Animated.View>
+          </View>
         );
         
       case 'stress':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizStress 
               selectedOption={quizData.stressUse}
               onSelectOption={(option: string) => handleDataUpdate('stress', option)} 
               questionNumber={8}
             />
-          </Animated.View>
+          </View>
         );
         
       case 'boredom':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizBoredom 
               selectedOption={quizData.boredomUse}
               onSelectOption={(option: string) => handleDataUpdate('boredom', option)} 
               questionNumber={9}
             />
-          </Animated.View>
+          </View>
         );
         
       case 'spending':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizSpending 
               selectedOption={quizData.spentMoney}
               onSelectOption={(option: string) => handleDataUpdate('spending', option)} 
               questionNumber={10}
             />
-          </Animated.View>
+          </View>
         );
         
       case 'personal':
         return (
-          <Animated.View 
-            entering={SlideInRight.duration(400)} 
-            exiting={SlideOutLeft.duration(300)} 
-            style={styles.stepContainer}
-          >
+          <View style={styles.stepContainer}>
             <QuizPersonal 
               personalInfo={quizData.personalInfo}
               onUpdateInfo={(info: PersonalInfo) => {
@@ -356,7 +306,7 @@ const SignupQuiz = ({ onComplete, isLoading = false }: SignupQuizProps) => {
               onComplete={() => handleQuizComplete(quizData)}
               isLoading={isLoading}
             />
-          </Animated.View>
+          </View>
         );
         
       default:
@@ -405,6 +355,7 @@ const SignupQuiz = ({ onComplete, isLoading = false }: SignupQuizProps) => {
           <Animated.View style={[styles.progressBar, progressAnimatedStyle]} />
         </View>
         <TouchableOpacity style={styles.languageSelector}>
+          <Text style={styles.flagIcon}>🇺🇸</Text>
           <Text style={styles.languageText}>EN</Text>
         </TouchableOpacity>
       </View>
@@ -463,15 +414,21 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: 3,
   },
   languageSelector: {
-    width: 40,
-    height: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 70,
+    height: 28,
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.borderRadius.small,
-    alignItems: 'center',
+    paddingHorizontal: 8,
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
     ...theme.shadows.light,
+  },
+  flagIcon: {
+    fontSize: 16,
+    marginRight: 4,
   },
   languageText: {
     color: theme.colors.textPrimary,

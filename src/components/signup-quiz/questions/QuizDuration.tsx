@@ -1,13 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
-
-interface AgeOption {
-  value: string;
-  label: string;
-}
 
 interface QuizDurationProps {
   selectedDuration: string;
@@ -19,36 +13,27 @@ const QuizDuration = ({ selectedDuration, onSelectDuration, questionNumber = 5 }
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
-  // Age options
-  const ageOptions: AgeOption[] = [
-    { value: '12_or_younger', label: '12 or younger' },
-    { value: '13_to_16', label: '13 to 16' },
-    { value: '17_to_24', label: '17 to 24' },
-    { value: '25_or_older', label: '25 or older' },
+  // Duration options
+  const durationOptions = [
+    { value: 'less_than_year', label: 'Less than a year' },
+    { value: '1_to_3_years', label: '1-3 years' },
+    { value: '4_to_10_years', label: '4-10 years' },
+    { value: 'more_than_10', label: 'More than 10 years' },
   ];
 
   return (
     <View style={styles.container}>
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.questionNumber}
-      >
+      <Text style={styles.questionNumber}>
         Question {questionNumber}
-      </Animated.Text>
+      </Text>
       
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.title}
-      >
-        At what age did you first come across explicit content?
-      </Animated.Text>
+      <Text style={styles.title}>
+        How long have you been struggling with pornography?
+      </Text>
       
       <View style={styles.optionsContainer}>
-        {ageOptions.map((option, index) => (
-          <Animated.View 
-            key={option.value}
-            entering={FadeIn.duration(400).delay(400 + index * 100)}
-          >
+        {durationOptions.map((option, index) => (
+          <View key={option.value}>
             <TouchableOpacity
               style={[
                 styles.option,
@@ -66,7 +51,7 @@ const QuizDuration = ({ selectedDuration, onSelectDuration, questionNumber = 5 }
                 {option.label}
               </Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         ))}
       </View>
     </View>
@@ -96,7 +81,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 24,
   },
   option: {
-    padding: 20,
+    padding: 16,
     borderRadius: theme.borderRadius.medium,
     backgroundColor: theme.colors.cardBackground,
     marginBottom: 12,

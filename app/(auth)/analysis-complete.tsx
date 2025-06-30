@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
+import FixedBottomButton from '@/src/components/FixedBottomButton';
 
 export default function AnalysisComplete() {
   const { theme } = useTheme();
@@ -31,7 +32,7 @@ export default function AnalysisComplete() {
   
   return (
     <GradientBackground>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <StatusBar style="auto" />
         
         <ScrollView 
@@ -42,28 +43,28 @@ export default function AnalysisComplete() {
             style={styles.contentContainer}
             entering={FadeIn.duration(500)}
           >
-            {/* Success checkmark */}
-            <View style={styles.checkmarkContainer}>
+            {/* Title with checkmark */}
+            <View style={styles.titleContainer}>
+              <Animated.Text 
+                style={styles.title}
+                entering={SlideInRight.duration(500).delay(200)}
+              >
+                Analysis Complete
+              </Animated.Text>
               <Ionicons 
                 name="checkmark-circle" 
-                size={80} 
+                size={24} 
                 color={getColor('success', '#34C759')} 
+                style={styles.checkmarkIcon}
               />
             </View>
             
-            {/* Title and description */}
-            <Animated.Text 
-              style={styles.title}
-              entering={SlideInRight.duration(500).delay(200)}
-            >
-              Analysis Complete
-            </Animated.Text>
-            
+            {/* Description */}
             <Animated.Text 
               style={styles.description}
               entering={SlideInRight.duration(500).delay(300)}
             >
-              Based on your responses, we've detected a clear porn dependency pattern that may be affecting your well-being.
+              We've got some news to break to you...
             </Animated.Text>
             
             {/* Graph visualization */}
@@ -71,7 +72,7 @@ export default function AnalysisComplete() {
               style={styles.graphContainer}
               entering={FadeIn.duration(800).delay(400)}
             >
-              <Text style={styles.graphTitle}>Dependency Assessment</Text>
+              <Text style={styles.graphTitle}>Your responses indicate a clear dependence on internet porn</Text>
               
               <View style={styles.graphContent}>
                 {/* User column */}
@@ -113,25 +114,27 @@ export default function AnalysisComplete() {
               style={styles.insight}
               entering={SlideInRight.duration(500).delay(700)}
             >
-              Your dependency level is higher than average, indicating moderate signs of addiction. Our program will help you overcome it step by step.
+              This is an informative result, not a medical diagnosis. If you're concerned, we encourage you to speak with a medical professional.
             </Animated.Text>
+            
+            {/* Add padding at the bottom to ensure content is not hidden behind the fixed button */}
+            <View style={styles.bottomPadding} />
           </Animated.View>
         </ScrollView>
         
-        {/* Continue button fixed at the bottom */}
-        <Animated.View 
-          style={styles.buttonContainer}
-          entering={FadeIn.duration(500).delay(800)}
-        >
-          <TouchableOpacity
-            style={styles.continueButton}
-            onPress={handleContinue}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.buttonText}>Check Your Symptoms</Text>
-            <Ionicons name="arrow-forward" size={22} color="white" style={styles.buttonIcon} />
-          </TouchableOpacity>
-        </Animated.View>
+        {/* Fixed bottom button - invisible style */}
+        <FixedBottomButton
+          title="Check Your Symptoms"
+          onPress={handleContinue}
+          icon="arrow-forward"
+          customStyle={{ 
+            backgroundColor: 'transparent', 
+            borderTopWidth: 0,
+            elevation: 0,
+            shadowOpacity: 0
+          }}
+          buttonStyle={{ backgroundColor: theme.colors.primary }}
+        />
       </SafeAreaView>
     </GradientBackground>
   );
@@ -149,10 +152,13 @@ const createStyles = (theme: any) => StyleSheet.create({
   contentContainer: {
     alignItems: 'center',
     width: '100%',
-    paddingBottom: 80, // Space for fixed button
+    paddingBottom: 20,
   },
-  checkmarkContainer: {
-    marginBottom: 16,
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
     marginTop: 8,
   },
   title: {
@@ -160,7 +166,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 12,
+  },
+  checkmarkIcon: {
+    marginLeft: 8,
   },
   description: {
     fontSize: 15,
@@ -228,30 +236,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 24,
     lineHeight: 22,
     paddingHorizontal: 8,
+    paddingVertical: 16,
   },
-  buttonContainer: {
-    width: '100%',
-    paddingHorizontal: 16,
-    position: 'absolute',
-    bottom: 16,
-    left: 0,
-    right: 0,
-  },
-  continueButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.medium,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...theme.shadows.medium,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  buttonIcon: {
-    marginLeft: 8,
+  bottomPadding: {
+    height: 130, // Further increased padding at the bottom
   },
 }); 

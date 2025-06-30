@@ -7,7 +7,8 @@ import {
   Dimensions, 
   ImageBackground,
   StatusBar,
-  Animated as RNAnimated
+  Animated as RNAnimated,
+  ScrollView
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { 
@@ -23,6 +24,9 @@ interface ReflectionModalProps {
 }
 
 const { height, width } = Dimensions.get('window');
+// Define height thresholds for responsive design
+const IS_SMALL_DEVICE = height < 700;
+const IS_VERY_SMALL_DEVICE = height < 600;
 
 const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
   const { theme } = useTheme();
@@ -88,36 +92,42 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <View style={styles.contentContainer}>
-          {/* Title */}
-          <RNAnimated.Text style={[styles.title, { opacity: titleOpacity }]}>
-            REFLECT AND BREATHE
-          </RNAnimated.Text>
-          
-          {/* Reflection content */}
-          <RNAnimated.View style={[styles.textContainer, { opacity: contentOpacity }]}>
-            <Text style={styles.reflectionText}>
-              You&apos;re feeling the urge to relapse again, and that&apos;s okay.
-            </Text>
-            <Text style={styles.reflectionText}>
-              It&apos;s love you&apos;re looking for.
-            </Text>
-            <Text style={styles.reflectionText}>
-              Porn pushes you away from that.
-            </Text>
-          </RNAnimated.View>
-          
-          {/* Button */}
-          <RNAnimated.View style={[styles.buttonContainer, { opacity: buttonOpacity }]}>
-            <TouchableOpacity 
-              style={styles.finishButton}
-              onPress={onClose}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.buttonText}>Finish Reflecting</Text>
-            </TouchableOpacity>
-          </RNAnimated.View>
-        </View>
+        <ScrollView 
+          contentContainerStyle={styles.scrollViewContent}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.contentContainer}>
+            {/* Title */}
+            <RNAnimated.Text style={[styles.title, { opacity: titleOpacity }]}>
+              REFLECT AND BREATHE
+            </RNAnimated.Text>
+            
+            {/* Reflection content */}
+            <RNAnimated.View style={[styles.textContainer, { opacity: contentOpacity }]}>
+              <Text style={styles.reflectionText}>
+                You&apos;re feeling the urge to relapse again, and that&apos;s okay.
+              </Text>
+              <Text style={styles.reflectionText}>
+                It&apos;s love you&apos;re looking for.
+              </Text>
+              <Text style={styles.reflectionText}>
+                Porn pushes you away from that.
+              </Text>
+            </RNAnimated.View>
+          </View>
+        </ScrollView>
+        
+        {/* Button - Now positioned outside ScrollView with fixed position */}
+        <RNAnimated.View style={[styles.fixedButtonContainer, { opacity: buttonOpacity }]}>
+          <TouchableOpacity 
+            style={styles.finishButton}
+            onPress={onClose}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.buttonText}>Finish Reflecting</Text>
+          </TouchableOpacity>
+        </RNAnimated.View>
       </ImageBackground>
     </Animated.View>
   );
@@ -134,48 +144,53 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
   backgroundImage: {
     width: '100%',
     height: '100%',
+  },
+  scrollViewContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    paddingBottom: 100, // Add padding to ensure content isn't hidden behind the fixed button
   },
   contentContainer: {
-    flex: 1,
     width: '100%',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: topPadding + 80,
-    paddingBottom: bottomPadding + 40,
+    paddingTop: IS_VERY_SMALL_DEVICE ? topPadding + 20 : topPadding + 60,
     paddingHorizontal: 30,
   },
   title: {
-    fontSize: 18,
+    fontSize: IS_SMALL_DEVICE ? 16 : 18,
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
     letterSpacing: 2,
-    marginBottom: 60,
+    marginBottom: IS_SMALL_DEVICE ? 20 : 40,
   },
   textContainer: {
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    paddingVertical: IS_SMALL_DEVICE ? 10 : 20,
   },
   reflectionText: {
-    fontSize: 28,
+    fontSize: IS_SMALL_DEVICE ? 22 : 28,
     fontWeight: '600',
     color: '#fff',
     textAlign: 'center',
-    lineHeight: 45,
-    marginBottom: 20,
+    lineHeight: IS_SMALL_DEVICE ? 34 : 45,
+    marginBottom: IS_SMALL_DEVICE ? 10 : 20,
   },
-  buttonContainer: {
-    width: '100%',
+  fixedButtonContainer: {
+    position: 'absolute',
+    bottom: bottomPadding,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    marginTop: 50,
+    paddingHorizontal: 30,
+    paddingVertical: 20,
   },
   finishButton: {
     backgroundColor: theme.colors.primary,
-    paddingVertical: 16,
+    paddingVertical: IS_SMALL_DEVICE ? 12 : 16,
     paddingHorizontal: 32,
     borderRadius: 30,
     minWidth: 200,
@@ -183,8 +198,9 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
   },
   buttonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: IS_SMALL_DEVICE ? 16 : 18,
     fontWeight: '600',
+    lineHeight: 22,
   },
 });
 

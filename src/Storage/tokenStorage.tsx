@@ -3,25 +3,57 @@ import * as Keychain from 'react-native-keychain';
 
 const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 
+// Interface for token data
+interface TokenData {
+  accessToken: string | null;
+  refreshToken: string | null;
+  expiresAt?: number;
+  refreshExpiresAt?: number;
+}
+
 // Save tokens
-export const saveTokens = async (accessToken: string, refreshToken: string) => {
+export const saveTokens = async (
+  accessToken: string, 
+  refreshToken: string, 
+  expiresAt?: number, 
+  refreshExpiresAt?: number
+) => {
   try {
     console.log('[TokenStorage] Saving tokens');
+    console.log('[TokenStorage] Access Token:', accessToken?.substring(0, 10) + '...');
+    console.log('[TokenStorage] Refresh Token:', refreshToken?.substring(0, 10) + '...');
     
-    // Salvăm accessToken în AsyncStorage (va fi gestionat de AuthContext)
+    // Save accessToken in AsyncStorage (will be managed by AuthContext)
     await AsyncStorage.setItem('accessToken', accessToken);
-    console.log('[TokenStorage] Access Token saved to AsyncStorage');
     
-    // Salvăm refreshToken în AsyncStorage ca backup (pentru cazul în care Keychain eșuează)
+    // Verify if token was saved correctly
+    const storedAccessToken = await AsyncStorage.getItem('accessToken');
+    console.log('[TokenStorage] Access Token saved to AsyncStorage:', storedAccessToken ? 'Success' : 'Failed');
+    if (storedAccessToken !== accessToken) {
+      console.error('[TokenStorage] Stored token does not match original token!');
+    }
+    
+    // Save refreshToken in AsyncStorage as backup (in case Keychain fails)
     await AsyncStorage.setItem('refreshToken', refreshToken);
     console.log('[TokenStorage] Refresh Token saved to AsyncStorage as backup');
     
-    // Încercăm să salvăm și în Keychain pentru securitate sporită
+    // Save expiration times if provided
+    if (expiresAt) {
+      await AsyncStorage.setItem('expiresAt', expiresAt.toString());
+      console.log('[TokenStorage] Expiration time saved:', new Date(expiresAt * 1000).toISOString());
+    }
+    
+    if (refreshExpiresAt) {
+      await AsyncStorage.setItem('refreshExpiresAt', refreshExpiresAt.toString());
+      console.log('[TokenStorage] Refresh expiration time saved:', new Date(refreshExpiresAt * 1000).toISOString());
+    }
+    
+    // Try to save in Keychain for enhanced security
     try {
       await Keychain.setGenericPassword('refreshToken', refreshToken);
       console.log('[TokenStorage] Refresh Token also saved to Keychain');
     } catch (keychainError) {
-      // Eroarea este ignorată întrucât avem deja un backup în AsyncStorage
+      // Error is ignored since we already have a backup in AsyncStorage
       console.warn('[TokenStorage] Could not save to Keychain, using AsyncStorage fallback');
     }
   } catch (error) {
@@ -30,12 +62,12 @@ export const saveTokens = async (accessToken: string, refreshToken: string) => {
 };
 
 // Get tokens
-export const getTokens = async () => {
+export const getTokens = async (): Promise<TokenData> => {
   try {
-    // Obținem accessToken din AsyncStorage
+    // Get accessToken from AsyncStorage
     const accessToken = await AsyncStorage.getItem('accessToken');
     
-    // Încercăm să obținem refreshToken din Keychain
+    // Try to get refreshToken from Keychain
     let refreshToken = null;
     try {
       const credentials = await Keychain.getGenericPassword();
@@ -47,13 +79,20 @@ export const getTokens = async () => {
       console.warn('[TokenStorage] Error accessing Keychain:', keychainError);
     }
     
-    // Dacă nu am putut obține din Keychain, încercăm din AsyncStorage
+    // If we couldn't get from Keychain, try AsyncStorage
     if (!refreshToken) {
       refreshToken = await AsyncStorage.getItem('refreshToken');
       console.log('[TokenStorage] Refresh Token retrieved from AsyncStorage');
     }
     
-    return { accessToken, refreshToken };
+    // Get expiration times
+    const expiresAtString = await AsyncStorage.getItem('expiresAt');
+    const refreshExpiresAtString = await AsyncStorage.getItem('refreshExpiresAt');
+    
+    const expiresAt = expiresAtString ? parseInt(expiresAtString, 10) : undefined;
+    const refreshExpiresAt = refreshExpiresAtString ? parseInt(refreshExpiresAtString, 10) : undefined;
+    
+    return { accessToken, refreshToken, expiresAt, refreshExpiresAt };
   } catch (error) {
     console.error('[TokenStorage] Error retrieving tokens:', error);
     return { accessToken: null, refreshToken: null };
@@ -63,7 +102,7 @@ export const getTokens = async () => {
 // Get only refresh token
 export const getRefreshToken = async () => {
   try {
-    // Încercăm mai întâi Keychain
+    // Try Keychain first
     try {
       const credentials = await Keychain.getGenericPassword();
       if (credentials) {
@@ -74,7 +113,7 @@ export const getRefreshToken = async () => {
       console.warn('[TokenStorage] Error accessing Keychain in getRefreshToken:', keychainError);
     }
     
-    // Dacă nu am găsit în Keychain, încercăm AsyncStorage
+    // If not found in Keychain, try AsyncStorage
     const refreshToken = await AsyncStorage.getItem('refreshToken');
     console.log('[TokenStorage] Refresh Token retrieved from AsyncStorage');
     return refreshToken;
@@ -87,18 +126,22 @@ export const getRefreshToken = async () => {
 // Remove tokens
 export const clearTokens = async () => {
   try {
-    // Ștergem accessToken din AsyncStorage
+    // Delete accessToken from AsyncStorage
     await AsyncStorage.removeItem('accessToken');
     
-    // Ștergem refreshToken din AsyncStorage
+    // Delete refreshToken from AsyncStorage
     await AsyncStorage.removeItem('refreshToken');
     
-    // Încercăm să ștergem și din Keychain
+    // Delete expiration times
+    await AsyncStorage.removeItem('expiresAt');
+    await AsyncStorage.removeItem('refreshExpiresAt');
+    
+    // Try to delete from Keychain
     try {
       await Keychain.resetGenericPassword();
       console.log('[TokenStorage] Tokens cleared from AsyncStorage and Keychain');
     } catch (keychainError) {
-      // Ignorăm eroarea deoarece am șters deja din AsyncStorage
+      // Ignore error since we already deleted from AsyncStorage
       console.warn('[TokenStorage] Could not clear from Keychain, but cleared from AsyncStorage');
     }
   } catch (error) {

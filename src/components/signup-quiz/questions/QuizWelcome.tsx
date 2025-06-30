@@ -130,7 +130,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   featureIconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 30,
     backgroundColor: theme.colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
@@ -156,7 +156,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   continueButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: 30,
     paddingVertical: 14,
     paddingHorizontal: 24,
     width: '100%',

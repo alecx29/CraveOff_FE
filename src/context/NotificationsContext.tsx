@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import React, { createContext, useState, useContext, useEffect, ReactNode, useRef } from 'react';
 import { Platform, Alert } from 'react-native';
+import { scheduleDailyCheckInNotification, cancelDailyCheckInNotification, setupNotificationChannels } from '@/src/services/notificationService';
 
 // Define the context type
 interface NotificationsContextType {
@@ -12,6 +13,8 @@ interface NotificationsContextType {
   requestPermissions: () => Promise<boolean>;
   scheduleNotification: (title: string, body: string, trigger?: Notifications.NotificationTriggerInput) => Promise<string | null>;
   cancelAllNotifications: () => Promise<void>;
+  scheduleDailyCheckIn: () => Promise<string | null>;
+  cancelDailyCheckIn: () => Promise<void>;
 }
 
 // Create context with default values
@@ -22,6 +25,8 @@ const NotificationsContext = createContext<NotificationsContextType>({
   requestPermissions: async () => false,
   scheduleNotification: async () => null,
   cancelAllNotifications: async () => {},
+  scheduleDailyCheckIn: async () => null,
+  cancelDailyCheckIn: async () => {},
 });
 
 // Custom hook for easy context usage
@@ -73,6 +78,9 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
           setIsNotificationsEnabled(false);
           await AsyncStorage.setItem(NOTIFICATIONS_ENABLED_KEY, 'false');
         }
+        
+        // Setup notification channels for Android
+        await setupNotificationChannels();
       } catch (error) {
         console.error('Error loading notification settings:', error);
       }
@@ -196,6 +204,17 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
     }
   };
 
+  // Schedule daily check-in notification at 11:00 AM
+  const scheduleDailyCheckIn = async (): Promise<string | null> => {
+    if (!isNotificationsEnabled) return null;
+    return await scheduleDailyCheckInNotification();
+  };
+
+  // Cancel daily check-in notification
+  const cancelDailyCheckIn = async (): Promise<void> => {
+    await cancelDailyCheckInNotification();
+  };
+
   // Cancel all notifications
   const cancelAllNotifications = async (): Promise<void> => {
     try {
@@ -215,6 +234,9 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
           console.log('Cannot enable notifications without permissions');
           return;
         }
+        
+        // Schedule daily check-in notification when notifications are enabled
+        await scheduleDailyCheckIn();
       } else {
         // If disabling, cancel all scheduled notifications
         await cancelAllNotifications();
@@ -236,6 +258,8 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
         requestPermissions,
         scheduleNotification,
         cancelAllNotifications,
+        scheduleDailyCheckIn,
+        cancelDailyCheckIn,
       }}
     >
       {children}

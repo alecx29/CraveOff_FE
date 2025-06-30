@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
@@ -19,33 +18,21 @@ const QuizGender = ({ selectedGender, onSelectGender, questionNumber = 1 }: Quiz
 
   return (
     <View style={styles.container}>
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.questionNumber}
-      >
+      <Text style={styles.questionNumber}>
         Question {questionNumber}
-      </Animated.Text>
+      </Text>
       
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(200)} 
-        style={styles.title}
-      >
+      <Text style={styles.title}>
         Choose your gender
-      </Animated.Text>
+      </Text>
       
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(300)} 
-        style={styles.subtitle}
-      >
+      <Text style={styles.subtitle}>
         This will be used to calibrate your custom plan
-      </Animated.Text>
+      </Text>
       
       <View style={styles.optionsContainer}>
         {genderOptions.map((gender, index) => (
-          <Animated.View 
-            key={gender}
-            entering={FadeIn.duration(400).delay(400 + index * 100)}
-          >
+          <View key={gender}>
             <TouchableOpacity
               style={[
                 styles.option,
@@ -63,7 +50,7 @@ const QuizGender = ({ selectedGender, onSelectGender, questionNumber = 1 }: Quiz
                 {gender}
               </Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         ))}
       </View>
     </View>
@@ -98,7 +85,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 16,
   },
   option: {
-    padding: 20,
+    padding: 16,
     borderRadius: theme.borderRadius.medium,
     backgroundColor: theme.colors.cardBackground,
     marginBottom: 12,

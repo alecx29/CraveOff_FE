@@ -133,7 +133,7 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: theme.sizes.buttonHeight,

@@ -65,8 +65,7 @@ const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onDismiss }) => {
       // The backend will handle it as null
       const logEntry = {
         date: today,
-        is_clean: isClean,
-        notes: isClean ? 'Daily check-in: Clean day' : 'Daily check-in: Relapse reported'
+        is_clean: isClean
       };
       
       // Pass the log entry without the duration field
