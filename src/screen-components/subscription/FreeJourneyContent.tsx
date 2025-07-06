@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { apiClient } from '@/src/axios/apiClient';
@@ -83,7 +84,7 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         console.log('Authentication state updated successfully');
         
         // Verificăm dacă tokenul a fost salvat corect
-        const storedToken = await AsyncStorage.getItem('accessToken');
+        const storedToken = await SecureStore.getItemAsync('accessToken');
         console.log('Stored access token after signIn:', storedToken ? 'Yes (found)' : 'No (not found)');
         
         // Clear the stored idToken as it's no longer needed
@@ -96,7 +97,7 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Verificăm din nou dacă tokenul este disponibil
-        const tokenAfterDelay = await AsyncStorage.getItem('accessToken');
+        const tokenAfterDelay = await SecureStore.getItemAsync('accessToken');
         console.log('Access token after delay:', tokenAfterDelay ? 'Yes (found)' : 'No (not found)');
         
         // Second API call: Log first entry with is_clean: true

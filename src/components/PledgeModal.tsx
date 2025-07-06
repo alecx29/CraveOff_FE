@@ -5,12 +5,11 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   Dimensions, 
-  ImageBackground, 
   StatusBar,
   Animated as RNAnimated,
   ScrollView
 } from 'react-native';
-import { Ionicons, AntDesign, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { 
@@ -19,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
+import Header from '@/src/components/header/Header';
 
 interface PledgeModalProps {
   visible: boolean;
@@ -28,7 +28,6 @@ interface PledgeModalProps {
 
 const { height, width } = Dimensions.get('window');
 const IS_SMALL_SCREEN = height < 700;
-const MODAL_MAX_HEIGHT = Math.min(height - 40, 600); // max 600px sau cât încape pe ecran
 
 const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
   const { theme } = useTheme();
@@ -90,27 +89,28 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
     >
       <StatusBar barStyle="light-content" />
       
-      <View style={styles.backgroundImage}>
+      <LinearGradient
+        colors={['rgba(20,20,30,0.98)', 'rgba(10,10,20,0.99)']}
+        style={styles.backgroundGradient}
+      >
         <RNAnimated.View 
           style={[
             styles.fullScreenContainer,
-            { opacity: opacityAnim, justifyContent: 'center', alignItems: 'center' }
+            { opacity: opacityAnim }
           ]}
         >
-          {/* X Button at the top */}
-          <TouchableOpacity 
-            style={styles.closeButton} 
-            onPress={handleClose}
-            activeOpacity={0.7}
-          >
-            <AntDesign name="close" size={24} color="#fff" />
-          </TouchableOpacity>
-          <View style={[styles.modalBox, { maxHeight: MODAL_MAX_HEIGHT, minWidth: 320, width: '90%' }]}> 
+          {/* Using the reusable Header component */}
+          <Header 
+            title="Pledge" 
+            onClose={handleClose}
+            backgroundColor="transparent"
+          />
+          
             <ScrollView
+            style={styles.scrollView}
               contentContainerStyle={styles.contentContainer}
               showsVerticalScrollIndicator={false}
             >
-              <Text style={styles.title}>Pledge Sobriety Today</Text>
               <View style={styles.iconContainer}>
                 <LinearGradient
                   colors={['rgb(175, 15, 81)', 'rgb(93, 107, 250)']}
@@ -121,8 +121,11 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
                   <Ionicons name="hand-right" size={40} color="#fff" />
                 </LinearGradient>
               </View>
+            
+            <Text style={styles.title}>Pledge Sobriety Today</Text>
+            
               <Text style={styles.pledgeText}>
-                Commit to 24 hours of strength. You're stronger than the urge — and we'll be here to check in when you've won.
+              Commit to 24 hours of strength. You&apos;re stronger than the urge — and we&apos;ll be here to check in when you&apos;ve won.
               </Text>
               <View style={styles.optionsOuterContainer}>
                 <View style={styles.optionsContainer}>
@@ -131,7 +134,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
                       <View style={styles.optionIconContainer}>
                         <MaterialCommunityIcons 
                           name="target" 
-                          size={18} 
+                        size={16} 
                           color={theme.colors.primary} 
                         />
                       </View>
@@ -149,7 +152,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
                       <View style={styles.optionIconContainer}>
                         <Feather 
                           name="coffee" 
-                          size={18} 
+                        size={16} 
                           color={theme.colors.primary} 
                         />
                       </View>
@@ -167,7 +170,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
                       <View style={styles.optionIconContainer}>
                         <Ionicons 
                           name="trophy-outline" 
-                          size={18} 
+                        size={16} 
                           color={theme.colors.primary} 
                         />
                       </View>
@@ -181,10 +184,9 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
                   </View>
                 </View>
               </View>
-              {/* Padding bottom pentru a nu fi acoperit de buton */}
-              <View style={{ height: 80 }} />
-            </ScrollView>
-            {/* Pledge Button la baza modalului, mereu vizibil */}
+            
+            {/* Pledge Button now inside ScrollView */}
+            <View style={styles.buttonWrapper}>
             <TouchableOpacity
               style={styles.pledgeButton}
               onPress={handlePledge}
@@ -197,13 +199,17 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
                     <Ionicons name="sync" size={22} color="#000000" style={{ transform: [{ rotate: '45deg' }] }} />
                   </View>
                 ) : (
+                    <>
+                      <Ionicons name="hand-right" size={22} color="#000000" style={styles.pledgeIcon} />
                   <Text style={styles.pledgeButtonText}>Pledge Now</Text>
+                    </>
                 )}
               </View>
             </TouchableOpacity>
           </View>
+          </ScrollView>
         </RNAnimated.View>
-      </View>
+      </LinearGradient>
     </Animated.View>
   );
 };
@@ -213,49 +219,36 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
     zIndex: 1000,
   },
-  backgroundImage: {
+  backgroundGradient: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#000',
   },
   fullScreenContainer: {
     flex: 1,
     width: '100%',
     height: '100%',
   },
-  closeButton: {
-    position: 'absolute',
-    top: topPadding,
-    right: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    zIndex: 10,
+  scrollView: {
+    flex: 1,
   },
   contentContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 30,
-    paddingTop: topPadding + 40,
-    paddingBottom: 100, // Space for the button at bottom
+    paddingTop: 20,
+    paddingBottom: bottomPadding + 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '600',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 24,
   },
   iconContainer: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 16,
   },
   iconBackground: {
     width: 90,
@@ -270,8 +263,8 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     elevation: 8,
   },
   pledgeText: {
-    fontSize: 18,
-    lineHeight: 26,
+    fontSize: 14,
+    lineHeight: 20,
     color: '#fff',
     textAlign: 'center',
     marginBottom: 30,
@@ -281,24 +274,18 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     marginBottom: 24,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
   },
   optionsContainer: {
     borderRadius: 16,
-    padding: 15,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    backdropFilter: 'blur(0px)',
+    padding: 10,
+    backgroundColor: 'rgba(30, 30, 40, 0.5)',
   },
   optionItem: {
-    padding: 12,
-    paddingVertical: 12,
+    padding: 8,
+    paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: 'transparent',
-    marginBottom: 10,
+    marginBottom: 8,
     borderWidth: 0,
   },
   optionContent: {
@@ -306,49 +293,37 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     alignItems: 'center',
   },
   optionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(20, 20, 30, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    marginRight: 10,
   },
   optionTextContainer: {
     flex: 1,
   },
   optionText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#fff',
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   optionSubtext: {
-    fontSize: 13,
+    fontSize: 12,
     color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '400',
   },
-  modalBox: {
-    backgroundColor: 'rgba(20,20,30,0.98)',
-    borderRadius: 24,
-    paddingBottom: 0,
-    paddingTop: 0,
+  buttonWrapper: {
+    width: '100%',
+    marginTop: 20,
+    paddingHorizontal: 10,
+    paddingBottom: bottomPadding,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    overflow: 'hidden',
-    position: 'relative',
   },
   pledgeButton: {
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    bottom: 20,
-    borderRadius: 16,
+    borderRadius: 30,
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
     shadowColor: '#000',
@@ -356,17 +331,22 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
+    minWidth: 200,
+    paddingHorizontal: 32,
   },
   pledgeButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
+    paddingVertical: 16,
   },
   pledgeButtonText: {
     color: '#000000',
     fontSize: 18,
     fontWeight: '600',
+  },
+  pledgeIcon: {
+    marginRight: 8,
   },
   loadingContainer: {
     flexDirection: 'row',

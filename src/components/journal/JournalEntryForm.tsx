@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView } from 'react-native';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { JournalEntry } from '@/src/context/JournalContext';
@@ -12,7 +12,8 @@ const getColor = (theme: any, colorName: string, fallbackColor: string): string 
   return fallbackColor;
 };
 
-type MoodOption = 'great' | 'good' | 'okay' | 'difficult';
+// Mood option type
+type MoodOption = 'difficult' | 'okay' | 'good' | 'great';
 
 interface JournalEntryFormProps {
   entry?: Partial<JournalEntry>;
@@ -133,11 +134,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
   };
   
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={100}
-    >
+    <View style={styles.container}>
       {/* Header with navigation buttons */}
       <View style={styles.header}>
         <TouchableOpacity 
@@ -168,104 +165,112 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
           )}
         </TouchableOpacity>
       </View>
-      
-      <View style={styles.mainContainer}>
-        {/* Title Input */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Title</Text>
-          <TextInput
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Enter a title..."
-            placeholderTextColor={theme.colors.textMuted}
-            editable={!isSaving}
-          />
-        </View>
-        
-        {/* Mood Selector */}
-        <View style={styles.moodContainer}>
-          <Text style={styles.label}>How are you feeling?</Text>
-          <View style={styles.moodButtonsContainer}>
-            {(['difficult', 'okay', 'good', 'great'] as MoodOption[]).map((moodOption) => {
-              const moodDetails = getMoodDetails(moodOption);
-              return (
-                <TouchableOpacity
-                  key={moodOption}
-                  style={[
-                    styles.moodButton,
-                    { 
-                      borderColor: moodDetails.borderColor,
-                      backgroundColor: moodDetails.backgroundColor
-                    },
-                    mood === moodOption && styles.selectedMoodButton,
-                    isSaving && styles.disabledButton
-                  ]}
-                  onPress={() => setMood(moodOption)}
-                  disabled={isSaving}
-                >
-                  <Text style={styles.emoji}>{moodDetails.emoji}</Text>
-                  <Text 
-                    style={[
-                      styles.moodLabel,
-                      { color: moodDetails.color },
-                      mood === moodOption && styles.selectedMoodLabel,
-                      isSaving && styles.disabledText
-                    ]}
-                  >
-                    {moodDetails.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-        
-        {/* Content Input - fills remaining space */}
-        <View style={styles.journalEntryContainer}>
-          <TextInput
-            style={styles.textArea}
-            value={content}
-            onChangeText={setContent}
-            placeholder="Write your thoughts..."
-            placeholderTextColor={theme.colors.textMuted}
-            multiline
-            textAlignVertical="top"
-            editable={!isSaving}
-          />
-        </View>
-        
-        {/* Tags Input - at the bottom */}
-        <View style={styles.tagsContainer}>
-          <Text style={styles.label}>Tags</Text>
-          <View style={styles.tagInputContainer}>
+
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      >
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Title Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Title</Text>
             <TextInput
-              style={styles.tagInput}
-              value={tagInput}
-              onChangeText={setTagInput}
-              placeholder="Add a tag..."
+              style={styles.input}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Enter a title..."
               placeholderTextColor={theme.colors.textMuted}
-              onSubmitEditing={addTag}
               editable={!isSaving}
             />
-            <TouchableOpacity 
-              style={[
-                styles.addTagButton,
-                isSaving && styles.disabledButton
-              ]}
-              onPress={addTag}
-              disabled={isSaving}
-            >
-              <Ionicons 
-                name="add" 
-                size={24} 
-                color={isSaving ? theme.colors.textMuted : theme.colors.primary} 
-              />
-            </TouchableOpacity>
           </View>
           
-          {/* Tags Display */}
-          {tags.length > 0 && (
+          {/* Mood Selector */}
+          <View style={styles.moodContainer}>
+            <Text style={styles.label}>How are you feeling?</Text>
+            <View style={styles.moodButtonsContainer}>
+              {(['difficult', 'okay', 'good', 'great'] as MoodOption[]).map((moodOption) => {
+                const moodDetails = getMoodDetails(moodOption);
+                return (
+                  <TouchableOpacity
+                    key={moodOption}
+                    style={[
+                      styles.moodButton,
+                      { 
+                        borderColor: moodDetails.borderColor,
+                        backgroundColor: moodDetails.backgroundColor
+                      },
+                      mood === moodOption && styles.selectedMoodButton,
+                      isSaving && styles.disabledButton
+                    ]}
+                    onPress={() => setMood(moodOption)}
+                    disabled={isSaving}
+                  >
+                    <Text style={styles.emoji}>{moodDetails.emoji}</Text>
+                    <Text 
+                      style={[
+                        styles.moodLabel,
+                        { color: moodDetails.color },
+                        mood === moodOption && styles.selectedMoodLabel,
+                        isSaving && styles.disabledText
+                      ]}
+                    >
+                      {moodDetails.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+          
+          {/* Content Input - with fixed height */}
+          <View style={styles.journalEntryContainer}>
+            <TextInput
+              style={styles.textArea}
+              value={content}
+              onChangeText={setContent}
+              placeholder="Write your thoughts..."
+              placeholderTextColor={theme.colors.textMuted}
+              multiline
+              textAlignVertical="top"
+              editable={!isSaving}
+            />
+          </View>
+          
+          {/* Tags Input - at the bottom */}
+          <View style={styles.tagsContainer}>
+            <Text style={styles.label}>Tags</Text>
+            <View style={styles.tagInputContainer}>
+              <TextInput
+                style={styles.tagInput}
+                value={tagInput}
+                onChangeText={setTagInput}
+                placeholder="Add a tag..."
+                placeholderTextColor={theme.colors.textMuted}
+                onSubmitEditing={addTag}
+                editable={!isSaving}
+              />
+              <TouchableOpacity 
+                style={[
+                  styles.addTagButton,
+                  isSaving && styles.disabledButton
+                ]}
+                onPress={addTag}
+                disabled={isSaving}
+              >
+                <Ionicons 
+                  name="add" 
+                  size={24} 
+                  color={isSaving ? theme.colors.textMuted : theme.colors.primary} 
+                />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Tags Display */}
             <View style={styles.tagsListContainer}>
               {tags.map((tag, index) => (
                 <View key={index} style={styles.tag}>
@@ -284,10 +289,10 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                 </View>
               ))}
             </View>
-          )}
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -295,6 +300,16 @@ const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    padding: 16,
+    paddingBottom: 100, // Extra padding at the bottom to ensure content is visible
   },
   header: {
     flexDirection: 'row',
@@ -305,12 +320,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(200, 200, 200, 0.3)',
     backgroundColor: getColor(theme, 'backgroundDeep', '#1a1c20'),
-  },
-  mainContainer: {
-    flex: 1,
-    padding: 16,
-    display: 'flex',
-    flexDirection: 'column',
   },
   headerButton: {
     padding: 6,
@@ -353,7 +362,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   journalEntryContainer: {
-    flex: 1,
+    height: 200, // Fixed height for the text area
     marginVertical: 10,
   },
   tagsContainer: {
@@ -382,10 +391,10 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     color: theme.colors.textPrimary,
-    flex: 1,
     height: '100%',
     borderWidth: 1,
     borderColor: 'rgba(55, 65, 81, 0.5)',
+    textAlignVertical: 'top',
   },
   moodButton: {
     flexDirection: 'row',

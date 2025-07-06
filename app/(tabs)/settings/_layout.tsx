@@ -18,6 +18,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="personal-details" />
       <Stack.Screen name="notifications" />
+      <Stack.Screen name="achievements" />
     </Stack>
   );
 }

@@ -2,6 +2,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, FlatList, SafeAreaView, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat } from 'react-native-reanimated';
+import { router } from 'expo-router';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { useUser } from '@/src/context/UserContext';
@@ -360,6 +361,12 @@ export default function HomeScreen() {
       return () => clearInterval(interval);
     }
   }, [lastRelapseData]);
+  
+  // Fetch daily quote when component mounts
+  useEffect(() => {
+    console.log('Fetching daily quote...');
+    fetchDailyQuote();
+  }, []);
   
   // Determine current day
   const today = new Date();
@@ -1062,7 +1069,9 @@ export default function HomeScreen() {
 
   return (
     <GradientBackground>
-      <ScrollView style={styles.container}>
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}>
         {/* Header cu salut */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
@@ -1268,7 +1277,10 @@ export default function HomeScreen() {
         
         {/* Chenare 21 Day Challenge și Pet */}
         <View style={styles.challengeRow}>
-          <TouchableOpacity style={styles.challengeCard}>
+          <TouchableOpacity 
+            style={styles.challengeCard}
+            onPress={() => router.push('/analytics')}
+          >
             <View style={styles.challengeContent}>
               <Text style={styles.challengeNumber}>90</Text>
               <View style={styles.challengeTextContainer}>
@@ -1311,7 +1323,12 @@ export default function HomeScreen() {
         
         {/* Card motivațional */}
         <View style={styles.motivationCard}>
-          <Text style={styles.sectionTitle}>Daily Motivation</Text>
+          <View style={styles.motivationHeader}>
+            <Text style={styles.sectionTitle}>Daily Motivation</Text>
+            <TouchableOpacity onPress={fetchDailyQuote}>
+              <Ionicons name="refresh-outline" size={20} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
           {isLoadingQuote ? (
             <View style={styles.quoteLoadingContainer}>
               <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -1369,222 +1386,224 @@ export default function HomeScreen() {
         onResetCounter={handleResetCounter}
       />
       
-      {/* Oria Chat Modal */}
-      <Modal
-        animationType="slide"
-        transparent={false}
-        visible={showOriaModal}
-        onRequestClose={() => {
-          setSelectedChat(null);
-          setShowOriaModal(false);
-        }}
-      >
-        <SafeAreaView style={styles.oriaModalContainer}>
-          {!selectedChat ? (
-            // Conversation list view
-            <View style={styles.oriaModalContainer}>
-              <View style={styles.oriaModalHeader}>
-                <TouchableOpacity
-                  onPress={() => setShowOriaModal(false)}
-                  style={styles.oriaModalCloseButton}
-                >
-                  <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
-                </TouchableOpacity>
-                <View style={styles.oriaModalTitleContainer}>
-                  <Text style={styles.oriaModalTitle}>Oria AI</Text>
-                  <View style={styles.oriaModalStatusContainer}>
-                    <View style={styles.oriaModalStatusDot} />
-                    <Text style={styles.oriaModalStatusText}>Online</Text>
+      {/* Oria Chat Modal - Only render when visible */}
+      {showOriaModal && (
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={true}
+          onRequestClose={() => {
+            setSelectedChat(null);
+            setShowOriaModal(false);
+          }}
+        >
+          <SafeAreaView style={styles.oriaModalContainer}>
+            {!selectedChat ? (
+              // Conversation list view
+              <View style={styles.oriaModalContainer}>
+                <View style={styles.oriaModalHeader}>
+                  <TouchableOpacity
+                    onPress={() => setShowOriaModal(false)}
+                    style={styles.oriaModalCloseButton}
+                  >
+                    <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
+                  </TouchableOpacity>
+                  <View style={styles.oriaModalTitleContainer}>
+                    <Text style={styles.oriaModalTitle}>Oria AI</Text>
+                    <View style={styles.oriaModalStatusContainer}>
+                      <View style={styles.oriaModalStatusDot} />
+                      <Text style={styles.oriaModalStatusText}>Online</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-              
-              {isLoadingChats ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={theme.colors.primary} />
-                  <Text style={styles.loadingText}>Loading conversations...</Text>
-                </View>
-              ) : chats.length === 0 ? (
-                <View style={styles.emptyStateContainer}>
-                  <Ionicons name="chatbubble-outline" size={48} color={theme.colors.textMuted} />
-                  <Text style={styles.emptyStateTitle}>No conversations yet</Text>
-                  <Text style={styles.emptyStateDescription}>
-                    Start a new chat with Oria to get help with your recovery journey
-                  </Text>
-                </View>
-              ) : (
-                <FlatList
-                  data={chats}
-                  keyExtractor={(item) => item.id}
-                  contentContainerStyle={styles.conversationListContainer}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity 
-                      style={styles.conversationItem}
-                      onPress={() => fetchChat(item.id)}
-                    >
-                      <View style={styles.conversationIcon}>
-                        <Ionicons name="chatbubble-outline" size={22} color={theme.colors.primary} />
-                      </View>
-                      <View style={styles.conversationContent}>
-                        <Text style={styles.conversationTitle}>{item.title}</Text>
-                        <Text style={styles.conversationPreview}>
-                          Tap to view conversation
-                        </Text>
-                      </View>
-                      <Text style={styles.conversationDate}>{formatDate(item.updated_at)}</Text>
-                    </TouchableOpacity>
-                  )}
-                  ItemSeparatorComponent={() => <View style={styles.conversationSeparator} />}
-                />
-              )}
-              
-              <TouchableOpacity 
-                style={styles.newChatButton}
-                onPress={createNewChat}
-                disabled={isLoadingChat}
-              >
-                {isLoadingChat ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="add" size={24} color="#fff" />
-                    <Text style={styles.newChatButtonText}>New Chat</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          ) : (
-            // Chat view
-            <View style={styles.chatContainer}>
-              <View style={styles.chatHeader}>
-                <TouchableOpacity
-                  onPress={() => setSelectedChat(null)}
-                  style={styles.chatBackButton}
-                >
-                  <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
-                </TouchableOpacity>
                 
-                {isEditingTitle ? (
-                  <View style={styles.titleEditContainer}>
-                    <TextInput
-                      ref={titleInputRef}
-                      style={styles.titleInput}
-                      value={editedTitle}
-                      onChangeText={setEditedTitle}
-                      onBlur={saveTitle}
-                      onSubmitEditing={saveTitle}
-                      returnKeyType="done"
-                      autoCapitalize="sentences"
-                      maxLength={50}
-                    />
-                    {isSavingTitle ? (
-                      <ActivityIndicator size="small" color={theme.colors.primary} style={styles.titleSaveIndicator} />
-                    ) : (
-                      <TouchableOpacity onPress={saveTitle} style={styles.titleSaveButton}>
-                        <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
+                {isLoadingChats ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                    <Text style={styles.loadingText}>Loading conversations...</Text>
+                  </View>
+                ) : chats.length === 0 ? (
+                  <View style={styles.emptyStateContainer}>
+                    <Ionicons name="chatbubble-outline" size={48} color={theme.colors.textMuted} />
+                    <Text style={styles.emptyStateTitle}>No conversations yet</Text>
+                    <Text style={styles.emptyStateDescription}>
+                      Start a new chat with Oria to get help with your recovery journey
+                    </Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={chats}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.conversationListContainer}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity 
+                        style={styles.conversationItem}
+                        onPress={() => fetchChat(item.id)}
+                      >
+                        <View style={styles.conversationIcon}>
+                          <Ionicons name="chatbubble-outline" size={22} color={theme.colors.primary} />
+                        </View>
+                        <View style={styles.conversationContent}>
+                          <Text style={styles.conversationTitle}>{item.title}</Text>
+                          <Text style={styles.conversationPreview}>
+                            Tap to view conversation
+                          </Text>
+                        </View>
+                        <Text style={styles.conversationDate}>{formatDate(item.updated_at)}</Text>
                       </TouchableOpacity>
                     )}
-                  </View>
-                ) : (
-                  <TouchableWithoutFeedback onPress={startEditingTitle}>
-                    <View style={styles.chatTitleContainer}>
-                      <Text style={styles.chatTitle}>{selectedChat.title}</Text>
-                      <Ionicons name="pencil-outline" size={16} color={theme.colors.textSecondary} style={styles.editTitleIcon} />
-                    </View>
-                  </TouchableWithoutFeedback>
-                )}
-              </View>
-              
-              {isLoadingChat ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={theme.colors.primary} />
-                  <Text style={styles.loadingText}>Loading conversation...</Text>
-                </View>
-              ) : (
-                <FlatList
-                  ref={chatScrollRef}
-                  data={selectedChat.messages}
-                  keyExtractor={(item) => item.id}
-                  contentContainerStyle={styles.messagesContainer}
-                  renderItem={({ item }) => (
-                    <View style={[
-                      styles.messageWrapper,
-                      item.role === 'user' ? styles.userMessageWrapper : styles.oriaMessageWrapper
-                    ]}>
-                      <View style={[
-                        styles.messageBubble,
-                        item.role === 'user' ? styles.userMessageBubble : styles.oriaMessageBubble
-                      ]}>
-                        {item.isLoading ? (
-                          <View style={styles.loadingIndicator}>
-                            <Animated.View 
-                              style={loadingIndicatorStyle}
-                            />
-                          </View>
-                        ) : (
-                          <Text style={[
-                            styles.messageText,
-                            item.role === 'user' ? styles.userMessageText : styles.oriaMessageText
-                          ]}>
-                            {item.content}
-                          </Text>
-                        )}
-                      </View>
-                      <Text style={styles.messageTime}>{formatChatTime(item.created_at)}</Text>
-                    </View>
-                  )}
-                  onLayout={() => {
-                    // Scroll to bottom on initial render
-                    setTimeout(() => {
-                      chatScrollRef.current?.scrollToEnd({ animated: false });
-                    }, 100);
-                  }}
-                />
-              )}
-              
-              <View style={styles.chatInputContainer}>
-                <View style={styles.chatInputWrapper}>
-                  <TextInput
-                    style={styles.chatInput}
-                    placeholder="Type a message..."
-                    placeholderTextColor={theme.colors.textMuted}
-                    value={newMessage}
-                    onChangeText={setNewMessage}
-                    multiline
-                    returnKeyType="send"
-                    onSubmitEditing={sendMessage}
-                    editable={!isSendingMessage}
+                    ItemSeparatorComponent={() => <View style={styles.conversationSeparator} />}
                   />
-                </View>
+                )}
+                
                 <TouchableOpacity 
-                  style={[
-                    styles.sendButton,
-                    newMessage.trim() || isGeneratingResponse ? styles.sendButtonActive : {}
-                  ]}
-                  onPress={isGeneratingResponse ? stopResponseGeneration : sendMessage}
-                  disabled={(!newMessage.trim() && !isGeneratingResponse) || (isSendingMessage && !isGeneratingResponse)}
+                  style={styles.newChatButton}
+                  onPress={createNewChat}
+                  disabled={isLoadingChat}
                 >
-                  {isSendingMessage && !isGeneratingResponse ? (
-                    <ActivityIndicator size="small" color={theme.colors.primary} />
-                  ) : isGeneratingResponse ? (
-                    <Ionicons 
-                      name="square" 
-                      size={18} 
-                      color={getEmergencyColor()} 
-                    />
+                  {isLoadingChat ? (
+                    <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Ionicons 
-                      name="send" 
-                      size={20} 
-                      color={newMessage.trim() ? theme.colors.primary : theme.colors.textMuted} 
-                    />
+                    <>
+                      <Ionicons name="add" size={24} color="#fff" />
+                      <Text style={styles.newChatButtonText}>New Chat</Text>
+                    </>
                   )}
                 </TouchableOpacity>
               </View>
-            </View>
-          )}
-        </SafeAreaView>
-      </Modal>
+            ) : (
+              // Chat view
+              <View style={styles.chatContainer}>
+                <View style={styles.chatHeader}>
+                  <TouchableOpacity
+                    onPress={() => setSelectedChat(null)}
+                    style={styles.chatBackButton}
+                  >
+                    <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
+                  </TouchableOpacity>
+                  
+                  {isEditingTitle ? (
+                    <View style={styles.titleEditContainer}>
+                      <TextInput
+                        ref={titleInputRef}
+                        style={styles.titleInput}
+                        value={editedTitle}
+                        onChangeText={setEditedTitle}
+                        onBlur={saveTitle}
+                        onSubmitEditing={saveTitle}
+                        returnKeyType="done"
+                        autoCapitalize="sentences"
+                        maxLength={50}
+                      />
+                      {isSavingTitle ? (
+                        <ActivityIndicator size="small" color={theme.colors.primary} style={styles.titleSaveIndicator} />
+                      ) : (
+                        <TouchableOpacity onPress={saveTitle} style={styles.titleSaveButton}>
+                          <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ) : (
+                    <TouchableWithoutFeedback onPress={startEditingTitle}>
+                      <View style={styles.chatTitleContainer}>
+                        <Text style={styles.chatTitle}>{selectedChat.title}</Text>
+                        <Ionicons name="pencil-outline" size={16} color={theme.colors.textSecondary} style={styles.editTitleIcon} />
+                      </View>
+                    </TouchableWithoutFeedback>
+                  )}
+                </View>
+                
+                {isLoadingChat ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                    <Text style={styles.loadingText}>Loading conversation...</Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    ref={chatScrollRef}
+                    data={selectedChat.messages}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.messagesContainer}
+                    renderItem={({ item }) => (
+                      <View style={[
+                        styles.messageWrapper,
+                        item.role === 'user' ? styles.userMessageWrapper : styles.oriaMessageWrapper
+                      ]}>
+                        <View style={[
+                          styles.messageBubble,
+                          item.role === 'user' ? styles.userMessageBubble : styles.oriaMessageBubble
+                        ]}>
+                          {item.isLoading ? (
+                            <View style={styles.loadingIndicator}>
+                              <Animated.View 
+                                style={loadingIndicatorStyle}
+                              />
+                            </View>
+                          ) : (
+                            <Text style={[
+                              styles.messageText,
+                              item.role === 'user' ? styles.userMessageText : styles.oriaMessageText
+                            ]}>
+                              {item.content}
+                            </Text>
+                          )}
+                        </View>
+                        <Text style={styles.messageTime}>{formatChatTime(item.created_at)}</Text>
+                      </View>
+                    )}
+                    onLayout={() => {
+                      // Scroll to bottom on initial render
+                      setTimeout(() => {
+                        chatScrollRef.current?.scrollToEnd({ animated: false });
+                      }, 100);
+                    }}
+                  />
+                )}
+                
+                <View style={styles.chatInputContainer}>
+                  <View style={styles.chatInputWrapper}>
+                    <TextInput
+                      style={styles.chatInput}
+                      placeholder="Type a message..."
+                      placeholderTextColor={theme.colors.textMuted}
+                      value={newMessage}
+                      onChangeText={setNewMessage}
+                      multiline
+                      returnKeyType="send"
+                      onSubmitEditing={sendMessage}
+                      editable={!isSendingMessage}
+                    />
+                  </View>
+                  <TouchableOpacity 
+                    style={[
+                      styles.sendButton,
+                      newMessage.trim() || isGeneratingResponse ? styles.sendButtonActive : {}
+                    ]}
+                    onPress={isGeneratingResponse ? stopResponseGeneration : sendMessage}
+                    disabled={(!newMessage.trim() && !isGeneratingResponse) || (isSendingMessage && !isGeneratingResponse)}
+                  >
+                    {isSendingMessage && !isGeneratingResponse ? (
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                    ) : isGeneratingResponse ? (
+                      <Ionicons 
+                        name="square" 
+                        size={18} 
+                        color={getEmergencyColor()} 
+                      />
+                    ) : (
+                      <Ionicons 
+                        name="send" 
+                        size={20} 
+                        color={newMessage.trim() ? theme.colors.primary : theme.colors.textMuted} 
+                      />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </SafeAreaView>
+        </Modal>
+      )}
       
       {/* Deep Breathing Coming Soon Modal */}
       <DeepBreathingComingSoonModal
@@ -1606,6 +1625,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 40,
+  },
+  contentContainer: {
+    paddingBottom: 60, // Increased bottom padding to ensure content is fully visible
   },
   header: {
     flexDirection: 'row',
@@ -2402,5 +2424,11 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#fff',
+  },
+  motivationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
 });

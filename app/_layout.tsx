@@ -1,6 +1,6 @@
 // app/_layout.tsx
 import React, { useContext, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View, StatusBar } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, StatusBar, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -14,7 +14,7 @@ import { UserProvider } from '@/src/context/UserContext';
 import { LogsProvider } from '@/src/context/LogsContext';
 import { JournalProvider } from '@/src/context/JournalContext';
 import { PledgeProvider } from '@/src/context/PledgeContext';
-import { getTokens } from '@/src/Storage/tokenStorage';
+import { getTokens, clearTokens } from '@/src/Storage/tokenStorage';
 import HomeOnlyCheckInController from '@/src/components/HomeOnlyCheckInController';
 import NotificationInitializer from '@/src/components/NotificationInitializer';
 
@@ -45,16 +45,17 @@ export default function RootLayout() {
 }
 
 const AuthNavigation: React.FC = () => {
-  const { isAuthenticated, signIn, accessToken, setAccessToken, setIsAuthenticated } = useContext(AuthContext);
-  const [loading, setLoading] = useState(true); // Loading state
+  const { isAuthenticated, signIn, accessToken, setAccessToken, setIsAuthenticated, loading } = useContext(AuthContext);
 
-  useEffect(() => {
-    const bootstrap = async () => {
+  // Funcție pentru verificarea și reînnoirea token-urilor
+  const checkAndRefreshTokens = async () => {
+    try {
       // Get tokens and expiration time
-      const { refreshToken, expiresAt } = await getTokens();
+      const { refreshToken, expiresAt, accessToken: storedAccessToken } = await getTokens();
       console.log('refreshToken: ' + (refreshToken ? 'exists' : 'not found'));
+      console.log('accessToken: ' + (storedAccessToken ? 'exists' : 'not found'));
       
-      if (refreshToken) {
+      if (refreshToken && storedAccessToken) {
         // Check if token is expired or about to expire (within 5 minutes)
         const now = Math.floor(Date.now() / 1000);
         const shouldRefresh = !expiresAt || expiresAt - now < 300;
@@ -75,23 +76,60 @@ const AuthNavigation: React.FC = () => {
             });
             
             console.log('Token refreshed and auth context updated');
+            return true;
           } catch (error) {
-            console.error('Error refreshing token on app launch:', error);
+            console.error('Error refreshing token:', error);
+            // Curățăm token-urile expirate și setăm starea ca neautentificat
+            await clearTokens();
+            setIsAuthenticated(false);
+            return false;
           }
         } else {
           console.log('Token still valid, skipping refresh');
-          // We don't need to manually set authentication state here
-          // The AuthContext already handles this in its useEffect
+          // Asigurăm-ne că starea este setată corect chiar dacă token-ul este valid
+          setAccessToken(storedAccessToken);
+          setIsAuthenticated(true);
+          // Setăm headerele pentru API client
+          apiClient.defaults.headers.common['Authorization'] = `Bearer ${storedAccessToken}`;
+          return true;
         }
+      } else {
+        console.log('No valid tokens found');
+        setIsAuthenticated(false);
+        return false;
       }
-      setLoading(false);
-      console.log('isAuthenticated: ' + isAuthenticated);
+    } catch (error) {
+      console.error('Error checking tokens:', error);
+      setIsAuthenticated(false);
+      return false;
+    }
+  };
+
+  // Verificare inițială la pornirea aplicației
+  useEffect(() => {
+    const bootstrap = async () => {
+      const authResult = await checkAndRefreshTokens();
+      console.log('Bootstrap complete, authentication result:', authResult);
+      console.log('isAuthenticated after bootstrap:', isAuthenticated);
     };
     bootstrap();
   }, []);
 
+  // Verificare la revenirea aplicației în prim-plan
   useEffect(() => {
-    console.log(loading, isAuthenticated)
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active' && isAuthenticated) {
+        console.log('App has come to the foreground, checking tokens...');
+        checkAndRefreshTokens();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push('/login');
     }

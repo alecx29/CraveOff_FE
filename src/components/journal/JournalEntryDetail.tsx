@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { format } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import React, { useState } from 'react';
 import { 
   View, 
@@ -34,6 +34,56 @@ interface JournalEntryDetailProps {
 
 const { width } = Dimensions.get('window');
 
+// Helper function to safely format dates
+const formatDate = (dateString: string | undefined): string => {
+  if (!dateString) return 'No date';
+  
+  try {
+    // Try to parse as ISO string first
+    const date = parseISO(dateString);
+    if (isValid(date)) {
+      return format(date, 'MMMM d, yyyy');
+    }
+    
+    // If that fails, try creating a new Date object directly
+    const fallbackDate = new Date(dateString);
+    if (isValid(fallbackDate)) {
+      return format(fallbackDate, 'MMMM d, yyyy');
+    }
+    
+    // If all parsing fails
+    return 'Unknown date';
+  } catch (error) {
+    console.error('Error formatting date:', dateString, error);
+    return 'Unknown date';
+  }
+};
+
+// Helper function to safely format time
+const formatTime = (dateString: string | undefined): string => {
+  if (!dateString) return '';
+  
+  try {
+    // Try to parse as ISO string first
+    const date = parseISO(dateString);
+    if (isValid(date)) {
+      return format(date, 'h:mm a');
+    }
+    
+    // If that fails, try creating a new Date object directly
+    const fallbackDate = new Date(dateString);
+    if (isValid(fallbackDate)) {
+      return format(fallbackDate, 'h:mm a');
+    }
+    
+    // If all parsing fails
+    return '';
+  } catch (error) {
+    console.error('Error formatting time:', dateString, error);
+    return '';
+  }
+};
+
 const JournalEntryDetail: React.FC<JournalEntryDetailProps> = ({
   entry,
   onEdit,
@@ -44,22 +94,9 @@ const JournalEntryDetail: React.FC<JournalEntryDetailProps> = ({
   const styles = createStyles(theme);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-  // Format the date
-  const formattedDate = React.useMemo(() => {
-    try {
-      return format(new Date(entry.date), 'MMMM d, yyyy');
-    } catch (error) {
-      return 'Invalid date';
-    }
-  }, [entry.date]);
-  
-  const formattedTime = React.useMemo(() => {
-    try {
-      return format(new Date(entry.createdAt), 'h:mm a');
-    } catch (error) {
-      return '';
-    }
-  }, [entry.createdAt]);
+  // Format the date and time using our helper functions
+  const formattedDate = formatDate(entry.date || entry.entry_date);
+  const formattedTime = formatTime(entry.createdAt);
 
   // Get mood emoji
   const getMoodEmoji = () => {
@@ -206,7 +243,7 @@ const JournalEntryDetail: React.FC<JournalEntryDetailProps> = ({
           <View style={styles.metaContainer}>
             <View style={styles.dateContainer}>
               <Text style={styles.date}>{formattedDate}</Text>
-              <Text style={styles.time}>{formattedTime}</Text>
+              {formattedTime ? <Text style={styles.time}>{formattedTime}</Text> : null}
             </View>
             <View style={[
               styles.moodContainer, 
@@ -229,7 +266,7 @@ const JournalEntryDetail: React.FC<JournalEntryDetailProps> = ({
           <Text style={styles.contentText}>{entry.content}</Text>
           
           {/* Tags */}
-          {entry.tags.length > 0 && (
+          {entry.tags && entry.tags.length > 0 && (
             <View style={styles.tagsContainer}>
               <Text style={styles.tagsTitle}>Tags</Text>
               <View style={styles.tagsList}>

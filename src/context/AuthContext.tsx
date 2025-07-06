@@ -2,6 +2,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
+import { Alert } from 'react-native';
 import { saveTokens, clearTokens, getRefreshToken, getTokens } from '@/src/Storage/tokenStorage';
 import { apiClient, apiClientImage, refreshTokenManually } from '@/src/axios/apiClient';
 import axios from 'axios';
@@ -16,6 +17,7 @@ interface AuthContextProps {
   refreshToken: () => Promise<boolean>;
   setAccessToken: (token: string | null) => void;
   setIsAuthenticated: (value: boolean) => void;
+  loading: boolean;
 }
 
 export const AuthContext = createContext<AuthContextProps>({
@@ -28,6 +30,7 @@ export const AuthContext = createContext<AuthContextProps>({
   refreshToken: () => Promise.resolve(false),
   setAccessToken: () => {},
   setIsAuthenticated: () => {},
+  loading: true,
 });
 
 interface AuthProviderProps {
@@ -38,12 +41,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<any>({});
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [authErrorCount, setAuthErrorCount] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Check for existing token on mount
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { accessToken } = await getTokens();
+        console.log('[AuthContext] Starting authentication check...');
+        const { accessToken, refreshToken } = await getTokens();
+        
+        console.log('[AuthContext] Token check result:', { 
+          accessTokenExists: !!accessToken, 
+          refreshTokenExists: !!refreshToken 
+        });
+        
         if (accessToken) {
           setAccessToken(accessToken);
           setIsAuthenticated(true);
@@ -54,14 +66,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           apiClientImage.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
         } else {
           console.log('[AuthContext] No token found, user is not authenticated');
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('[AuthContext] Error checking authentication:', error);
+        setIsAuthenticated(false);
+      } finally {
+        console.log('[AuthContext] Authentication check complete, setting loading to false');
+        setLoading(false);
       }
     };
     
     checkAuth();
   }, []);
+
+  // Resetăm contorul de erori când utilizatorul se autentifică cu succes
+  useEffect(() => {
+    if (isAuthenticated) {
+      setAuthErrorCount(0);
+    }
+  }, [isAuthenticated]);
 
   const signIn = async (userData: { accessToken: string; refreshToken: string; user?: any; expiresAt?: number; refreshExpiresAt?: number }) => {
     try {
@@ -91,6 +115,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[AuthContext] Sign in complete');
     } catch (error) {
       console.error('[AuthContext] Error during sign in:', error);
+      // Incrementăm contorul de erori
+      setAuthErrorCount(prev => prev + 1);
+      
+      // Dacă avem mai multe erori consecutive, notificăm utilizatorul
+      if (authErrorCount > 2) {
+        Alert.alert(
+          'Probleme de autentificare',
+          'Am întâmpinat probleme la autentificarea ta. Te rugăm să te reconectezi.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   };
 
@@ -140,16 +175,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       } else {
         console.log('[AuthContext] Token refresh failed');
+        // Incrementăm contorul de erori
+        setAuthErrorCount(prev => prev + 1);
+        
+        // Dacă avem mai multe erori consecutive, notificăm utilizatorul
+        if (authErrorCount > 2) {
+          Alert.alert(
+            'Sesiune expirată',
+            'Sesiunea ta a expirat. Te rugăm să te reconectezi.',
+            [{ text: 'OK' }]
+          );
+          // Deconectăm utilizatorul după prea multe încercări eșuate
+          await signOut();
+        }
         return false;
       }
     } catch (error) {
       console.error('[AuthContext] Error refreshing token:', error);
+      // Incrementăm contorul de erori
+      setAuthErrorCount(prev => prev + 1);
       return false;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, signIn, signUp, signOut, user, accessToken, refreshToken, setAccessToken, setIsAuthenticated }}>
+    <AuthContext.Provider value={{ isAuthenticated, signIn, signUp, signOut, user, accessToken, refreshToken, setAccessToken, setIsAuthenticated, loading }}>
       {children}
     </AuthContext.Provider>
   );

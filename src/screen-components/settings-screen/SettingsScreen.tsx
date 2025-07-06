@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -19,9 +19,49 @@ const SettingsScreen = () => {
   const { isNotificationsEnabled, setNotificationsEnabled, requestPermissions } = useNotifications();
   const { signOut, user: authUser } = useContext(AuthContext);
   const { resetUser } = useUser();
-  const { resetLogs } = useLogs();
-  const { resetJournal } = useJournal();
+  const { resetLogs, lastRelapseData } = useLogs();
+  const { resetJournal, entries } = useJournal();
   const styles = createStyles(theme);
+  
+  // State pentru clean days
+  const [cleanDays, setCleanDays] = useState(0);
+  
+  // Calculăm zilele clean pe baza ultimei recidive
+  useEffect(() => {
+    if (lastRelapseData && lastRelapseData.last_relapse_date) {
+      try {
+        // Parse the relapse date which comes in UTC format
+        const relapseDateTime = new Date(lastRelapseData.last_relapse_date);
+        
+        // Check if the date is valid
+        if (isNaN(relapseDateTime.getTime())) {
+          console.error('Invalid date format:', lastRelapseData.last_relapse_date);
+          setCleanDays(0);
+          return;
+        }
+        
+        // Get current time
+        const now = new Date();
+        
+        // Calculate the time difference in milliseconds
+        const diffTimeMs = now.getTime() - relapseDateTime.getTime();
+        
+        // Only proceed if the relapse date is in the past
+        if (diffTimeMs > 0) {
+          // Calculate days based on milliseconds
+          const diffDays = Math.floor(diffTimeMs / (24 * 3600 * 1000));
+          setCleanDays(diffDays);
+        } else {
+          setCleanDays(0);
+        }
+      } catch (e) {
+        console.error('Error parsing or calculating time from last_relapse_date:', e);
+        setCleanDays(0);
+      }
+    } else {
+      setCleanDays(0);
+    }
+  }, [lastRelapseData]);
 
   // Helper function to get the flame color safely
   const getFlameColor = (): string => {
@@ -41,6 +81,10 @@ const SettingsScreen = () => {
   const navigateToNotifications = () => {
     router.push('/settings/notifications');
   };
+  
+  const navigateToAchievements = () => {
+    router.push('/settings/achievements');
+  };
 
   const openPrivacyPolicy = async () => {
     await WebBrowser.openBrowserAsync('https://www.craveoffapp.com/privacy-policy');
@@ -51,7 +95,7 @@ const SettingsScreen = () => {
   };
 
   const openTermsOfService = async () => {
-    await WebBrowser.openBrowserAsync('https://www.craveoffapp.com/terms-of-service');
+    await WebBrowser.openBrowserAsync('https://www.craveoffapp.com/terms-and-conditions');
   };
 
   return (
@@ -77,25 +121,33 @@ const SettingsScreen = () => {
       <View style={styles.statsRow}>
         {/* Clean Days */}
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>7</Text>
+          <Text style={styles.statNumber}>{cleanDays}</Text>
           <Ionicons name="flame" size={16} color={getFlameColor()} style={styles.statIcon} />
           <Text style={styles.statLabel}>Days Clean</Text>
         </View>
         
         {/* Journal Entries */}
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>12</Text>
+          <Text style={styles.statNumber}>{entries?.length || 0}</Text>
           <Text style={styles.statLabel}>Journal Entries</Text>
         </View>
         
         {/* Achievements */}
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>3</Text>
+          <Text style={styles.statNumber}>1/2</Text>
           <Text style={styles.statLabel}>Achievements</Text>
         </View>
       </View>
 
       {/* Settings Options */}
+      <SettingCard
+        icon="trophy-outline"
+        title="Achievements"
+        value="1 of 2 Unlocked"
+        onPress={navigateToAchievements}
+        iconComponent={Ionicons}
+        variant="primary"
+      />
       <SettingCard
         icon="notifications-outline"
         title="Notifications"
@@ -110,6 +162,7 @@ const SettingsScreen = () => {
         value="Privacy Policy & Terms"
         onPress={openPrivacyPolicy}
         iconComponent={Ionicons}
+        variant="primary"
       />
       <SettingCard
         icon="help-circle-outline"
@@ -117,12 +170,14 @@ const SettingsScreen = () => {
         value="Get Help"
         onPress={openSupport}
         iconComponent={Ionicons}
+        variant="primary"
       />
       <SettingCard
         icon="document-text-outline"
         title="Terms of Service"
         onPress={openTermsOfService}
         iconComponent={Ionicons}
+        variant="primary"
       />
 
       {/* Logout Button */}

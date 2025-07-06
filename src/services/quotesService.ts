@@ -8,7 +8,9 @@ export const quotesService = {
    */
   getDailyQuote: async (): Promise<MotivationalQuote> => {
     try {
+      console.log("Calling quote API endpoint:", BackendRoutes.DAILY_QUOTE);
       const response = await apiClient.get(BackendRoutes.DAILY_QUOTE);
+      console.log("Quote API response:", response.data);
       return response.data;
     } catch (error) {
       console.error("Error fetching daily quote:", error);

@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  Dimensions,
   StatusBar,
-  ScrollView
+  ScrollView,
+  Modal
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { 
@@ -17,6 +17,8 @@ import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { useTheme } from '@/src/context/ThemeProvider';
+import { usePledge } from '@/src/context/PledgeContext';
+import Header from '@/src/components/header/Header';
 
 interface RelapsedModalProps {
   visible: boolean;
@@ -28,6 +30,8 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { canMakePledge, activePledgeTimeRemaining } = usePledge();
+  const [showConfirmation, setShowConfirmation] = useState(false);
   
   // Adjust for safe areas
   const bottomPadding = Math.max(insets.bottom, 20);
@@ -38,6 +42,19 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
     onClose();
     // Navigate to journal tab
     router.push('/(tabs)/journal');
+  };
+
+  // Function to handle reset button press
+  const handleResetPress = () => {
+    // Always show confirmation modal, regardless of pledge status
+    setShowConfirmation(true);
+  };
+
+  // Function to confirm reset
+  const confirmReset = () => {
+    setShowConfirmation(false);
+    onResetCounter();
+    onClose();
   };
   
   if (!visible) return null;
@@ -52,28 +69,22 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
     >
       <StatusBar barStyle="light-content" />
       
+      {/* Using the reusable Header component */}
+      <Header 
+        title="Relapsed" 
+        titleColor="#e74c3c"
+        onClose={onClose}
+        backgroundColor={theme.colors.background || '#121212'}
+      />
+      
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Close button */}
-        <TouchableOpacity 
-          style={styles.closeButton}
-          onPress={onClose}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="close" size={24} color="#fff" />
-        </TouchableOpacity>
-        
         <View style={styles.contentContainer}>
           {/* Header Section */}
           <View style={styles.headerSection}>
-            {/* Title */}
-            <Text style={styles.title}>
-              Relapsed
-            </Text>
-            
             {/* Subtitle */}
             <Text style={styles.subtitle}>
               Don&apos;t be hard on yourself
@@ -172,12 +183,17 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
         
         {/* Button Container - Fixed at bottom */}
         <View style={styles.bottomButtonContainer}>
+          {!canMakePledge && (
+            <View style={styles.pledgeWarning}>
+              <Ionicons name="shield-checkmark" size={18} color="#fff" style={styles.pledgeIcon} />
+              <Text style={styles.pledgeWarningText}>
+                You have an active pledge ({activePledgeTimeRemaining} remaining)
+              </Text>
+            </View>
+          )}
           <TouchableOpacity 
             style={styles.resetButton}
-            onPress={() => {
-              onResetCounter();
-              onClose();
-            }}
+            onPress={handleResetPress}
             activeOpacity={0.8}
           >
             <Ionicons name="refresh-outline" size={22} color="#fff" style={styles.resetIcon} />
@@ -185,6 +201,52 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Confirmation Modal */}
+      <Modal
+        transparent={true}
+        visible={showConfirmation}
+        animationType="fade"
+        onRequestClose={() => setShowConfirmation(false)}
+      >
+        <View style={styles.confirmationOverlay}>
+          <View style={styles.confirmationContainer}>
+            <View style={styles.confirmationHeader}>
+              <Ionicons name="warning" size={28} color="#FF9500" />
+              <Text style={styles.confirmationTitle}>Reset Counter</Text>
+            </View>
+            {!canMakePledge ? (
+              <Text style={styles.confirmationMessage}>
+                You have an active pledge with {activePledgeTimeRemaining} remaining. 
+                Are you sure you want to reset your counter?
+              </Text>
+            ) : (
+              <Text style={styles.confirmationMessage}>
+                Are you sure you want to reset your counter?
+              </Text>
+            )}
+            {!canMakePledge && (
+              <Text style={styles.confirmationEncouragement}>
+                Remember, you committed to this pledge.
+              </Text>
+            )}
+            <View style={styles.confirmationButtons}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => setShowConfirmation(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.confirmButton}
+                onPress={confirmReset}
+              >
+                <Text style={styles.confirmButtonText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Animated.View>
   );
 };
@@ -192,7 +254,7 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
 const createStyles = (theme: any, bottomPadding: number, topPadding: number) => StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: theme.colors.backgroundDeep || '#121212',
+    backgroundColor: theme.colors.background || '#121212',
     zIndex: 1000,
   },
   scrollView: {
@@ -200,7 +262,7 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: topPadding + 40,
+    paddingTop: 20,
     paddingBottom: bottomPadding + 20,
     justifyContent: 'space-between',
   },
@@ -213,13 +275,6 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
   headerSection: {
     alignItems: 'center',
     width: '100%',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#e74c3c', // Red color for "Relapsed"
-    textAlign: 'center',
-    marginBottom: 20,
   },
   subtitle: {
     fontSize: 28,
@@ -320,6 +375,25 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     marginTop: 20,
     marginBottom: 10,
   },
+  pledgeWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 149, 0, 0.2)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 16,
+    width: '100%',
+  },
+  pledgeIcon: {
+    marginRight: 8,
+  },
+  pledgeWarningText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
   resetButton: {
     backgroundColor: '#e74c3c', // Red color for the button
     paddingVertical: 16,
@@ -338,18 +412,77 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     fontSize: 18,
     fontWeight: '600',
   },
-  closeButton: {
-    position: 'absolute',
-    top: topPadding + 10,
-    right: 20,
-    padding: 10,
-    zIndex: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
+  confirmationOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2000,
+  },
+  confirmationContainer: {
+    backgroundColor: theme.colors.card || '#1c1c1e',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    maxWidth: 360,
+    alignItems: 'center',
+  },
+  confirmationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  confirmationTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    marginLeft: 10,
+  },
+  confirmationMessage: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  confirmationEncouragement: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  cancelButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  confirmButton: {
+    backgroundColor: '#e74c3c',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    flex: 1,
+    marginLeft: 8,
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

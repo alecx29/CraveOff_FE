@@ -80,10 +80,49 @@ export default function AnalyticsScreen() {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   
-  // Calculate clean days and progress percentage based on last relapse date
+  // Calculate clean days based on last relapse date
   useEffect(() => {
-    // fetchLogs();
-  }, []);
+    if (lastRelapseData && lastRelapseData.last_relapse_date) {
+      try {
+        // Parse the relapse date which comes in UTC format
+        const relapseDateTime = new Date(lastRelapseData.last_relapse_date);
+        
+        // Check if the date is valid
+        if (isNaN(relapseDateTime.getTime())) {
+          console.error('Invalid date format:', lastRelapseData.last_relapse_date);
+          setCleanDays(0);
+          return;
+        }
+        
+        // Get current time
+        const now = new Date();
+        
+        // Calculate the time difference in milliseconds
+        const diffTimeMs = now.getTime() - relapseDateTime.getTime();
+        
+        // Only proceed if the relapse date is in the past
+        if (diffTimeMs > 0) {
+          // Calculate days based on milliseconds
+          const diffDays = Math.floor(diffTimeMs / (24 * 3600 * 1000));
+          setCleanDays(diffDays);
+          
+          // Calculate progress percentage towards 90 days
+          const percentage = Math.min(100, Math.round((diffDays / 90) * 100));
+          setProgressPercentage(percentage);
+        } else {
+          setCleanDays(0);
+          setProgressPercentage(0);
+        }
+      } catch (e) {
+        console.error('Error parsing or calculating time from last_relapse_date:', e);
+        setCleanDays(0);
+        setProgressPercentage(0);
+      }
+    } else {
+      setCleanDays(0);
+      setProgressPercentage(0);
+    }
+  }, [lastRelapseData]);
   
   // Calculate streak statistics from logs
   useEffect(() => {
@@ -96,29 +135,7 @@ export default function AnalyticsScreen() {
   // Check for active pledge when component mounts
   useEffect(() => {
     checkActivePledge();
-    
-    // Set up interval to update the remaining time
-    const interval = setInterval(() => {
-      if (!canMakePledge && activePledgeStartTime) {
-        const pledgeDate = new Date(activePledgeStartTime);
-        const now = new Date();
-        const diffHours = differenceInHours(now, pledgeDate);
-        
-        if (diffHours >= 24) {
-          // Pledge has expired
-          setCanMakePledge(true);
-          setActivePledgeTimeRemaining(null);
-        } else {
-          // Update remaining time
-          const remainingHours = 24 - diffHours;
-          const remainingMinutes = 60 - differenceInMinutes(now, pledgeDate) % 60;
-          setActivePledgeTimeRemaining(`${Math.floor(remainingHours)}h ${remainingMinutes}m`);
-        }
-      }
-    }, 60000); // Update every minute
-    
-    return () => clearInterval(interval);
-  }, [canMakePledge, activePledgeStartTime]);
+  }, []);
   
   // Function to calculate streak statistics
   const calculateStreakStats = (logEntries: LogEntry[]) => {
@@ -356,27 +373,14 @@ export default function AnalyticsScreen() {
     const dateLabels = Array(datesToCalculate.length).fill('');
     
     // First date label
-    dateLabels[0] = format(datesToCalculate[0], 'dd/MM/yy');
+    dateLabels[0] = 'Join date';
     
     // Last date label (today)
-    dateLabels[dateLabels.length - 1] = 'Acum';
+    dateLabels[dateLabels.length - 1] = 'Present';
     
-    // For milestone points, add a short label
-    if (datesToCalculate.length > 3) {
+    // All other labels are empty - no milestone labels
       for (let i = 1; i < datesToCalculate.length - 1; i++) {
-        // Check for key milestone days from the start date
-        const daysSinceStart = Math.round(
-          (datesToCalculate[i].getTime() - earliestLogDate.getTime()) / (24 * 3600 * 1000)
-        );
-        
-        if (keyMilestones.includes(daysSinceStart)) {
-          // For key milestones, show the day number
-          dateLabels[i] = `Z${daysSinceStart}`;
-        } else if (i % 2 === 0 && dateLabels.length > 7) {
-          // For longer charts, add some date markers
-          dateLabels[i] = format(datesToCalculate[i], 'dd/MM');
-        }
-      }
+      dateLabels[i] = '';
     }
     
     // Initialize progress scores for each point
@@ -526,12 +530,25 @@ export default function AnalyticsScreen() {
       }
     });
     
-    // Create chart data object
+    // Create chart data object with validation to prevent bugs
+    const validProgressScores = progressScores.map(score => {
+      // Ensure all values are valid numbers
+      if (isNaN(score) || score === null || score === undefined) {
+        return 0;
+      }
+      return Math.min(Math.max(Math.round(score), 0), 100);
+    });
+
+    // Ensure we have enough valid labels
+    const validLabels = dateLabels.length >= validProgressScores.length 
+      ? dateLabels 
+      : [...dateLabels, ...Array(validProgressScores.length - dateLabels.length).fill('')];
+    
     const chartData = {
-      labels: dateLabels,
+      labels: validLabels,
       datasets: [
         {
-          data: progressScores,
+          data: validProgressScores,
           color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`,
           strokeWidth: 2
         }
@@ -559,53 +576,6 @@ export default function AnalyticsScreen() {
       trend 
     });
   };
-  
-  useEffect(() => {
-    if (lastRelapseData && lastRelapseData.last_relapse_date) {
-      try {
-        // Parse the relapse date (in UTC format)
-        const relapseDateTime = new Date(lastRelapseData.last_relapse_date);
-        
-        // Check if the date is valid
-        if (isNaN(relapseDateTime.getTime())) {
-          console.error('Invalid date format:', lastRelapseData.last_relapse_date);
-          setCleanDays(0);
-          setProgressPercentage(0);
-          return;
-        }
-        
-        // Get current time
-        const now = new Date();
-        
-        // Calculate the time difference in milliseconds
-        const diffTimeMs = now.getTime() - relapseDateTime.getTime();
-        
-        // Only proceed if the relapse date is in the past
-        if (diffTimeMs > 0) {
-          // Calculate days since relapse
-          const diffDays = Math.floor(diffTimeMs / (24 * 3600 * 1000));
-          
-          // Goal is 90 days
-          const GOAL_DAYS = 90;
-          // Calculate percentage (0 to 100)
-          const percentage = Math.min(100, Math.round((diffDays / GOAL_DAYS) * 100));
-          
-          setCleanDays(diffDays);
-          setProgressPercentage(percentage);
-        } else {
-          setCleanDays(0);
-          setProgressPercentage(0);
-        }
-      } catch (e) {
-        console.error('Error calculating clean days:', e);
-        setCleanDays(0);
-        setProgressPercentage(0);
-      }
-    } else {
-      setCleanDays(0);
-      setProgressPercentage(0);
-    }
-  }, [lastRelapseData]);
   
   // Update animated values when progress percentage changes
   useEffect(() => {
@@ -698,9 +668,19 @@ export default function AnalyticsScreen() {
       borderRadius: 16
     },
     propsForDots: {
-      r: "6",
+      r: "4",
       strokeWidth: "2",
       stroke: theme.colors.cardBackground
+    },
+    strokeWidth: 3,
+    propsForBackgroundLines: {
+      strokeDasharray: "", // solid background lines
+      strokeWidth: 1,
+      stroke: `${theme.colors.textSecondary}20` // transparent lines
+    },
+    propsForLabels: {
+      fontSize: 10,
+      fontWeight: "bold"
     }
   };
 
@@ -767,7 +747,10 @@ export default function AnalyticsScreen() {
 
   return (
     <GradientBackground>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}>
         <Text style={styles.screenTitle}>Analytics</Text>
         <Text style={styles.screenSubtitle}>Track your progress and insights</Text>
         
@@ -850,7 +833,7 @@ export default function AnalyticsScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>
-              <Ionicons name="trending-up" size={18} color={theme.colors.primary} /> Evoluția în timp
+              <Ionicons name="trending-up" size={18} color={theme.colors.primary} /> Progress Over Time
             </Text>
             {progressTrend.value > 0 && (
               <View style={styles.trendContainer}>
@@ -872,26 +855,101 @@ export default function AnalyticsScreen() {
           </View>
           
           <View style={styles.chartContainer}>
+            {progressData.datasets[0].data.length > 0 ? (
+              <>
             <LineChart
-              data={progressData}
+                  data={{
+                    ...progressData,
+                    labels: ['', ''] // Ascundem etichetele originale
+                  }}
               width={screenWidth - 70}
-              height={180}
+                  height={240}
               chartConfig={chartConfig}
               bezier
               style={styles.chart}
-              withInnerLines={false}
-              withVerticalLines={false}
+                  withInnerLines={true}
+                  withVerticalLines={true}
               withHorizontalLabels={true}
-              withVerticalLabels={true}
+                  withVerticalLabels={false} // Dezactivăm etichetele verticale originale
               withDots={true}
               formatYLabel={(value) => `${value}%`}
+                  yAxisInterval={25}
+                  yAxisSuffix="%"
+                  segments={4}
               fromZero
-            />
+                  withOuterLines={false}
+                />
+                <View style={styles.chartLabelContainer}>
+                  <Text style={styles.chartLabel}>Join date</Text>
+                  <Text style={styles.chartLabel}>Present</Text>
+                </View>
+              </>
+            ) : (
+              <View style={styles.noDataContainer}>
+                <Text style={styles.noDataText}>Not enough data to display the chart</Text>
+              </View>
+            )}
           </View>
           
           <Text style={styles.chartDescription}>
-            Evoluția recuperării de la instalarea aplicației, cu indicatori care reflectă progresul în timp, adaptată la streakuri și momente importante din călătoria ta.
+            Recovery progress since app installation, with indicators reflecting your journey milestones and important moments in your recovery.
           </Text>
+        </View>
+        
+        {/* 90 Day Challenge Banner - moved to the bottom */}
+        <View style={styles.challengeBanner}>
+          <View style={styles.challengeHeader}>
+            <View style={styles.challengeTitleContainer}>
+              <Text style={styles.challengeTitle}>90 Day Challenge</Text>
+              <Text style={styles.challengeSubtitle}>Rewire your brain</Text>
+            </View>
+            <View style={styles.challengeBadge}>
+              <Text style={styles.challengeBadgeText}>{progressPercentage}%</Text>
+            </View>
+          </View>
+          
+          <View style={styles.challengeContent}>
+            <View style={styles.challengeStats}>
+              <Text style={styles.challengeDaysCount}>{cleanDays}</Text>
+              <Text style={styles.challengeDaysLabel}>days clean</Text>
+            </View>
+            
+            <View style={styles.challengeInfoContainer}>
+              <Text style={styles.challengeInfo}>
+                Studies show it takes about 90 days to rewire your brain and break free from addiction. 
+                Stay consistent and track your progress here.
+              </Text>
+              
+              <View style={styles.milestoneContainer}>
+                <View style={styles.milestone}>
+                  <View style={[styles.milestoneMarker, cleanDays >= 30 ? styles.milestoneCompleted : {}]}>
+                    {cleanDays >= 30 && <Ionicons name="checkmark" size={12} color="#fff" />}
+                  </View>
+                  <Text style={styles.milestoneText}>30 days</Text>
+                </View>
+                
+                <View style={styles.milestone}>
+                  <View style={[styles.milestoneMarker, cleanDays >= 60 ? styles.milestoneCompleted : {}]}>
+                    {cleanDays >= 60 && <Ionicons name="checkmark" size={12} color="#fff" />}
+                  </View>
+                  <Text style={styles.milestoneText}>60 days</Text>
+                </View>
+                
+                <View style={styles.milestone}>
+                  <View style={[styles.milestoneMarker, cleanDays >= 90 ? styles.milestoneCompleted : {}]}>
+                    {cleanDays >= 90 && <Ionicons name="checkmark" size={12} color="#fff" />}
+                  </View>
+                  <Text style={styles.milestoneText}>90 days</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+          
+          <View style={styles.challengeProgressBarContainer}>
+            <View style={styles.challengeProgressBar}>
+              <View style={[styles.challengeProgress, { width: `${progressPercentage}%` }]} />
+            </View>
+          </View>
         </View>
       
       </ScrollView>
@@ -1036,19 +1094,26 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
   },
   chartContainer: {
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 16,
+    marginTop: 0,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 0,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.borderRadius.small,
   },
   chart: {
     borderRadius: theme.borderRadius.medium,
     paddingRight: 12,
+    paddingLeft: 0,
+    marginLeft: 0,
+    marginBottom: -10,
   },
   chartDescription: {
     fontSize: 14,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginTop: 16,
-    padding: 8,
+    marginTop: 8,
+    padding: 4,
     backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
     borderRadius: theme.borderRadius.small,
   },
@@ -1112,5 +1177,135 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     fontSize: 12,
     fontWeight: '600',
     color: '#fff',
+  },
+  contentContainer: {
+    paddingBottom: 60,
+  },
+  noDataContainer: {
+    height: 280,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.borderRadius.medium,
+    padding: 20,
+  },
+  noDataText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  chartLabelContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 15,
+    marginTop: -10,
+    marginBottom: 0,
+  },
+  chartLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: theme.colors.textSecondary,
+  },
+  // 90 Day Challenge Banner styles
+  challengeBanner: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.borderRadius.medium,
+    padding: 16,
+    marginBottom: 16,
+    ...theme.shadows.small,
+  },
+  challengeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  challengeTitleContainer: {
+    flex: 1,
+  },
+  challengeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  challengeSubtitle: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  challengeBadge: {
+    backgroundColor: theme.colors.primary + '20',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  challengeBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  challengeContent: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  challengeStats: {
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  challengeDaysCount: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+  },
+  challengeDaysLabel: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+  },
+  challengeInfoContainer: {
+    flex: 1,
+  },
+  challengeInfo: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  milestoneContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  milestone: {
+    alignItems: 'center',
+  },
+  milestoneMarker: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: theme.colors.cardInteractive,
+    marginBottom: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  milestoneCompleted: {
+    backgroundColor: theme.colors.success || '#22c55e',
+  },
+  milestoneText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+  },
+  challengeProgressBarContainer: {
+    marginTop: 8,
+  },
+  challengeProgressBar: {
+    height: 6,
+    backgroundColor: theme.colors.cardInteractive,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  challengeProgress: {
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+    borderRadius: 3,
   },
 });
