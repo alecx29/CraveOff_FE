@@ -1,14 +1,16 @@
 // app/(auth)/login.tsx
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useContext, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { Alert, StyleSheet, View, Image, TouchableOpacity, Text } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Constants from 'expo-constants';
 
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
 import { AuthContext } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeProvider';
 import GoogleSignInButton from '@/src/google-sign-in/GoogleSignInButton';
+import { AppleSignInButton } from '@/src/apple-sign-in';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { saveTokens } from '@/src/Storage/tokenStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,7 +21,14 @@ const LoginScreen: React.FC = () => {
   const { signIn } = useContext(AuthContext);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isDevAppleLoading, setIsDevAppleLoading] = useState(false);
   const styles = createStyles(theme);
+  
+  // Check if we're in development mode - show dev button for apple-signin channel or development builds
+  const isDevelopment = 
+    Constants.expoConfig?.extra?.eas?.build?.channel === 'apple-signin' || 
+    process.env.NODE_ENV === 'development' ||
+    __DEV__;
 
   const googleLogin = async (idToken: string) => {
     if (isLoading) return;
@@ -99,6 +108,69 @@ const LoginScreen: React.FC = () => {
     }
   };
 
+  // Development-only Apple Sign In
+  const handleDevAppleSignIn = async () => {
+    if (isDevAppleLoading) return;
+    
+    setIsDevAppleLoading(true);
+    console.log('[DevLogin] Starting dev Apple login process...');
+    
+    try {
+      console.log('[DevLogin] Sending authentication request to server...');
+      const response = await apiClient.post(BackendRoutes.DEV_LOGIN, { 
+        provider: 'APPLE',
+        signup_complete: true
+      });
+      
+      console.log('[DevLogin] Authentication successful, processing response');
+      console.log('[DevLogin] Full response structure:', JSON.stringify(response.data, null, 2));
+      
+      const { session, user } = response.data;
+      console.log('[DevLogin] Session object:', JSON.stringify(session, null, 2));
+      
+      const accessToken = session.access_token || session.accessToken;
+      const refreshToken = session.refresh_token || session.refreshToken;
+      
+      console.log('[DevLogin] Extracted tokens:');
+      console.log('[DevLogin] Access Token:', accessToken?.substring(0, 10) + '...');
+      console.log('[DevLogin] Refresh Token:', refreshToken?.substring(0, 10) + '...');
+      
+      if (!accessToken || !refreshToken) {
+        console.error('[DevLogin] ERROR: Missing tokens in response!');
+        Alert.alert('Authentication Error', 'Token information missing from response');
+        setIsDevAppleLoading(false);
+        return;
+      }
+      
+      console.log('[DevLogin] Saving tokens using tokenStorage...');
+      await saveTokens(accessToken, refreshToken);
+      console.log('[DevLogin] Tokens saved successfully');
+      
+      // Save authentication state
+      await signIn({
+        accessToken, 
+        refreshToken,
+        user
+      });
+      
+      // Add a small delay to ensure token is properly stored and available for subsequent requests
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // For dev login, always treat as completed signup
+      console.log('[DevLogin] Dev login successful, redirecting to home');
+      router.push('/');
+    } catch (error: any) {
+      console.error('[DevLogin] Dev Apple login error:', error.response?.data || error.message);
+      console.error('[DevLogin] Full error:', error);
+      Alert.alert(
+        'Login Error', 
+        error.response?.data?.message || 'Failed to login with Dev Apple. Please try again.'
+      );
+    } finally {
+      setIsDevAppleLoading(false);
+    }
+  };
+
   return (
     <GradientBackground>
       <View style={styles.container}>
@@ -128,7 +200,7 @@ const LoginScreen: React.FC = () => {
             style={styles.subtitle}
             entering={FadeInDown.duration(800).delay(400)}
           >
-            Join over 10,000 users. Become porn free and learn to be in control
+            Join over our comunity of users. Become porn free and learn to be in control
           </Animated.Text>
            
           <Animated.View 
@@ -136,6 +208,29 @@ const LoginScreen: React.FC = () => {
             entering={FadeInDown.duration(800).delay(500)}
           >
             <GoogleSignInButton signInCallback={googleLogin} />
+            
+            <View style={styles.buttonSpacer} />
+            
+            <AppleSignInButton />
+
+            {isDevelopment && (
+              <>
+                <View style={styles.buttonSpacer} />
+                
+                <TouchableOpacity
+                  style={[
+                    styles.devButton,
+                    isDevAppleLoading ? { opacity: 0.6 } : null
+                  ]}
+                  onPress={handleDevAppleSignIn}
+                  disabled={isDevAppleLoading}
+                >
+                  <Text style={styles.devButtonText}>
+                    DEV ONLY - Apple Sign In
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </Animated.View>
         </Animated.View>
       </View>
@@ -196,5 +291,25 @@ const createStyles = (theme: any) => StyleSheet.create({
   googleSignInContainer: {
     width: '100%',
     marginTop: 20,
+  },
+  buttonSpacer: {
+    height: 16,
+  },
+  devButton: {
+    width: '100%',
+    height: 48,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    borderWidth: 2,
+    borderColor: '#FFFF00',
+    borderStyle: 'dashed',
+  },
+  devButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

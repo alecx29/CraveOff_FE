@@ -6,12 +6,16 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "store"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      }
     },
     "production": {
+      "distribution": "store",
       "autoIncrement": true
     },
     "release": {
@@ -20,6 +24,14 @@
       "android": {
         "buildType": "app-bundle"
       }
+    },
+    "appleSignIn": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": false,
+        "enterpriseProvisioning": "adhoc"
+      },
+      "channel": "apple-signin"
     }
   },
   "submit": {

@@ -64,7 +64,7 @@ export default function AnalysisComplete() {
               style={styles.description}
               entering={SlideInRight.duration(500).delay(300)}
             >
-              We've got some news to break to you...
+              We&apos;ve got some news to break to you...
             </Animated.Text>
             
             {/* Graph visualization */}
@@ -114,7 +114,7 @@ export default function AnalysisComplete() {
               style={styles.insight}
               entering={SlideInRight.duration(500).delay(700)}
             >
-              This is an informative result, not a medical diagnosis. If you're concerned, we encourage you to speak with a medical professional.
+              This is an informative result, not a medical diagnosis. If you&apos;re concerned, we encourage you to speak with a medical professional.
             </Animated.Text>
             
             {/* Add padding at the bottom to ensure content is not hidden behind the fixed button */}

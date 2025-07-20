@@ -16,7 +16,7 @@ WebBrowser.maybeCompleteAuthSession();
 // Get client IDs from app config
 const WEB_CLIENT_ID = Constants.expoConfig?.extra?.googleWebClientId || '391159890839-orc2jub1onifvuqgtchj0tonpsd5jn61.apps.googleusercontent.com';
 const ANDROID_CLIENT_ID = Constants.expoConfig?.extra?.googleAndroidClientId || '391159890839-va2ga57lfrnfugnhn4mvm01jdug850rv.apps.googleusercontent.com';
-const IOS_CLIENT_ID = Constants.expoConfig?.extra?.googleIosClientId || '353269821618-n3s13eq5edvpar4nh2j0f0pcjfr9tlpg.apps.googleusercontent.com';
+const IOS_CLIENT_ID = Constants.expoConfig?.extra?.googleIosClientId || '391159890839-bh8c7d8toeqfjbg4cj1k2438ao5pajon.apps.googleusercontent.com';
 
 // Configure GoogleSignin for native platforms
 if (Platform.OS !== 'web') {

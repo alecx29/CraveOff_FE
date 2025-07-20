@@ -2,6 +2,7 @@ export const BackendRoutes = {
   LOGIN: "/auth/login",
   AUTHENTICATE: "/auth/authenticate",
   GOOGLE_LOGIN: "/auth/google-login",
+  DEV_LOGIN: "/auth/dev-login",
   REGISTER: "/auth/signup",
   REFRESH_TOKEN: "/auth/refresh",
   SIGNUP_ANALYSIS: "/signup/analysis",

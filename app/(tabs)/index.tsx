@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, FlatList, SafeAreaView, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat } from 'react-native-reanimated';
 import { router } from 'expo-router';
+import NetInfo from '@react-native-community/netinfo';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { useUser } from '@/src/context/UserContext';
@@ -1067,6 +1068,27 @@ export default function HomeScreen() {
     }
   };
 
+  // State for network connectivity
+  const [isConnected, setIsConnected] = useState(true);
+  
+  // Setup NetInfo listener for connectivity changes
+  useEffect(() => {
+    // Subscribe to network state updates
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected);
+    });
+
+    // Check initial connection state
+    NetInfo.fetch().then(state => {
+      setIsConnected(state.isConnected);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   return (
     <GradientBackground>
       <ScrollView 
@@ -1081,6 +1103,9 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
             <Text style={styles.subGreeting}>Stay strong today</Text>
+            {!isConnected && (
+              <Text style={styles.offlineMessage}>You're currently offline</Text>
+            )}
           </View>
           
           <View style={styles.headerButtons}>
@@ -1651,9 +1676,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 4,
   },
   subGreeting: {
-    fontSize: 14,
+    fontSize: 16,
     color: theme.colors.textSecondary,
+    marginTop: 5,
+  },
+  offlineMessage: {
+    fontSize: 12,
+    color: theme.colors.emergency || '#dc2626',
     marginTop: 2,
+    fontStyle: 'italic',
   },
   cleanDaysCard: {
     backgroundColor: theme.colors.backgroundDeep,
