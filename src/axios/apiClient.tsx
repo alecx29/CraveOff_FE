@@ -42,6 +42,13 @@ apiClient.interceptors.request.use(
       // Log all outgoing requests
       console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
       
+      // Skip adding Authorization header for authentication endpoints
+      if (config.url === '/auth/authenticate' || config.url === '/auth/login' || config.url === '/auth/signup') {
+        console.log(`[API Client] Skipping Authorization header for ${config.url}`);
+        console.log(`[API Client] Headers for auth endpoint:`, JSON.stringify(config.headers, null, 2));
+        return config;
+      }
+      
       // Check if token is about to expire and refresh if needed
       const { accessToken, expiresAt } = await getTokens();
       

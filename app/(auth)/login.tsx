@@ -39,8 +39,8 @@ const LoginScreen: React.FC = () => {
     try {
       console.log('[Login] Sending authentication request to server...');
       const response = await apiClient.post(BackendRoutes.AUTHENTICATE, { 
-        provider: 'GOOGLE', 
-        idToken 
+        provider: 'google', 
+        idToken: idToken 
       });
       
       console.log('[Login] Authentication successful, processing response');

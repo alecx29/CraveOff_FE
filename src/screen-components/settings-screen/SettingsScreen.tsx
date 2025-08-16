@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -91,7 +91,21 @@ const SettingsScreen = () => {
   };
 
   const openSupport = async () => {
-    await WebBrowser.openBrowserAsync('https://www.craveoffapp.com/support');
+    const emailUrl = 'mailto:romanalexandru123@gmail.com';
+    try {
+      const supported = await Linking.canOpenURL(emailUrl);
+      if (supported) {
+        await Linking.openURL(emailUrl);
+      } else {
+        console.log('Email app not available');
+        // Fallback to web browser if email app is not available
+        await WebBrowser.openBrowserAsync('https://www.craveoffapp.com/support');
+      }
+    } catch (error) {
+      console.error('Error opening email app:', error);
+      // Fallback to web browser on error
+      await WebBrowser.openBrowserAsync('https://www.craveoffapp.com/support');
+    }
   };
 
   const openTermsOfService = async () => {

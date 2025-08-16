@@ -1,5 +1,5 @@
-export const baseURL = 'http://localhost:8000/api';
-// export const baseURL = 'https://craveoff-production.up.railway.app/api';
+// export const baseURL = 'http://localhost:8000/api';
+export const baseURL = 'https://craveoff-production.up.railway.app/api';
 
 export const backendURLs = {
   LOGIN: '/auth/login',

@@ -42,15 +42,41 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
     setIsLoading(true);
     
     try {
-      // Retrieve the saved Google idToken
-      const idToken = await AsyncStorage.getItem('googleIdToken');
-      console.log('Retrieved idToken for signup-complete:', idToken ? 'Yes (found)' : 'No (not found)');
+      // Retrieve the saved idTokens (Google or Apple)
+      const googleIdToken = await AsyncStorage.getItem('googleIdToken');
+      const appleIdToken = await AsyncStorage.getItem('appleIdToken');
+      const idToken = googleIdToken || appleIdToken;
       
-      // First API call: Mark signup as complete, including the idToken if available
-      const response = await apiClient.post(BackendRoutes.SIGNUP_COMPLETE || '/profile/signup-complete', { 
-        signup_complete: true,
-        ...(idToken ? { idToken } : {})
-      });
+      // Determine the provider based on which token is available
+      let provider: string | undefined;
+      if (googleIdToken) {
+        provider = 'google';
+      } else if (appleIdToken) {
+        provider = 'apple';
+      }
+      
+      console.log('Retrieved Google idToken for signup-complete:', googleIdToken ? 'Yes (found)' : 'No (not found)');
+      console.log('Retrieved Apple idToken for signup-complete:', appleIdToken ? 'Yes (found)' : 'No (not found)');
+      console.log('Using idToken for signup-complete:', idToken ? 'Yes (found)' : 'No (not found)');
+      console.log('Provider detected:', provider || 'none');
+      
+      // Prepare request body
+      const requestBody: any = { 
+        signup_complete: true 
+      };
+      
+      // Add idToken and provider if available
+      if (idToken) {
+        requestBody.idToken = idToken;
+      }
+      if (provider) {
+        requestBody.provider = provider;
+      }
+      
+      console.log('Signup-complete request body:', JSON.stringify(requestBody, null, 2));
+      
+      // First API call: Mark signup as complete, including the idToken and provider if available
+      const response = await apiClient.post(BackendRoutes.SIGNUP_COMPLETE || '/profile/signup-complete', requestBody);
       console.log('Signup marked as complete');
       console.log('Response structure:', JSON.stringify(response.data, null, 2));
       
@@ -87,10 +113,14 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         const storedToken = await SecureStore.getItemAsync('accessToken');
         console.log('Stored access token after signIn:', storedToken ? 'Yes (found)' : 'No (not found)');
         
-        // Clear the stored idToken as it's no longer needed
-        if (idToken) {
+        // Clear the stored idTokens as they're no longer needed
+        if (googleIdToken) {
           await AsyncStorage.removeItem('googleIdToken');
-          console.log('Cleared stored idToken after use');
+          console.log('Cleared stored Google idToken after use');
+        }
+        if (appleIdToken) {
+          await AsyncStorage.removeItem('appleIdToken');
+          console.log('Cleared stored Apple idToken after use');
         }
         
         // Add a small delay to ensure token is properly stored and available for subsequent requests
@@ -318,4 +348,4 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
 });
 
-export default FreeJourneyContent; 
+export default FreeJourneyContent;

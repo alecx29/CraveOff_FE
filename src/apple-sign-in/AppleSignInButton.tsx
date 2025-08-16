@@ -41,16 +41,36 @@ export default function AppleSignInButton() {
   }, [isIOS]);
 
   // Handle the backend authentication with the ID token
-  async function handleBackendAuthentication(identityToken: string) {
+  async function handleBackendAuthentication(identityToken: string, additionalData?: any) {
     try {
       console.log('[AppleSignIn] Sending authentication request to server...');
-      const response = await apiClient.post(BackendRoutes.AUTHENTICATE, { 
-        provider: 'APPLE', 
-        idToken: identityToken 
-      });
       
-      console.log('[AppleSignIn] Authentication successful, processing response');
-      console.log('[AppleSignIn] Full response structure:', JSON.stringify(response.data, null, 2));
+      // Backend expects camelCase idToken
+      const requestBody = { 
+        provider: 'apple', 
+        idToken: identityToken
+      };
+      
+      // Add additional data if available
+      if (additionalData) {
+        console.log('[AppleSignIn] Additional data available:', JSON.stringify(additionalData, null, 2));
+        
+        // Note: Not including additional data in request for now to simplify debugging
+      }
+      
+      console.log('[AppleSignIn] Request body:', JSON.stringify(requestBody, null, 2));
+      console.log('[AppleSignIn] ID Token length:', identityToken?.length);
+      console.log('[AppleSignIn] ID Token preview:', identityToken?.substring(0, 50) + '...');
+      
+      const response = await apiClient.post(BackendRoutes.AUTHENTICATE, requestBody);
+      
+      console.log('[AppleSignIn] ========== APPLE SIGN-IN SUCCESS DEBUG ==========');
+      console.log('[AppleSignIn] Response status:', response.status);
+      console.log('[AppleSignIn] Response headers:', JSON.stringify(response.headers, null, 2));
+      console.log('[AppleSignIn] Response data (full):', JSON.stringify(response.data, null, 2));
+      console.log('[AppleSignIn] Response config URL:', response.config?.url);
+      console.log('[AppleSignIn] Response config method:', response.config?.method);
+      console.log('[AppleSignIn] ================================================');
       
       const { session, user } = response.data;
       console.log('[AppleSignIn] Session object:', JSON.stringify(session, null, 2));
@@ -102,11 +122,30 @@ export default function AppleSignInButton() {
         router.push('/');
       }
     } catch (error: any) {
-      console.error('[AppleSignIn] Apple login error:', error.response?.data || error.message);
-      console.error('[AppleSignIn] Full error:', error);
+      console.error('[AppleSignIn] ========== APPLE SIGN-IN ERROR DEBUG ==========');
+      console.error('[AppleSignIn] Error type:', typeof error);
+      console.error('[AppleSignIn] Error message:', error.message);
+      console.error('[AppleSignIn] Error code:', error.code);
+      
+      if (error.response) {
+        console.error('[AppleSignIn] Response status:', error.response.status);
+        console.error('[AppleSignIn] Response headers:', JSON.stringify(error.response.headers, null, 2));
+        console.error('[AppleSignIn] Response data (full):', JSON.stringify(error.response.data, null, 2));
+        console.error('[AppleSignIn] Response config URL:', error.response.config?.url);
+        console.error('[AppleSignIn] Response config method:', error.response.config?.method);
+        console.error('[AppleSignIn] Response config data:', error.response.config?.data);
+      } else if (error.request) {
+        console.error('[AppleSignIn] Request made but no response:', error.request);
+      } else {
+        console.error('[AppleSignIn] Error setting up request:', error.message);
+      }
+      
+      console.error('[AppleSignIn] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      console.error('[AppleSignIn] ================================================');
+      
       Alert.alert(
         'Login Error', 
-        error.response?.data?.message || 'Failed to login with Apple. Please try again.'
+        error.response?.data?.message || error.response?.data?.detail || 'Failed to login with Apple. Please try again.'
       );
     } finally {
       setIsLoading(false);
@@ -124,62 +163,79 @@ export default function AppleSignInButton() {
       return;
     }
 
+    // Check if Apple Authentication is available before proceeding
+    if (isAppleAuthAvailable === false) {
+      Alert.alert(
+        "Not Available",
+        "Apple Sign In is not available on this device. This feature requires a development build with native modules.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    // Wait for availability check to complete
+    if (isAppleAuthAvailable === null) {
+      Alert.alert(
+        "Please Wait",
+        "Checking Apple Sign In availability...",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
     try {
       setIsLoading(true);
       console.log('[AppleSignIn] Starting Apple sign-in process...');
       
-      // Sărim peste verificarea disponibilității în build-ul de dezvoltare
-      console.log('[AppleSignIn] Încercăm autentificarea direct, fără verificare de disponibilitate');
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
       
-      try {
-        // Încercăm direct autentificarea
-        const credential = await AppleAuthentication.signInAsync({
-          requestedScopes: [
-            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-            AppleAuthentication.AppleAuthenticationScope.EMAIL,
-          ],
-        });
-        
-        console.log('[AppleSignIn] Sign-in successful, credential received');
-        
-        // Get the identity token from the credential
-        const { identityToken } = credential;
-        
-        if (identityToken) {
-          console.log('✅ Apple ID Token received');
-          await handleBackendAuthentication(identityToken);
-        } else {
-          console.error('🚨 No identity token received from Apple');
-          Alert.alert(
-            "Authentication Error",
-            "No identity token received from Apple. Please try again.",
-            [{ text: "OK" }]
-          );
-          setIsLoading(false);
-        }
-      } catch (signInError: any) {
+      console.log('[AppleSignIn] Sign-in successful, credential received');
+      console.log('[AppleSignIn] Full credential object:', JSON.stringify(credential, null, 2));
+      
+      // Get the identity token from the credential
+      const { identityToken, authorizationCode, email, fullName } = credential;
+      
+      if (identityToken) {
+        console.log('✅ Apple ID Token received');
+        await handleBackendAuthentication(identityToken, { authorizationCode, email, fullName });
+      } else {
+        console.error('🚨 No identity token received from Apple');
+        Alert.alert(
+          "Authentication Error",
+          "No identity token received from Apple. Please try again.",
+          [{ text: "OK" }]
+        );
         setIsLoading(false);
-        console.error('🚨 Apple Sign-In failed:', signInError);
-        
-        // Handle user cancellation
-        if (signInError.code === 1000) { // AppleAuthentication user canceled request
-          console.log('User cancelled the login flow');
-        } else {
-          console.log('Apple authentication error:', signInError.message);
-          console.log('Error code:', signInError.code);
-          Alert.alert(
-            "Authentication Error",
-            `Apple Sign In failed: ${signInError.message} (Code: ${signInError.code})`,
-            [{ text: "OK" }]
-          );
-        }
       }
     } catch (error: any) {
       setIsLoading(false);
-      console.error('🚨 Unexpected error in handleSignInWithApple:', error);
+      console.error('🚨 Apple Sign-In failed:', error);
+      
+      // Handle specific error codes
+      if (error.code === 1000) { // User canceled
+        console.log('User cancelled the login flow');
+        return;
+      }
+      
+      if (error.code === 'ERR_UNAVAILABLE') {
+        Alert.alert(
+          "Not Available",
+          "Apple Sign In is not available. Please use a development build or try another sign-in method.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
+      
+      console.log('Apple authentication error:', error.message);
+      console.log('Error code:', error.code);
       Alert.alert(
-        "Error",
-        `Unexpected error: ${error.message}`,
+        "Authentication Error",
+        `Apple Sign In failed: ${error.message}`,
         [{ text: "OK" }]
       );
     }
@@ -213,6 +269,9 @@ export default function AppleSignInButton() {
   }
 
   // Fallback button for non-iOS platforms or when Apple Authentication is not available
+  const isUnavailable = !isIOS || isAppleAuthAvailable === false;
+  const isCheckingAvailability = isAppleAuthAvailable === null && isIOS;
+  
   return (
     <TouchableOpacity
       style={[
@@ -222,13 +281,13 @@ export default function AppleSignInButton() {
           borderColor: '#E0E0E0',
           borderRadius: theme.borderRadius.medium,
         },
-        isLoading ? { opacity: 0.6 } : null
+        (isLoading || isUnavailable) ? { opacity: 0.6 } : null
       ]}
       onPress={handleSignInWithApple}
-      disabled={isLoading}
+      disabled={isLoading || isUnavailable || isCheckingAvailability}
       activeOpacity={0.8}
     >
-      {isLoading ? (
+      {isLoading || isCheckingAvailability ? (
         <ActivityIndicator size="small" color={theme.colors.primary} />
       ) : (
         <View style={styles.buttonContent}>
@@ -238,10 +297,12 @@ export default function AppleSignInButton() {
           <Text 
             style={[
               styles.buttonText,
-              { color: theme.colors.textPrimary }
+              { 
+                color: isUnavailable ? theme.colors.textSecondary : theme.colors.textPrimary 
+              }
             ]}
           >
-            Sign in with Apple
+            {isUnavailable ? 'Apple Sign In (Unavailable)' : 'Sign in with Apple'}
           </Text>
         </View>
       )}

@@ -584,6 +584,8 @@ export default function HomeScreen() {
         console.log('Relapse log added:', response.data);
         // Refresh logs and counters
         fetchLogs();
+        // Refresh pledge history to update pledge status after reset
+        fetchPledgeHistory();
       })
       .catch(error => {
         console.error('Error recording relapse log:', error);
