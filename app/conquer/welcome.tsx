@@ -3,14 +3,16 @@ import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Text, TouchableOpacity, Image, ScrollView, Dimensions } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ConquerProgressDots from '@/src/components/ConquerProgressDots';
 import LottieUniversal from '@/src/components/LottieUniversal';
-import Constants from 'expo-constants';
 
 const { width, height } = Dimensions.get('window');
-const statusBarHeight = Constants.statusBarHeight || 0;
 
 export default function ConquerWelcome() {
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(insets);
+  
   // Handler to navigate to next page
   const handleNext = () => {
     router.push('/conquer/rewire');
@@ -88,19 +90,19 @@ export default function ConquerWelcome() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (insets: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#db042c',
   },
   backgroundContainer: {
     position: 'absolute',
-    top: -statusBarHeight, // Extend above status bar
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: height + statusBarHeight, // Cover status bar area
+    top: -insets.top, // Extend above status bar
+    left: -insets.left, // Extend to left edge
+    right: -insets.right, // Extend to right edge
+    bottom: -insets.bottom, // Extend below safe area
+    width: width + insets.left + insets.right,
+    height: height + insets.top + insets.bottom,
     zIndex: 0,
     backgroundColor: '#db042c',
   },
@@ -114,7 +116,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    paddingTop: statusBarHeight + 10,
+    paddingTop: insets.top + 10,
     paddingBottom: 10,
     zIndex: 1,
   },

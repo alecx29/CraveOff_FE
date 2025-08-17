@@ -1,7 +1,7 @@
 // app/(auth)/login.tsx
 import { useRouter } from 'expo-router';
 import React, { useContext, useState } from 'react';
-import { Alert, StyleSheet, View, Image, TouchableOpacity, Text } from 'react-native';
+import { Alert, StyleSheet, View, Image, TouchableOpacity, Text, Platform } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import Constants from 'expo-constants';
 
@@ -81,8 +81,21 @@ const LoginScreen: React.FC = () => {
       // Check user status and redirect accordingly
       if (user.isNewUser) {
         // For new users, save the idToken for later use in signup-complete
-        console.log('[Login] New user detected, saving idToken for signup-complete');
-        await AsyncStorage.setItem('googleIdToken', idToken);
+        const isValidIdToken = (token?: string | null) => {
+          if (!token) return false;
+          const trimmed = token.trim();
+          if (!trimmed) return false;
+          const lowered = trimmed.toLowerCase();
+          if (lowered === 'null' || lowered === 'undefined') return false;
+          return true;
+        };
+
+        if (isValidIdToken(idToken)) {
+          console.log('[Login] New user detected, saving idToken for signup-complete');
+          await AsyncStorage.setItem('googleIdToken', idToken.trim());
+        } else {
+          console.warn('[Login] New user detected but idToken invalid. Skipping storage for signup-complete');
+        }
         
         // Redirect to signup flow
         console.log('[Login] Redirecting to signup flow');
@@ -209,11 +222,11 @@ const LoginScreen: React.FC = () => {
           >
             <GoogleSignInButton signInCallback={googleLogin} />
             
-            <View style={styles.buttonSpacer} />
+            {Platform.OS === 'ios' && <View style={styles.buttonSpacer} />}
             
             <AppleSignInButton />
 
-            {isDevelopment && (
+            {isDevelopment && Platform.OS === 'ios' && (
               <>
                 <View style={styles.buttonSpacer} />
                 

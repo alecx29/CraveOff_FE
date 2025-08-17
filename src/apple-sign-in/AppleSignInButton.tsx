@@ -255,8 +255,13 @@ export default function AppleSignInButton() {
     </Svg>
   );
 
+  // Don't render anything on Android - hide completely
+  if (!isIOS) {
+    return null;
+  }
+
   // Use AppleAuthentication.AppleAuthenticationButton on iOS if available
-  if (isIOS && isAppleAuthAvailable === true) {
+  if (isAppleAuthAvailable === true) {
     return (
       <AppleAuthentication.AppleAuthenticationButton
         buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
@@ -268,9 +273,9 @@ export default function AppleSignInButton() {
     );
   }
 
-  // Fallback button for non-iOS platforms or when Apple Authentication is not available
-  const isUnavailable = !isIOS || isAppleAuthAvailable === false;
-  const isCheckingAvailability = isAppleAuthAvailable === null && isIOS;
+  // Show loading or unavailable state only on iOS
+  const isCheckingAvailability = isAppleAuthAvailable === null;
+  const isUnavailable = isAppleAuthAvailable === false;
   
   return (
     <TouchableOpacity

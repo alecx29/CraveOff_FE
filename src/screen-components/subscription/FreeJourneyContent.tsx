@@ -42,12 +42,34 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
     setIsLoading(true);
     
     try {
-      // Retrieve the saved idTokens (Google or Apple)
-      const googleIdToken = await AsyncStorage.getItem('googleIdToken');
-      const appleIdToken = await AsyncStorage.getItem('appleIdToken');
+      // Retrieve the saved idTokens (Google or Apple) and validate them
+      const rawGoogleIdToken = await AsyncStorage.getItem('googleIdToken');
+      const rawAppleIdToken = await AsyncStorage.getItem('appleIdToken');
+
+      const isValidToken = (token?: string | null) => {
+        if (!token) return false;
+        const trimmed = token.trim();
+        if (!trimmed) return false;
+        const lowered = trimmed.toLowerCase();
+        if (lowered === 'null' || lowered === 'undefined') return false;
+        return true;
+      };
+
+      const googleIdToken = isValidToken(rawGoogleIdToken) ? rawGoogleIdToken!.trim() : undefined;
+      const appleIdToken = isValidToken(rawAppleIdToken) ? rawAppleIdToken!.trim() : undefined;
+
+      // Clean up invalid persisted tokens to avoid future confusion
+      if (rawGoogleIdToken && !googleIdToken) {
+        await AsyncStorage.removeItem('googleIdToken');
+        console.warn('Removed invalid persisted Google idToken');
+      }
+      if (rawAppleIdToken && !appleIdToken) {
+        await AsyncStorage.removeItem('appleIdToken');
+        console.warn('Removed invalid persisted Apple idToken');
+      }
       const idToken = googleIdToken || appleIdToken;
       
-      // Determine the provider based on which token is available
+      // Determine the provider based on which valid token is available
       let provider: string | undefined;
       if (googleIdToken) {
         provider = 'google';
@@ -55,9 +77,9 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         provider = 'apple';
       }
       
-      console.log('Retrieved Google idToken for signup-complete:', googleIdToken ? 'Yes (found)' : 'No (not found)');
-      console.log('Retrieved Apple idToken for signup-complete:', appleIdToken ? 'Yes (found)' : 'No (not found)');
-      console.log('Using idToken for signup-complete:', idToken ? 'Yes (found)' : 'No (not found)');
+      console.log('Retrieved Google idToken for signup-complete:', googleIdToken ? 'Yes (valid)' : 'No (missing/invalid)');
+      console.log('Retrieved Apple idToken for signup-complete:', appleIdToken ? 'Yes (valid)' : 'No (missing/invalid)');
+      console.log('Using idToken for signup-complete:', idToken ? 'Yes (valid)' : 'No (not found)');
       console.log('Provider detected:', provider || 'none');
       
       // Prepare request body
@@ -65,11 +87,9 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         signup_complete: true 
       };
       
-      // Add idToken and provider if available
-      if (idToken) {
+      // Add idToken and provider only if we have a valid token and matching provider
+      if (idToken && provider) {
         requestBody.idToken = idToken;
-      }
-      if (provider) {
         requestBody.provider = provider;
       }
       
@@ -192,7 +212,7 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         </Text>
         
         <Text style={styles.offerDescription}>
-          As we're just launching, we're offering all premium features for free for a limited time. Be among the first to experience the full power of CraveOff.
+          As we are just launching, we are offering all premium features for free for a limited time. Be among the first to experience the full power of CraveOff.
         </Text>
         
         <View style={styles.featuresContainer}>
