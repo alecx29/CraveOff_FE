@@ -108,12 +108,28 @@ export default function AppleSignInButton() {
         // For new users, save the idToken for later use in signup-complete
         console.log('[AppleSignIn] New user detected, saving idToken for signup-complete');
         await AsyncStorage.setItem('appleIdToken', identityToken);
+        // Save metadata for provider and timestamp
+        await AsyncStorage.setItem('lastAuthProvider', 'apple');
+        await AsyncStorage.setItem('idTokenSavedAt', Date.now().toString());
+        // Ensure opposite provider token is cleared to avoid ambiguity
+        await AsyncStorage.removeItem('googleIdToken');
         
         // Redirect to signup flow
         console.log('[AppleSignIn] Redirecting to signup flow');
         router.push('/signup');
       } else if (user.signup_complete === false) {
-        // For users who haven't completed signup, redirect to symptoms
+        // For users who haven't completed signup, persist identityToken for signup-complete
+        if (identityToken) {
+          console.log('[AppleSignIn] Incomplete signup: saving Apple idToken for signup-complete');
+          await AsyncStorage.setItem('appleIdToken', identityToken);
+          await AsyncStorage.setItem('lastAuthProvider', 'apple');
+          await AsyncStorage.setItem('idTokenSavedAt', Date.now().toString());
+          await AsyncStorage.removeItem('googleIdToken');
+        } else {
+          console.warn('[AppleSignIn] Incomplete signup but identityToken missing. Skipping storage');
+        }
+
+        // Redirect to symptoms
         console.log('[AppleSignIn] Incomplete signup detected, redirecting to symptoms screen');
         router.push('/(auth)/symptoms');
       } else {

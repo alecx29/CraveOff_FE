@@ -93,6 +93,11 @@ const LoginScreen: React.FC = () => {
         if (isValidIdToken(idToken)) {
           console.log('[Login] New user detected, saving idToken for signup-complete');
           await AsyncStorage.setItem('googleIdToken', idToken.trim());
+          // Save metadata for provider and timestamp
+          await AsyncStorage.setItem('lastAuthProvider', 'google');
+          await AsyncStorage.setItem('idTokenSavedAt', Date.now().toString());
+          // Ensure opposite provider token is cleared to avoid ambiguity
+          await AsyncStorage.removeItem('appleIdToken');
         } else {
           console.warn('[Login] New user detected but idToken invalid. Skipping storage for signup-complete');
         }
@@ -101,7 +106,27 @@ const LoginScreen: React.FC = () => {
         console.log('[Login] Redirecting to signup flow');
         router.push('/signup');
       } else if (user.signup_complete === false) {
-        // For users who haven't completed signup, redirect to symptoms
+        // For users who haven't completed signup, persist idToken for signup-complete
+        const isValidIdToken = (token?: string | null) => {
+          if (!token) return false;
+          const trimmed = token.trim();
+          if (!trimmed) return false;
+          const lowered = trimmed.toLowerCase();
+          if (lowered === 'null' || lowered === 'undefined') return false;
+          return true;
+        };
+
+        if (isValidIdToken(idToken)) {
+          console.log('[Login] Incomplete signup: saving Google idToken for signup-complete');
+          await AsyncStorage.setItem('googleIdToken', idToken.trim());
+          await AsyncStorage.setItem('lastAuthProvider', 'google');
+          await AsyncStorage.setItem('idTokenSavedAt', Date.now().toString());
+          await AsyncStorage.removeItem('appleIdToken');
+        } else {
+          console.warn('[Login] Incomplete signup but idToken invalid. Skipping storage');
+        }
+
+        // Redirect to symptoms
         console.log('[Login] Incomplete signup detected, redirecting to symptoms screen');
         router.push('/(auth)/symptoms');
       } else {
