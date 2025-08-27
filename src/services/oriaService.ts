@@ -114,7 +114,7 @@ export const oriaService = {
         chat_id: chatId,
       };
 
-      // Always use streaming mode
+      // Try streaming mode first, but allow fallback
       const isStreamingMode = true;
       console.log("Streaming mode is FORCED on:", isStreamingMode);
 
@@ -143,8 +143,11 @@ export const oriaService = {
         // Step 1: Send the message with POST
         const messageUrl = BackendRoutes.ORIA_MESSAGES(chatId);
         console.log("Sending message with POST to:", messageUrl);
+        console.log("Message payload:", requestBody);
 
-        await apiClient.post(messageUrl, requestBody);
+        const postResponse = await apiClient.post(messageUrl, requestBody);
+        console.log("POST response status:", postResponse.status);
+        console.log("POST response data:", postResponse.data);
 
         // Step 2: Now connect to the streaming endpoint to receive the response
         const streamUrl = `/oria/chats/${chatId}/message/stream`;
@@ -162,12 +165,40 @@ export const oriaService = {
         console.log("  - API base URL:", apiClient.defaults.baseURL);
 
         // Create our custom streaming interface that mimics EventSource
+        let messageBuffer: { data: string }[] = []; // Buffer for messages that arrive before handler is set
+        
         const customEventSource: StreamEventSource = {
+          onmessage: undefined, // Initialize as undefined
+          onerror: undefined,
+          onopen: undefined,
           close: () => {
             // Will be defined below
             console.log("Closing stream connection");
           },
         };
+
+        // Override the onmessage setter to process buffered messages
+        Object.defineProperty(customEventSource, 'onmessage', {
+          get() {
+            return this._onmessage;
+          },
+          set(handler) {
+            console.log("🎯 onmessage handler being set, processing", messageBuffer.length, "buffered messages");
+            this._onmessage = handler;
+            
+            // Process any buffered messages with throttling
+            if (handler && messageBuffer.length > 0) {
+              // Process buffered messages with a small delay to prevent overwhelming the UI
+              messageBuffer.forEach((msg, index) => {
+                setTimeout(() => {
+                  console.log("📦 Processing buffered message", index + 1, "of", messageBuffer.length);
+                  handler(msg);
+                }, index * 10); // 10ms delay between messages
+              });
+              messageBuffer = []; // Clear buffer
+            }
+          }
+        });
 
         // Start the fetch request for streaming
         (async () => {
@@ -196,27 +227,39 @@ export const oriaService = {
             // Set up the request
             xhr.open("GET", streamingUrl);
             xhr.setRequestHeader("Accept", "text/event-stream");
+            xhr.setRequestHeader("Cache-Control", "no-cache");
 
-            // Process chunks as they arrive
-            xhr.onprogress = () => {
+            // Handle state changes - this is crucial for streaming
+            xhr.onreadystatechange = () => {
               if (!isActive) return;
+              
+              console.log("XHR readyState:", xhr.readyState, "status:", xhr.status);
+              
+              // Check if we have a response and it's successful
+              if (xhr.readyState >= 3 && xhr.status === 200) { // LOADING or DONE
+                // Get any new data
+                const newData = xhr.responseText.substring(buffer.length);
+                if (newData) {
+                  console.log("Received new data chunk:", newData.length, "characters");
+                  buffer += newData;
 
-              // Get any new data
-              const newData = xhr.responseText.substring(buffer.length);
-              if (newData) {
-                buffer += newData;
+                  // Process complete SSE messages
+                  const lines = buffer.split("\n\n");
+                  buffer = lines.pop() || ""; // Keep the last incomplete chunk in the buffer
 
-                // Process complete SSE messages
-                const lines = buffer.split("\n\n");
-                buffer = lines.pop() || ""; // Keep the last incomplete chunk in the buffer
+                  for (const line of lines) {
+                    if (line.trim() && line.startsWith("data:")) {
+                      const data = line.substring(5).trim();
+                      console.log("Processing SSE data:", data);
 
-                for (const line of lines) {
-                  if (line.trim() && line.startsWith("data:")) {
-                    const data = line.substring(5).trim();
-
-                    // Call onmessage handler if defined
-                    if (customEventSource.onmessage && isActive) {
-                      customEventSource.onmessage({ data });
+                      // Call onmessage handler if defined or buffer the message
+                      if (customEventSource.onmessage && isActive) {
+                        console.log("🚀 CALLING onmessage handler");
+                        customEventSource.onmessage({ data });
+                      } else if (isActive) {
+                        console.log("📥 BUFFERING message - handler not set yet");
+                        messageBuffer.push({ data });
+                      }
                     }
                   }
                 }
@@ -226,7 +269,7 @@ export const oriaService = {
             // Handle completion
             xhr.onload = () => {
               if (isActive) {
-                console.log("Stream complete");
+                console.log("Stream complete - onload fired");
                 isActive = false;
               }
             };
@@ -234,13 +277,27 @@ export const oriaService = {
             // Handle errors
             xhr.onerror = (error) => {
               console.error("XHR Stream error:", error);
+              console.error("XHR status:", xhr.status, "readyState:", xhr.readyState);
               if (customEventSource.onerror && isActive) {
                 customEventSource.onerror(error);
               }
               isActive = false;
             };
 
+            // Handle timeout
+            xhr.ontimeout = () => {
+              console.error("XHR Stream timeout");
+              if (customEventSource.onerror && isActive) {
+                customEventSource.onerror(new Error("Stream timeout"));
+              }
+              isActive = false;
+            };
+
+            // Set timeout to 30 seconds
+            xhr.timeout = 30000;
+
             // Start the request
+            console.log("Starting XHR request to:", streamingUrl);
             xhr.send();
           } catch (error) {
             console.error("Stream setup error:", error);

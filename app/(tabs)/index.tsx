@@ -678,8 +678,10 @@ export default function HomeScreen() {
       };
       
       // Add the empty assistant message to the UI with loading indicator
+      console.log("Adding temporary assistant message:", tempAssistantMessage);
       setSelectedChat(prevChat => {
         if (!prevChat) return prevChat;
+        console.log("Adding temp message to chat with", prevChat.messages.length, "existing messages");
         return {
           ...prevChat,
           messages: [...prevChat.messages, tempAssistantMessage]
@@ -688,6 +690,7 @@ export default function HomeScreen() {
       
       // Set up a timeout to detect if no response is received
       const responseTimeoutId = setTimeout(() => {
+        console.log("Response timeout triggered after 15 seconds");
         // If we still have a loading message, update it with an error
         setSelectedChat(prevChat => {
           if (!prevChat) return prevChat;
@@ -728,56 +731,130 @@ export default function HomeScreen() {
         // This is streaming mode
         let assistantMessageContent = '';
         let hasReceivedFirstChunk = false;
+        let isProcessing = false; // Prevent concurrent updates
+        let updateTimeout: ReturnType<typeof setTimeout> | null = null; // For throttling UI updates
         
         // Listen for message events
+        console.log("Setting up onmessage handler for streaming response");
         response.onmessage = (event) => {
+          // Prevent concurrent processing
+          if (isProcessing) {
+            console.log("⏸️ Skipping concurrent message processing");
+            return;
+          }
+          isProcessing = true;
+          
           try {
+            console.log("🔥 Processing streaming chunk:", event.data);
             const data = JSON.parse(event.data);
             
-            // Mark that we've received at least one chunk
-            hasReceivedFirstChunk = true;
+            // Determine if this is the first chunk and mark received
+            const isFirstChunk = !hasReceivedFirstChunk;
+            if (isFirstChunk) {
+              hasReceivedFirstChunk = true;
+              console.log("✅ First chunk received");
+            }
             
-            // Append the new chunk to the full message
-            assistantMessageContent += data.content;
+            // Follow backend spec: append chunks as-is; on done=true replace with full final content
+            const incoming = typeof data.content === 'string' ? data.content : '';
+            if (data.done) {
+              assistantMessageContent = incoming; // Final content identical with DB
+            } else {
+              assistantMessageContent += incoming; // Incremental append
+            }
             
-            // Update the message in the UI
-            setSelectedChat(prevChat => {
-              if (!prevChat) return prevChat;
-              
-              const updatedMessages = [...prevChat.messages];
-              const lastIndex = updatedMessages.length - 1;
-              
-              // Update the last message if it's from the assistant
-              if (updatedMessages[lastIndex].role === 'assistant') {
-                updatedMessages[lastIndex] = {
-                  ...updatedMessages[lastIndex],
-                  content: assistantMessageContent,
-                  isLoading: false, // Once we get content, it's no longer loading
+            // Throttle UI updates for smoother streaming (update immediately on first chunk)
+            const updateUI = () => {
+              setSelectedChat(prevChat => {
+                if (!prevChat) return prevChat;
+                
+                const updatedMessages = [...prevChat.messages];
+                const lastIndex = updatedMessages.length - 1;
+                
+                // Update the last message if it's from the assistant
+                if (updatedMessages[lastIndex] && updatedMessages[lastIndex].role === 'assistant') {
+                  updatedMessages[lastIndex] = {
+                    ...updatedMessages[lastIndex],
+                    content: assistantMessageContent,
+                    isLoading: false,
+                  };
+                }
+                
+                return {
+                  ...prevChat,
+                  messages: updatedMessages,
                 };
-              }
+              });
               
-              return {
-                ...prevChat,
-                messages: updatedMessages,
-              };
-            });
+              // Scroll to bottom smoothly
+              setTimeout(() => {
+                chatScrollRef.current?.scrollToEnd({ animated: true });
+              }, 16);
+            };
             
-            // Scroll to bottom as content arrives
-            setTimeout(() => {
-              chatScrollRef.current?.scrollToEnd({ animated: true });
-            }, 50);
+            // Update immediately for first chunk, then throttle subsequent updates (~20fps)
+            if (isFirstChunk) {
+              updateUI();
+            } else if (!updateTimeout) {
+              updateTimeout = setTimeout(() => {
+                updateTimeout = null;
+                updateUI();
+              }, 50);
+            }
             
             // If this is the last chunk, clean up
             if (data.done) {
+              console.log("🏁 Streaming complete");
+              
+              // Clear any pending UI updates
+              if (updateTimeout) {
+                clearTimeout(updateTimeout);
+                updateTimeout = null;
+              }
+              
+              // Final UI update with complete message
+              updateUI();
+              
+              // If backend provided the final message id, update the temp assistant message id
+              if (data.id) {
+                setSelectedChat(prevChat => {
+                  if (!prevChat) return prevChat;
+                  
+                  const updatedMessages = [...prevChat.messages];
+                  const lastIndex = updatedMessages.length - 1;
+                  
+                  if (updatedMessages[lastIndex] && updatedMessages[lastIndex].role === 'assistant') {
+                    updatedMessages[lastIndex] = {
+                      ...updatedMessages[lastIndex],
+                      id: data.id,
+                    };
+                  }
+                  
+                  return {
+                    ...prevChat,
+                    messages: updatedMessages,
+                  };
+                });
+              }
+              
               setIsGeneratingResponse(false);
               setIsSendingMessage(false);
               response.close();
               
-              // Fetch the updated chat to ensure we have the correct IDs
-              fetchChat(selectedChat.id);
+              // Log the final assistant message after stream closes
+              try {
+                const finalContent = assistantMessageContent || '';
+                console.log('CHAT_STREAM_LAST_MESSAGE_FINAL', {
+                  id: data.id || 'unknown',
+                  length: finalContent.length,
+                  content: finalContent,
+                });
+              } catch (e) {
+                console.log('CHAT_STREAM_LAST_MESSAGE_FINAL_LOG_ERROR', e);
+              }
             }
           } catch (error) {
-            console.error('Error processing streaming message:', error);
+            console.error('❌ Error processing streaming message:', error);
             
             // Update the message to show an error
             setSelectedChat(prevChat => {
@@ -786,7 +863,7 @@ export default function HomeScreen() {
               const updatedMessages = [...prevChat.messages];
               const lastIndex = updatedMessages.length - 1;
               
-              if (updatedMessages[lastIndex].role === 'assistant') {
+              if (updatedMessages[lastIndex] && updatedMessages[lastIndex].role === 'assistant') {
                 updatedMessages[lastIndex] = {
                   ...updatedMessages[lastIndex],
                   isLoading: false,
@@ -803,12 +880,15 @@ export default function HomeScreen() {
             setIsGeneratingResponse(false);
             setIsSendingMessage(false);
             response.close();
+          } finally {
+            isProcessing = false;
           }
         };
         
         // Handle errors
         response.onerror = (error) => {
           console.error('EventSource error:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
           
           // Update the UI with an error message if we haven't received any chunks yet
           if (!hasReceivedFirstChunk) {
@@ -1077,12 +1157,12 @@ export default function HomeScreen() {
   useEffect(() => {
     // Subscribe to network state updates
     const unsubscribe = NetInfo.addEventListener(state => {
-      setIsConnected(state.isConnected);
+      setIsConnected(state.isConnected ?? false);
     });
 
     // Check initial connection state
     NetInfo.fetch().then(state => {
-      setIsConnected(state.isConnected);
+      setIsConnected(state.isConnected ?? false);
     });
 
     // Cleanup on unmount
