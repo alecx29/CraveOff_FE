@@ -1,6 +1,6 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, Text, TouchableOpacity, Image, ScrollView, Dimensions } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Image, ScrollView, Dimensions, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -93,7 +93,7 @@ export default function ConquerRewire() {
 const createStyles = (insets: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#db042c',
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#db042c',
   },
   backgroundContainer: {
     position: 'absolute',
@@ -104,7 +104,7 @@ const createStyles = (insets: any) => StyleSheet.create({
     width: width + insets.left + insets.right,
     height: height + insets.top + insets.bottom,
     zIndex: 0,
-    backgroundColor: '#db042c',
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#db042c',
   },
   backgroundAnimation: {
     width: '100%',
@@ -171,7 +171,7 @@ const createStyles = (insets: any) => StyleSheet.create({
   },
   bottomContainer: {
     position: 'absolute',
-    bottom: height * 0.08, // Position from bottom
+    bottom: height * 0.08 + insets.bottom, // Account for safe area to match onboarding
     left: 0,
     right: 0,
     alignItems: 'center',

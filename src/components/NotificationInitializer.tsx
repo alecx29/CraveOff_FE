@@ -12,23 +12,20 @@ const NotificationInitializer: React.FC = () => {
     scheduleDailyCheckIn 
   } = useNotifications();
 
-  // Initialize notifications when the app starts
+  // Initialize notifications when the app starts (idempotent scheduling)
   useEffect(() => {
     const initializeNotifications = async () => {
-      if (isNotificationsEnabled) {
-        // Check if check-in notifications are enabled
-        const checkInEnabled = await AsyncStorage.getItem('CHECK_IN_NOTIFICATION_ENABLED');
-        
-        // If not explicitly disabled, schedule the check-in notification
-        if (checkInEnabled !== 'false') {
-          console.log('Scheduling daily check-in notification on app start');
-          await scheduleDailyCheckIn();
-        }
-      }
+      if (!isNotificationsEnabled) return;
+
+      const checkInEnabled = await AsyncStorage.getItem('CHECK_IN_NOTIFICATION_ENABLED');
+      if (checkInEnabled === 'false') return;
+
+      // The scheduler is idempotent; calling it here is safe and won't duplicate
+      await scheduleDailyCheckIn();
     };
 
     initializeNotifications();
-  }, [isNotificationsEnabled]);
+  }, [isNotificationsEnabled, scheduleDailyCheckIn]);
 
   // This component doesn't render anything
   return null;

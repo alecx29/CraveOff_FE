@@ -13,6 +13,33 @@ const STORAGE_KEYS = {
 };
 
 /**
+ * Check if a daily check-in notification is already scheduled.
+ * Returns the identifier if found, otherwise null.
+ */
+const getExistingDailyCheckInId = async (): Promise<string | null> => {
+  try {
+    const storedId = await AsyncStorage.getItem(STORAGE_KEYS.CHECKIN_NOTIFICATION_ID);
+    if (!storedId) {
+      return null;
+    }
+
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const exists = scheduled.some((n) => (n as any).identifier === storedId);
+
+    if (exists) {
+      return storedId;
+    }
+
+    // If the notification is no longer scheduled, clean up the stored ID
+    await AsyncStorage.removeItem(STORAGE_KEYS.CHECKIN_NOTIFICATION_ID);
+    return null;
+  } catch (error) {
+    console.error("Error checking existing daily check-in notification:", error);
+    return null;
+  }
+};
+
+/**
  * Schedule a daily check-in notification at 11:00 AM local time
  * This will show the app logo in the notification
  */
@@ -20,8 +47,12 @@ export const scheduleDailyCheckInNotification = async (): Promise<
   string | null
 > => {
   try {
-    // Cancel any existing check-in notification first
-    await cancelDailyCheckInNotification();
+    // If it's already scheduled, do nothing (idempotent)
+    const existingId = await getExistingDailyCheckInId();
+    if (existingId) {
+      console.log("Daily check-in notification already scheduled with ID:", existingId);
+      return existingId;
+    }
 
     // Set up notification content
     const notificationContent: Notifications.NotificationContentInput = {
@@ -38,29 +69,16 @@ export const scheduleDailyCheckInNotification = async (): Promise<
       console.log("Using Android-specific notification channel: check-ins");
     }
 
-    // Schedule for 11:00 AM every day
-    const now = new Date();
-    const scheduledTime = new Date();
-    scheduledTime.setHours(11, 0, 0, 0); // Set to 11:00 AM
+    // Schedule using a calendar-based daily trigger at 11:00 AM local time
+    const calendarTrigger: Notifications.NotificationTriggerInput = Platform.select({
+      ios: { hour: 11, minute: 0, repeats: true },
+      android: { hour: 11, minute: 0, repeats: true, channelId: "check-ins" as any },
+      default: { hour: 11, minute: 0, repeats: true },
+    }) as Notifications.NotificationTriggerInput;
 
-    // If it's already past 11:00 AM, schedule for tomorrow
-    if (now > scheduledTime) {
-      scheduledTime.setDate(scheduledTime.getDate() + 1);
-    }
-
-    // Calculate seconds until scheduled time
-    const secondsUntilScheduled = Math.floor(
-      (scheduledTime.getTime() - now.getTime()) / 1000
-    );
-
-    // Schedule the notification
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: notificationContent,
-      trigger: {
-        seconds: secondsUntilScheduled,
-        repeats: true,
-        channelId: "check-ins",
-      },
+      trigger: calendarTrigger,
     });
 
     // Store the notification ID for future reference

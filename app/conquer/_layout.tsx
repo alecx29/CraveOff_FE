@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 
 export default function ConquerLayout() {
   return (
@@ -7,8 +7,8 @@ export default function ConquerLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          animation: 'none',
-          contentStyle: { backgroundColor: '#db042c' }
+          animation: Platform.OS === 'ios' ? 'fade' : 'none',
+          contentStyle: { backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#db042c' }
         }}
       />
     </View>
