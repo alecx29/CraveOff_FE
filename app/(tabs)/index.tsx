@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, FlatList, SafeAreaView, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, FlatList, SafeAreaView, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
@@ -1527,6 +1527,11 @@ export default function HomeScreen() {
           }}
         >
           <SafeAreaView style={styles.oriaModalContainer}>
+            <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+            >
             {!selectedChat ? (
               // Conversation list view
               <View style={styles.oriaModalContainer}>
@@ -1730,6 +1735,7 @@ export default function HomeScreen() {
                 </View>
               </View>
             )}
+            </KeyboardAvoidingView>
           </SafeAreaView>
         </Modal>
       )}
@@ -2068,8 +2074,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginHorizontal: 4,
   },
   messagesContainer: {
-    padding: 16,
-    paddingBottom: 24,
+    padding: 12,
+    paddingBottom: 8,
   },
   messageWrapper: {
     marginBottom: 16,
@@ -2111,22 +2117,22 @@ const createStyles = (theme: any) => StyleSheet.create({
   chatInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: theme.colors.cardBackground,
   },
   chatInputWrapper: {
     flex: 1,
     backgroundColor: theme.colors.cardBackground,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    marginRight: 12,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    marginRight: 8,
   },
   chatInput: {
     fontSize: 16,
     color: theme.colors.textPrimary,
-    paddingVertical: 10,
+    paddingVertical: 8,
     maxHeight: 100,
   },
   chatInputPlaceholder: {
