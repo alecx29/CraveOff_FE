@@ -757,11 +757,33 @@ export default function HomeScreen() {
             
             // Follow backend spec: append chunks as-is; on done=true replace with full final content
             const incoming = typeof data.content === 'string' ? data.content : '';
+            const prevLen = assistantMessageContent.length;
+            let action = 'append';
             if (data.done) {
               assistantMessageContent = incoming; // Final content identical with DB
+              action = 'final_replace';
             } else {
-              assistantMessageContent += incoming; // Incremental append
+              // Compare on normalized forms to handle diacritics/Unicode composition
+              const normalizedIncoming = (incoming || '').normalize('NFC');
+              const normalizedCurrent = (assistantMessageContent || '').normalize('NFC');
+              
+              if (normalizedIncoming.startsWith(normalizedCurrent)) {
+                // Cumulative: replace with the new full content (keep original incoming bytes)
+                assistantMessageContent = incoming;
+                action = 'replace_cumulative';
+              } else if (
+                normalizedCurrent.endsWith(normalizedIncoming) ||
+                (normalizedIncoming && normalizedCurrent.indexOf(normalizedIncoming) >= 0)
+              ) {
+                // Incoming already present in current (dup); do nothing
+                action = 'noop_duplicate';
+              } else {
+                // Delta: append as-is
+                assistantMessageContent += incoming;
+                action = 'append_delta';
+              }
             }
+            console.log('STREAM_DECISION', { action, prevLen, incLen: incoming.length, newLen: assistantMessageContent.length, done: data.done });
             
             // Throttle UI updates for smoother streaming (update immediately on first chunk)
             const updateUI = () => {
