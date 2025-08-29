@@ -16,6 +16,7 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.usualsuspect29.craveoffapp",
+      icon: "./assets/images/logoCraveoff-512.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
