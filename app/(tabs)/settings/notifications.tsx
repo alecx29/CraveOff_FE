@@ -58,12 +58,12 @@ const NotificationsScreen = () => {
         // Explică utilizatorului de ce avem nevoie de permisiuni înainte de a le cere
         if (permissionStatus !== 'granted') {
           Alert.alert(
-            'Permite notificări',
-            'CraveOff folosește notificări pentru a te ajuta să rămâi motivat și pentru a-ți aminti să-ți înregistrezi progresul. Vrei să activezi notificările?',
+            'Allow notifications',
+            'CraveOff uses notifications to help you stay motivated and remind you to track your progress. Would you like to enable notifications?',
             [
-              { text: 'Nu acum', style: 'cancel', onPress: () => setIsLoading(false) },
+              { text: 'Not now', style: 'cancel', onPress: () => setIsLoading(false) },
               { 
-                text: 'Activează', 
+                text: 'Enable', 
                 onPress: async () => {
                   const granted = await requestPermissions();
                   if (granted) {
@@ -124,22 +124,22 @@ const NotificationsScreen = () => {
   const sendTestNotification = async () => {
     if (!isNotificationsEnabled) {
       Alert.alert(
-        'Notificări dezactivate',
-        'Te rugăm să activezi notificările pentru a primi o notificare de test.',
+        'Notifications disabled',
+        'Please enable notifications to receive a test notification.',
         [{ text: 'OK' }]
       );
       return;
     }
 
     await scheduleNotification(
-      'Notificare de test',
-      'Aceasta este o notificare de test de la CraveOff. Dacă o poți vedea, notificările funcționează corect!',
+      'Test notification',
+      'This is a test notification from CraveOff. If you can see it, notifications are working correctly!',
       { seconds: 2, type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL }
     );
     
     Alert.alert(
-      'Notificare de test trimisă',
-      'Ar trebui să primești o notificare în câteva secunde.',
+      'Test notification sent',
+      'You should receive a notification in a few seconds.',
       [{ text: 'OK' }]
     );
   };
@@ -148,13 +148,13 @@ const NotificationsScreen = () => {
   const getPermissionStatusText = () => {
     switch(permissionStatus) {
       case 'granted':
-        return 'Permisiune acordată';
+        return 'Permission granted';
       case 'denied':
-        return 'Permisiune refuzată';
+        return 'Permission denied';
       case 'undetermined':
-        return 'Permisiune nesolicitată';
+        return 'Permission not requested';
       default:
-        return 'Necunoscut';
+        return 'Unknown';
     }
   };
 
@@ -173,9 +173,9 @@ const NotificationsScreen = () => {
   return (
     <GradientBackground>
       <Stack.Screen options={{ 
-        title: 'Notificări', 
+        title: 'Notifications', 
         headerShown: true,
-        headerBackTitle: 'Setări',
+        headerBackTitle: 'Settings',
         headerStyle: {
           backgroundColor: theme.colors.background,
         },
@@ -187,14 +187,14 @@ const NotificationsScreen = () => {
         <View style={styles.section}>
           <View style={styles.header}>
             <Ionicons name="notifications" size={24} color={theme.colors.primary} />
-            <Text style={styles.sectionTitle}>Setări notificări</Text>
+            <Text style={styles.sectionTitle}>Notification settings</Text>
           </View>
           
           <View style={styles.permissionCard}>
             <View style={styles.permissionContent}>
               <View style={styles.permissionInfo}>
                 <Text style={styles.permissionTitle}>
-                  Notificări {isNotificationsEnabled ? 'activate' : 'dezactivate'}
+                  Notifications {isNotificationsEnabled ? 'enabled' : 'disabled'}
                 </Text>
                 <View style={styles.statusContainer}>
                   <View style={[styles.statusDot, { backgroundColor: getPermissionStatusColor() }]} />
@@ -216,13 +216,13 @@ const NotificationsScreen = () => {
             {permissionStatus === 'denied' && (
               <View style={styles.settingsButtonContainer}>
                 <Text style={styles.settingsHelpText}>
-                  Pentru a primi notificări, trebuie să le activezi în setările dispozitivului.
+                  To receive notifications, you need to enable them in your device settings.
                 </Text>
                 <TouchableOpacity 
                   style={styles.openSettingsButton} 
                   onPress={openAppSettings}
                 >
-                  <Text style={styles.openSettingsText}>Deschide Setări</Text>
+                  <Text style={styles.openSettingsText}>Open Settings</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -273,12 +273,12 @@ const NotificationsScreen = () => {
           <Text style={[
             styles.testButtonText,
             !isNotificationsEnabled && styles.disabledText
-          ]}>Trimite notificare de test</Text>
+          ]}>Send test notification</Text>
         </TouchableOpacity>
         
         {/* Help text */}
         <Text style={styles.helpText}>
-          Notificările te ajută să rămâi pe drumul cel bun cu obiectivele tale. Vei primi remindere și notificări de realizare când acestea sunt activate.
+          Notifications help you stay on track with your goals. You will receive reminders and achievement notifications when they are enabled.
         </Text>
       </ScrollView>
     </GradientBackground>

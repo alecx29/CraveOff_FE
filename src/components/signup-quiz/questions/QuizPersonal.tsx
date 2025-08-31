@@ -50,7 +50,7 @@ const QuizPersonal = ({ personalInfo, onUpdateInfo, onComplete, isLoading = fals
       
       <View style={styles.formContainer}>
         <View>
-          <Text style={styles.inputLabel}>Name</Text>
+          <Text style={styles.inputLabel}>Full Name</Text>
           <TextInput
             style={[
               styles.textInput,
@@ -58,7 +58,7 @@ const QuizPersonal = ({ personalInfo, onUpdateInfo, onComplete, isLoading = fals
             ]}
             value={personalInfo.name}
             onChangeText={(text) => handleInfoChange('name', text)}
-            placeholder="Your name"
+            placeholder="Your full name"
             placeholderTextColor={theme.colors.textSecondary + '80'}
             onFocus={() => setFocusedField('name')}
             onBlur={() => setFocusedField(null)}

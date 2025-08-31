@@ -21,6 +21,7 @@ export interface LastRelapseData {
 interface LogsContextType {
   logs: LogEntry[];
   lastRelapseData: LastRelapseData | null;
+  currentStreak: number;
   isLoading: boolean;
   error: string | null;
   fetchLogs: () => Promise<void>;
@@ -35,6 +36,7 @@ interface LogsContextType {
 const LogsContext = createContext<LogsContextType>({
   logs: [],
   lastRelapseData: null,
+  currentStreak: 0,
   isLoading: false,
   error: null,
   fetchLogs: async () => {},
@@ -49,6 +51,7 @@ const LogsContext = createContext<LogsContextType>({
 export const LogsProvider = ({ children }: { children: ReactNode }) => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [lastRelapseData, setLastRelapseData] = useState<LastRelapseData | null>(null);
+  const [currentStreak, setCurrentStreak] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,16 +101,19 @@ export const LogsProvider = ({ children }: { children: ReactNode }) => {
         // Format: { upsert_data: { id: "...", last_relapse_date: "..." } }
         console.log('Setting lastRelapseData from upsert_data:', JSON.stringify(response.data.upsert_data, null, 2));
         setLastRelapseData(response.data.upsert_data);
+        updateCurrentStreakFromDate(response.data.upsert_data.last_relapse_date);
       } else if (response.data && response.data.last_relapse_date) {
         // Format: { id: "...", last_relapse_date: "..." }
         console.log('Setting lastRelapseData directly from response:', JSON.stringify(response.data, null, 2));
         setLastRelapseData(response.data);
+        updateCurrentStreakFromDate(response.data.last_relapse_date);
       } else if (typeof response.data === 'object' && response.data !== null) {
         // Try to find last_relapse_date in any object
         for (const key in response.data) {
           if (response.data[key] && response.data[key].last_relapse_date) {
             console.log(`Found last_relapse_date in response.data.${key}:`, JSON.stringify(response.data[key], null, 2));
             setLastRelapseData(response.data[key]);
+            updateCurrentStreakFromDate(response.data[key].last_relapse_date);
             return;
           }
         }
@@ -118,6 +124,38 @@ export const LogsProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Failed to fetch last relapse:', error);
       // We don't set the global error here to avoid overriding logs errors
+    }
+  };
+
+  // Update current streak whenever lastRelapseData changes
+  React.useEffect(() => {
+    updateCurrentStreakFromDate(lastRelapseData?.last_relapse_date ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastRelapseData?.last_relapse_date]);
+
+  // Helper to compute current streak (days since last relapse)
+  const updateCurrentStreakFromDate = (dateStr: string | null) => {
+    try {
+      if (!dateStr) {
+        setCurrentStreak(0);
+        return;
+      }
+      const relapseDateTime = new Date(dateStr);
+      if (isNaN(relapseDateTime.getTime())) {
+        setCurrentStreak(0);
+        return;
+      }
+      const now = new Date();
+      const diffTimeMs = now.getTime() - relapseDateTime.getTime();
+      if (diffTimeMs > 0) {
+        const diffDays = Math.floor(diffTimeMs / (24 * 3600 * 1000));
+        setCurrentStreak(diffDays);
+      } else {
+        setCurrentStreak(0);
+      }
+    } catch (e) {
+      console.error('Error computing current streak:', e);
+      setCurrentStreak(0);
     }
   };
 
@@ -194,6 +232,7 @@ export const LogsProvider = ({ children }: { children: ReactNode }) => {
       value={{ 
         logs, 
         lastRelapseData,
+        currentStreak,
         isLoading, 
         error, 
         fetchLogs,

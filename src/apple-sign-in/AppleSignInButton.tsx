@@ -276,18 +276,7 @@ export default function AppleSignInButton() {
     return null;
   }
 
-  // Use AppleAuthentication.AppleAuthenticationButton on iOS if available
-  if (isAppleAuthAvailable === true) {
-    return (
-      <AppleAuthentication.AppleAuthenticationButton
-        buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-        cornerRadius={theme.borderRadius.medium}
-        style={styles.appleButton}
-        onPress={handleSignInWithApple}
-      />
-    );
-  }
+  // Always use a custom button to force English label across locales
 
   // Show loading or unavailable state only on iOS
   const isCheckingAvailability = isAppleAuthAvailable === null;

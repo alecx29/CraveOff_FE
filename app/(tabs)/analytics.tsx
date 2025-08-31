@@ -25,7 +25,7 @@ const getColor = (theme: any, colorName: string, fallbackColor: string): string 
 
 export default function AnalyticsScreen() {
   const { theme } = useTheme();
-  const { lastRelapseData, isLoading, logs } = useLogs();
+  const { lastRelapseData, isLoading, logs, currentStreak } = useLogs();
   const { user } = useUser();
   const styles = createStyles(theme, getColor);
   
@@ -36,7 +36,7 @@ export default function AnalyticsScreen() {
     return fallbackColor;
   };
   
-  // State for clean days progress
+  // State for clean days progress (derived from context currentStreak)
   const [cleanDays, setCleanDays] = useState(0);
   const [progressPercentage, setProgressPercentage] = useState(0);
   
@@ -80,57 +80,27 @@ export default function AnalyticsScreen() {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   
-  // Calculate clean days based on last relapse date
+  // Derive clean days from shared context currentStreak
   useEffect(() => {
-    if (lastRelapseData && lastRelapseData.last_relapse_date) {
-      try {
-        // Parse the relapse date which comes in UTC format
-        const relapseDateTime = new Date(lastRelapseData.last_relapse_date);
-        
-        // Check if the date is valid
-        if (isNaN(relapseDateTime.getTime())) {
-          console.error('Invalid date format:', lastRelapseData.last_relapse_date);
-          setCleanDays(0);
-          return;
-        }
-        
-        // Get current time
-        const now = new Date();
-        
-        // Calculate the time difference in milliseconds
-        const diffTimeMs = now.getTime() - relapseDateTime.getTime();
-        
-        // Only proceed if the relapse date is in the past
-        if (diffTimeMs > 0) {
-          // Calculate days based on milliseconds
-          const diffDays = Math.floor(diffTimeMs / (24 * 3600 * 1000));
-          setCleanDays(diffDays);
-          
-          // Calculate progress percentage towards 90 days
-          const percentage = Math.min(100, Math.round((diffDays / 90) * 100));
-          setProgressPercentage(percentage);
-        } else {
-          setCleanDays(0);
-          setProgressPercentage(0);
-        }
-      } catch (e) {
-        console.error('Error parsing or calculating time from last_relapse_date:', e);
-        setCleanDays(0);
-        setProgressPercentage(0);
-      }
-    } else {
-      setCleanDays(0);
-      setProgressPercentage(0);
-    }
-  }, [lastRelapseData]);
+    const diffDays = Number.isFinite(Number(currentStreak)) ? Number(currentStreak) : 0;
+    setCleanDays(diffDays);
+    const percentage = Math.min(100, Math.round((diffDays / 90) * 100));
+    setProgressPercentage(percentage);
+  }, [currentStreak]);
   
   // Calculate streak statistics from logs
   useEffect(() => {
     if (logs && logs.length > 0) {
       calculateStreakStats(logs);
+      fetchBackendStreaks();
       calculateProgressOverTime(logs);
     }
   }, [logs]);
+
+  // Always fetch backend-provided streaks on mount
+  useEffect(() => {
+    fetchBackendStreaks();
+  }, []);
   
   // Check for active pledge when component mounts
   useEffect(() => {
@@ -210,6 +180,22 @@ export default function AnalyticsScreen() {
     setAverageStreak(avgStreak);
     
     console.log('Streak stats calculated:', { longestStreak: maxStreak, averageStreak: avgStreak, streaks });
+  };
+
+  // Fetch longest and average streak from backend
+  const fetchBackendStreaks = async () => {
+    try {
+      const response = await apiClient.get(BackendRoutes.STREAKS);
+      const data = response.data || {};
+      // Support both potential key spellings
+      const longest = data.longesStreak ?? data.longestStreak ?? data.longest ?? 0;
+      const average = data.avgStreak ?? data.averageStreak ?? data.average ?? 0;
+      if (Number.isFinite(Number(longest))) setLongestStreak(Number(longest));
+      if (Number.isFinite(Number(average))) setAverageStreak(Number(average));
+    } catch (error) {
+      console.error('Failed to fetch backend streaks:', error);
+      // Keep locally computed values as fallback
+    }
   };
   
   // Function to calculate progress over time

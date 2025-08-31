@@ -20,6 +20,9 @@ export const BackendRoutes = {
   PLEDGE_HISTORY: "/pledge/history",
   DAILY_QUOTE: "/quote",
 
+  // Streaks
+  STREAKS: "/streak/streaks",
+
   // Oria chat routes
   ORIA_CHATS: "/oria/chats",
   ORIA_CHAT: (chatId: string) => `/oria/chats/${chatId}`,
