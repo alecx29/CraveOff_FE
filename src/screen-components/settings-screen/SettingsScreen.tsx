@@ -113,13 +113,10 @@ const SettingsScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
-        <TouchableOpacity style={styles.settingsIcon}>
-          <Ionicons name="settings-outline" size={24} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
       </View>
 
       {/* Profile Card */}
@@ -209,10 +206,11 @@ const SettingsScreen = () => {
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   content: {
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 44,
   },
   header: {
     flexDirection: 'row',
@@ -225,14 +223,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.textPrimary,
   },
-  settingsIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.cardBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  // settingsIcon removed
   profileCard: {
     backgroundColor: theme.colors.backgroundDeep,
     borderRadius: theme.borderRadius.medium,

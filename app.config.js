@@ -7,7 +7,7 @@ module.exports = {
     
     // Note: These properties will not be synced when android/ios folders are present
     orientation: "portrait",
-    icon: "./assets/images/play_store_512.png",
+    icon: "./assets/images/logoCraveoff-512.png",
     scheme: "craveoffapp",
     userInterfaceStyle: "automatic",
     

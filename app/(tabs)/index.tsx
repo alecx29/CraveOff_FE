@@ -1197,7 +1197,9 @@ export default function HomeScreen() {
     <GradientBackground>
       <ScrollView 
         style={styles.container}
-        contentContainerStyle={styles.contentContainer}>
+        contentContainerStyle={styles.contentContainer}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}>
         {/* Header cu salut */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
@@ -1760,9 +1762,11 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 40,
+    backgroundColor: 'transparent',
   },
   contentContainer: {
     paddingBottom: 60, // Increased bottom padding to ensure content is fully visible
+    paddingTop: 8,
   },
   header: {
     flexDirection: 'row',

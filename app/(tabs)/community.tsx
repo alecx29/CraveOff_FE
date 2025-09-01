@@ -15,7 +15,7 @@ export default function CommunityScreen() {
 
   return (
     <GradientBackground>
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false}>
         <Text style={styles.title}>Community</Text>
         
         {/* Hero Section */}
@@ -126,8 +126,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingTop: 44,
     paddingBottom: 40,
+    backgroundColor: 'transparent',
   },
   title: {
     fontSize: 28,

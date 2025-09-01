@@ -736,6 +736,8 @@ export default function AnalyticsScreen() {
       <ScrollView 
         style={styles.container} 
         contentContainerStyle={styles.contentContainer}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
         showsVerticalScrollIndicator={false}>
         <Text style={styles.screenTitle}>Analytics</Text>
         <Text style={styles.screenSubtitle}>Track your progress and insights</Text>
@@ -948,6 +950,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 40,
+    backgroundColor: 'transparent',
   },
   screenTitle: {
     fontSize: 28,
@@ -1166,6 +1169,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
   },
   contentContainer: {
     paddingBottom: 60,
+    paddingTop: 8,
   },
   noDataContainer: {
     height: 280,

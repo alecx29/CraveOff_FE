@@ -5,7 +5,6 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   Dimensions, 
-  ImageBackground,
   StatusBar,
   Animated as RNAnimated,
   ScrollView
@@ -17,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
+import LottieUniversal from '@/src/components/LottieUniversal';
 
 interface ReflectionModalProps {
   visible: boolean;
@@ -34,8 +34,10 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
   
   // Animation values
   const titleOpacity = useRef(new RNAnimated.Value(0)).current;
+  const titleScale = useRef(new RNAnimated.Value(1)).current;
   const contentOpacity = useRef(new RNAnimated.Value(0)).current;
   const buttonOpacity = useRef(new RNAnimated.Value(0)).current;
+  const pulseAnimRef = useRef<RNAnimated.CompositeAnimation | null>(null);
   
   // Adjust for safe areas
   const bottomPadding = Math.max(insets.bottom, 20);
@@ -45,6 +47,7 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
     if (visible) {
       // Reset animation values
       titleOpacity.setValue(0);
+      titleScale.setValue(1);
       contentOpacity.setValue(0);
       buttonOpacity.setValue(0);
       
@@ -54,6 +57,26 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
         duration: 1000,
         useNativeDriver: true,
       }).start();
+
+      // Subtle continuous pulse on title
+      if (pulseAnimRef.current) {
+        pulseAnimRef.current.stop();
+      }
+      pulseAnimRef.current = RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(titleScale, {
+            toValue: 1.04,
+            duration: 1400,
+            useNativeDriver: true,
+          }),
+          RNAnimated.timing(titleScale, {
+            toValue: 1.0,
+            duration: 1400,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulseAnimRef.current.start();
       
       // Animate content with delay
       setTimeout(() => {
@@ -73,6 +96,13 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
         }).start();
       }, 1500);
     }
+
+    return () => {
+      if (pulseAnimRef.current) {
+        pulseAnimRef.current.stop();
+        pulseAnimRef.current = null;
+      }
+    };
   }, [visible]);
   
   if (!visible) return null;
@@ -86,49 +116,52 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
       exiting={FadeOut.duration(200)}
     >
       <StatusBar barStyle="light-content" />
-      
-      <ImageBackground
-        source={require('@/assets/images/star_background.png')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
+      <View style={styles.backgroundContainer}>
+        <LottieUniversal
+          source={require('@/assets/images/Animation_SkyStar.json')}
+          autoPlay
+          loop
+          style={styles.backgroundAnimation}
+          resizeMode="cover"
+        />
+      </View>
+
+      <ScrollView 
+        contentContainerStyle={styles.scrollViewContent}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView 
-          contentContainerStyle={styles.scrollViewContent}
-          bounces={false}
-          showsVerticalScrollIndicator={false}
+        <View style={styles.contentContainer}>
+          {/* Title */}
+          <RNAnimated.Text style={[styles.title, { opacity: titleOpacity, transform: [{ scale: titleScale }] }]}>
+            REFLECT AND BREATHE
+          </RNAnimated.Text>
+          
+          {/* Reflection content */}
+          <RNAnimated.View style={[styles.textContainer, { opacity: contentOpacity }]}>
+            <Text style={styles.reflectionText}>
+              You&apos;re feeling the urge to relapse again, and that&apos;s okay.
+            </Text>
+            <Text style={styles.reflectionText}>
+              It&apos;s love you&apos;re looking for.
+            </Text>
+            <Text style={styles.reflectionText}>
+              Porn pushes you away from that.
+            </Text>
+          </RNAnimated.View>
+        </View>
+      </ScrollView>
+      
+      {/* Button - Now positioned outside ScrollView with fixed position */}
+      <RNAnimated.View style={[styles.fixedButtonContainer, { opacity: buttonOpacity }]}>
+        <TouchableOpacity 
+          style={styles.finishButton}
+          onPress={onClose}
+          activeOpacity={0.8}
         >
-          <View style={styles.contentContainer}>
-            {/* Title */}
-            <RNAnimated.Text style={[styles.title, { opacity: titleOpacity }]}>
-              REFLECT AND BREATHE
-            </RNAnimated.Text>
-            
-            {/* Reflection content */}
-            <RNAnimated.View style={[styles.textContainer, { opacity: contentOpacity }]}>
-              <Text style={styles.reflectionText}>
-                You&apos;re feeling the urge to relapse again, and that&apos;s okay.
-              </Text>
-              <Text style={styles.reflectionText}>
-                It&apos;s love you&apos;re looking for.
-              </Text>
-              <Text style={styles.reflectionText}>
-                Porn pushes you away from that.
-              </Text>
-            </RNAnimated.View>
-          </View>
-        </ScrollView>
-        
-        {/* Button - Now positioned outside ScrollView with fixed position */}
-        <RNAnimated.View style={[styles.fixedButtonContainer, { opacity: buttonOpacity }]}>
-          <TouchableOpacity 
-            style={styles.finishButton}
-            onPress={onClose}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.buttonText}>Finish Reflecting</Text>
-          </TouchableOpacity>
-        </RNAnimated.View>
-      </ImageBackground>
+          <Text style={styles.buttonText}>Finish Reflecting</Text>
+        </TouchableOpacity>
+      </RNAnimated.View>
     </Animated.View>
   );
 };
@@ -142,6 +175,14 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     zIndex: 1000,
   },
   backgroundImage: {
+    width: '100%',
+    height: '100%',
+  },
+  backgroundContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+  backgroundAnimation: {
     width: '100%',
     height: '100%',
   },

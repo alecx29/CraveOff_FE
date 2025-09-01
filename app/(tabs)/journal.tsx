@@ -218,7 +218,7 @@ export default function JournalScreen() {
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 40,
+    paddingTop: 44,
   },
   loadingContainer: {
     flex: 1,
