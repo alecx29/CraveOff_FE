@@ -44,6 +44,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authErrorCount, setAuthErrorCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
 
+  const PERSISTED_USER_KEY = 'authUser';
+
+  const persistUser = async (userData: any) => {
+    try {
+      await AsyncStorage.setItem(PERSISTED_USER_KEY, JSON.stringify(userData));
+    } catch (e) {
+      console.warn('[AuthContext] Failed to persist user:', e);
+    }
+  };
+
+  const loadPersistedUser = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(PERSISTED_USER_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setUser(parsed);
+        console.log('[AuthContext] Loaded user from storage');
+      }
+    } catch (e) {
+      console.warn('[AuthContext] Failed to load user from storage:', e);
+    }
+  };
+
+  const clearPersistedUser = async () => {
+    try {
+      await AsyncStorage.removeItem(PERSISTED_USER_KEY);
+    } catch (e) {
+      console.warn('[AuthContext] Failed to clear persisted user:', e);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      // Fetch current user profile after token is set
+      const response = await apiClient.get('/users/profile');
+      if (response?.data) {
+        setUser(response.data);
+        persistUser(response.data);
+        console.log('[AuthContext] User profile fetched from API');
+      }
+    } catch (e) {
+      console.warn('[AuthContext] Failed to fetch user profile:', (e as any)?.message);
+    }
+  };
+
   // Check for existing token on mount
   useEffect(() => {
     const checkAuth = async () => {
@@ -64,6 +109,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Set the token in the API client headers
           apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
           apiClientImage.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+
+          // Load any persisted user immediately to avoid UI fallback
+          await loadPersistedUser();
+
+          // Then refresh user data from API in background
+          fetchUserProfile();
         } else {
           console.log('[AuthContext] No token found, user is not authenticated');
           setIsAuthenticated(false);
@@ -105,7 +156,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (userData.user) {
         setUser(userData.user);
+        persistUser(userData.user);
         console.log('[AuthContext] User data set');
+      } else {
+        // If user payload not provided, fetch it now
+        await fetchUserProfile();
       }
       
       // Set the token in the API client headers
@@ -153,6 +208,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setAccessToken(null);
       setIsAuthenticated(false);
       setUser({});
+      clearPersistedUser();
       
       // Remove the token from the API client headers
       delete apiClient.defaults.headers.common['Authorization'];

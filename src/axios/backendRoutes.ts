@@ -19,6 +19,7 @@ export const BackendRoutes = {
   PLEDGE: "/pledge/",
   PLEDGE_HISTORY: "/pledge/history",
   DAILY_QUOTE: "/quote",
+  ACHIEVEMENTS: "/achievements/",
 
   // Streaks
   STREAKS: "/streak/streaks",

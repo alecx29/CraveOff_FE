@@ -6,32 +6,119 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
+import { useLogs } from '@/src/context/LogsContext';
+import { apiClient } from '@/src/axios/apiClient';
+import { BackendRoutes } from '@/src/axios/backendRoutes';
+import { useAchievements } from '@/src/context/AchievementsContext';
 import LottieUniversal from '@/src/components/LottieUniversal';
 
 const AchievementsScreen = () => {
   const { theme } = useTheme();
+  const { currentStreak, lastRelapseData } = useLogs();
+  const { achievements: storedAchievements, summary: storedSummary, setFromServer } = useAchievements();
   const styles = createStyles(theme);
 
-  // Lista de achievements - doar 2 conform cerinței
-  const achievements = [
-    {
-      id: 'join',
-      title: 'Welcome to CraveOff',
-      description: 'You took the first step towards a healthier life',
-      icon: 'ribbon-outline',
-      unlocked: true,
-      date: 'Jun 15, 2025',
-      xp: 100,
-    },
-    {
-      id: '90days',
-      title: '90 Days Clean',
-      description: 'Stay clean for 90 consecutive days',
-      icon: 'trophy-outline',
-      unlocked: false,
-      xp: 1000,
+  // Helper: format date nice
+  const formatDate = (d: Date) => d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // Helper: estimate unlock date from last relapse
+  const estimateUnlockDate = (days: number): string | undefined => {
+    try {
+      const relapse = lastRelapseData?.last_relapse_date ? new Date(lastRelapseData.last_relapse_date) : null;
+      if (!relapse || isNaN(relapse.getTime())) return undefined;
+      const unlockDate = new Date(relapse.getTime() + days * 24 * 3600 * 1000);
+      const now = new Date();
+      // If threshold already passed, cap at today for display
+      return formatDate(unlockDate > now ? now : unlockDate);
+    } catch {
+      return undefined;
     }
+  };
+
+  // Dynamic achievements driven by backend codes; fallback definitions
+  const milestoneDefs = [
+    { id: 'WELCOME', title: 'Welcome to CraveOff', desc: 'You took the first step towards a healthier life', icon: 'ribbon-outline' as const, threshold: 0, xp: 100 },
+    { id: 'STREAK_7', title: '7 Days Clean', desc: 'Stay clean for 7 consecutive days', icon: 'medal-outline' as const, threshold: 7, xp: 150 },
+    { id: 'STREAK_30', title: '30 Days Clean', desc: 'Stay clean for 30 consecutive days', icon: 'trophy-outline' as const, threshold: 30, xp: 300 },
+    { id: 'STREAK_60', title: '60 Days Clean', desc: 'Stay clean for 60 consecutive days', icon: 'trophy-outline' as const, threshold: 60, xp: 600 },
+    { id: 'STREAK_90', title: '90 Days Clean', desc: 'Stay clean for 90 consecutive days', icon: 'trophy-outline' as const, threshold: 90, xp: 1000 },
   ];
+
+  const [achievements, setAchievements] = React.useState<Array<{
+    id: string;
+    title: string;
+    description: string;
+    icon: any;
+    unlocked: boolean;
+    date?: string;
+    xp: number;
+  }>>([]);
+
+  // Fetch achievements on mount
+  React.useEffect(() => {
+    const fetchAchievements = async () => {
+      try {
+        const response = await apiClient.get(BackendRoutes.ACHIEVEMENTS);
+        const list = response?.data?.achievements || [];
+
+        // Map backend items by code
+        const mapped = milestoneDefs.map(def => {
+          const serverItem = list.find((it: any) => it.code === def.id);
+          const isUnlocked = serverItem ? !!serverItem.unlocked : (def.threshold === 0 ? true : currentStreak >= def.threshold);
+          // Only show date if provided by backend; no fallback date
+          const unlockedAt = serverItem?.unlockedAt;
+          return {
+            id: def.id,
+            title: serverItem?.title || def.title,
+            description: serverItem?.description || def.desc,
+            icon: def.icon,
+            unlocked: isUnlocked,
+            date: unlockedAt,
+            xp: serverItem?.xp ?? def.xp,
+          };
+        });
+
+        setAchievements(mapped);
+        // Persist to store for profile usage
+        await setFromServer(list);
+      } catch (e) {
+        // Fallback to local calculation if API fails
+        const fallback = milestoneDefs.map(def => ({
+          id: def.id,
+          title: def.title,
+          description: def.desc,
+          icon: def.icon,
+          unlocked: def.threshold === 0 ? true : currentStreak >= def.threshold,
+          date: def.threshold > 0 && currentStreak >= def.threshold ? estimateUnlockDate(def.threshold) : (def.threshold === 0 ? formatDate(new Date()) : undefined),
+          xp: def.xp,
+        }));
+        setAchievements(fallback);
+      }
+    };
+
+    // Prefer store if available; otherwise fetch
+    if (storedAchievements && storedAchievements.length > 0) {
+      // Map store entries to UI using defs for icons/xp
+      const mapped = milestoneDefs.map(def => {
+        const serverItem = storedAchievements.find((it: any) => it.code === def.id);
+        const isUnlocked = serverItem ? !!serverItem.unlocked : (def.threshold === 0 ? true : currentStreak >= def.threshold);
+        const unlockedAt = serverItem?.unlockedAt;
+        return {
+          id: def.id,
+          title: serverItem?.title || def.title,
+          description: serverItem?.description || def.desc,
+          icon: def.icon,
+          unlocked: isUnlocked,
+          date: unlockedAt,
+          xp: serverItem?.xp ?? def.xp,
+        };
+      });
+      setAchievements(mapped);
+    } else {
+      fetchAchievements();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Calculăm progresul total
   const totalAchievements = achievements.length;

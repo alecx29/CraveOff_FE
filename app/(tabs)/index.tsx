@@ -21,7 +21,9 @@ import quotesService from '@/src/services/quotesService';
 import { OriaChat, OriaChatWithMessages } from '@/src/types/oria';
 import { usePledge } from '@/src/context/PledgeContext';
 import PetComingSoonModal from '@/src/components/PetComingSoonModal';
+import LeaderboardComingSoon from '@/src/components/LeaderboardComingSoon';
 import DeepBreathingComingSoonModal from '@/src/components/DeepBreathingComingSoonModal';
+import { useAchievements } from '@/src/context/AchievementsContext';
 
 // Helper function to format time with more precision
 const formatTimeCounter = (seconds: number) => {
@@ -139,6 +141,7 @@ export default function HomeScreen() {
   const { theme } = useTheme();
   const { user } = useUser();
   const { logs, lastRelapseData, fetchLogs, isLoading } = useLogs();
+  const { refreshFromApi } = useAchievements();
   const styles = createStyles(theme);
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = screenWidth - 40; // Define card width as a constant
@@ -230,6 +233,11 @@ export default function HomeScreen() {
       -1,
       true
     );
+  }, []);
+
+  // Kick off achievements fetch asynchronously when Home mounts
+  useEffect(() => {
+    refreshFromApi();
   }, []);
   
   // Animated style for loading indicator
@@ -1468,6 +1476,9 @@ export default function HomeScreen() {
             <Text style={styles.quoteText}>&quot;{quote}&quot;</Text>
           )}
         </View>
+        
+        {/* Leaderboard Coming Soon - under Daily Motivation */}
+        <LeaderboardComingSoon />
         
         {/* Active Pledge Banner */}
         {!canMakePledge && activePledgeTimeRemaining && (

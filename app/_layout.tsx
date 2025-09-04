@@ -13,6 +13,7 @@ import { ThemeProvider } from '@/src/context/ThemeProvider';
 import { UserProvider } from '@/src/context/UserContext';
 import { LogsProvider } from '@/src/context/LogsContext';
 import { JournalProvider } from '@/src/context/JournalContext';
+import { AchievementsProvider } from '@/src/context/AchievementsContext';
 import { PledgeProvider } from '@/src/context/PledgeContext';
 import { getTokens, clearTokens } from '@/src/Storage/tokenStorage';
 import HomeOnlyCheckInController from '@/src/components/HomeOnlyCheckInController';
@@ -29,10 +30,12 @@ export default function RootLayout() {
             <UserProvider>
               <LogsProvider>
                 <JournalProvider>
+                  <AchievementsProvider>
                   <PledgeProvider>
                   <NotificationInitializer />
                   <AuthNavigation />
                   </PledgeProvider>
+                  </AchievementsProvider>
                 </JournalProvider>
               </LogsProvider>
             </UserProvider>

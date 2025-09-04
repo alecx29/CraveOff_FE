@@ -10,6 +10,7 @@ const NOTIFICATION_IDS = {
 // Storage keys
 const STORAGE_KEYS = {
   CHECKIN_NOTIFICATION_ID: "checkin-notification-id",
+  CHECKIN_LAST_SCHEDULED_AT: "checkin-last-scheduled-at",
 };
 
 /**
@@ -20,6 +21,13 @@ const getExistingDailyCheckInId = async (): Promise<string | null> => {
   try {
     const storedId = await AsyncStorage.getItem(STORAGE_KEYS.CHECKIN_NOTIFICATION_ID);
     if (!storedId) {
+      // Try to discover an existing check-in by content title to avoid duplicates
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const found = scheduled.find((n: any) => n?.content?.title === "Daily Check-in Reminder");
+      if (found?.identifier) {
+        await AsyncStorage.setItem(STORAGE_KEYS.CHECKIN_NOTIFICATION_ID, found.identifier);
+        return found.identifier as string;
+      }
       return null;
     }
 
@@ -54,6 +62,19 @@ export const scheduleDailyCheckInNotification = async (): Promise<
       return existingId;
     }
 
+    // Avoid rapid re-scheduling on app cold starts
+    const lastScheduledAt = await AsyncStorage.getItem(STORAGE_KEYS.CHECKIN_LAST_SCHEDULED_AT);
+    if (lastScheduledAt) {
+      const last = Number(lastScheduledAt);
+      if (!Number.isNaN(last)) {
+        const minutesSince = (Date.now() - last) / 60000;
+        if (minutesSince < 10) {
+          console.log("Skipping re-schedule; last scheduled", Math.round(minutesSince), "minutes ago");
+          return null;
+        }
+      }
+    }
+
     // Set up notification content
     const notificationContent: Notifications.NotificationContentInput = {
       title: "Daily Check-in Reminder",
@@ -86,6 +107,7 @@ export const scheduleDailyCheckInNotification = async (): Promise<
       STORAGE_KEYS.CHECKIN_NOTIFICATION_ID,
       notificationId
     );
+    await AsyncStorage.setItem(STORAGE_KEYS.CHECKIN_LAST_SCHEDULED_AT, String(Date.now()));
 
     console.log(
       "Daily check-in notification scheduled with ID:",

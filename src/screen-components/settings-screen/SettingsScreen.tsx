@@ -10,6 +10,7 @@ import { AuthContext } from '@/src/context/AuthContext';
 import { useUser } from '@/src/context/UserContext';
 import { useLogs } from '@/src/context/LogsContext';
 import { useJournal } from '@/src/context/JournalContext';
+import { useAchievements } from '@/src/context/AchievementsContext';
 import AButton from '@/src/components/AButton/AButton';
 
 import SettingCard from './SettingsCard';
@@ -21,6 +22,7 @@ const SettingsScreen = () => {
   const { resetUser } = useUser();
   const { resetLogs, lastRelapseData } = useLogs();
   const { resetJournal, entries } = useJournal();
+  const { summary, refreshFromApi } = useAchievements();
   const styles = createStyles(theme);
   
   // State pentru clean days
@@ -145,7 +147,9 @@ const SettingsScreen = () => {
         
         {/* Achievements */}
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>1/2</Text>
+          <Text style={styles.statNumber}>
+            {summary ? `${summary.unlocked}/${summary.total}` : '—'}
+          </Text>
           <Text style={styles.statLabel}>Achievements</Text>
         </View>
       </View>
@@ -154,7 +158,7 @@ const SettingsScreen = () => {
       <SettingCard
         icon="trophy-outline"
         title="Achievements"
-        value="1 of 2 Unlocked"
+        value={summary ? `${summary.unlocked} of ${summary.total} Unlocked` : 'Loading...'}
         onPress={navigateToAchievements}
         iconComponent={Ionicons}
         variant="primary"
