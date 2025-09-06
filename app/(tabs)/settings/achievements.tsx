@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -138,7 +138,7 @@ const AchievementsScreen = () => {
         headerShadowVisible: true,
       }} />
       
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
         {/* Progress Header */}
         <Animated.View 
           entering={FadeInDown.delay(100).duration(600)} 
@@ -269,7 +269,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingTop: 24,
+    paddingTop: Platform.OS === 'android' ? 36 : 24,
     paddingBottom: 40,
   },
   header: {

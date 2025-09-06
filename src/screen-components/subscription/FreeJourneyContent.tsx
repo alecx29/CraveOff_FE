@@ -122,8 +122,13 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
       const effectiveIdToken = provider === 'google' ? effectiveGoogleIdToken : provider === 'apple' ? effectiveAppleIdToken : undefined;
       
       // Prepare request body
+      const resolvedTimeZone = (Intl as any)?.DateTimeFormat?.().resolvedOptions?.().timeZone || (Intl as any)?.resolvedOptions?.().timeZone || 'UTC';
+      const tzOffsetMinutes = new Date().getTimezoneOffset();
+      console.log('[SignupComplete] Detected timezone:', resolvedTimeZone);
+      console.log('[SignupComplete] Current GMT offset (minutes):', tzOffsetMinutes, '=> hours:', -(tzOffsetMinutes / 60));
       const requestBody: any = { 
-        signup_complete: true 
+        signup_complete: true,
+        timezone: resolvedTimeZone
       };
       
       // Add idToken and provider only if we have a valid token and matching provider

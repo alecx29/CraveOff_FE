@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { apiClient } from '@/src/axios/apiClient';
 import { AuthContext, AuthProvider } from '@/src/context/AuthContext';
+import { registerDeviceWithBackend } from '@/src/services/pushService';
 import { NotificationsProvider } from '@/src/context/NotificationsContext';
 import { ThemeProvider } from '@/src/context/ThemeProvider';
 import { UserProvider } from '@/src/context/UserContext';
@@ -114,6 +115,11 @@ const AuthNavigation: React.FC = () => {
       const authResult = await checkAndRefreshTokens();
       console.log('Bootstrap complete, authentication result:', authResult);
       console.log('isAuthenticated after bootstrap:', isAuthenticated);
+      if (authResult) {
+        try {
+          registerDeviceWithBackend({ silent: true });
+        } catch {}
+      }
     };
     bootstrap();
   }, []);

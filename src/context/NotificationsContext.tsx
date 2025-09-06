@@ -4,6 +4,7 @@ import * as Device from 'expo-device';
 import React, { createContext, useState, useContext, useEffect, ReactNode, useRef } from 'react';
 import { Platform, Alert } from 'react-native';
 import { scheduleDailyCheckInNotification, cancelDailyCheckInNotification, setupNotificationChannels } from '@/src/services/notificationService';
+import { registerDeviceWithBackend } from '@/src/services/pushService';
 
 // Define the context type
 interface NotificationsContextType {
@@ -206,8 +207,9 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
 
   // Schedule daily check-in notification at 11:00 AM
   const scheduleDailyCheckIn = async (): Promise<string | null> => {
+    // We now use server-side push notifications; keep this as no-op or legacy support
     if (!isNotificationsEnabled) return null;
-    return await scheduleDailyCheckInNotification();
+    return null;
   };
 
   // Cancel daily check-in notification
@@ -234,9 +236,9 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
           console.log('Cannot enable notifications without permissions');
           return;
         }
-        
-        // Schedule daily check-in notification when notifications are enabled
-        await scheduleDailyCheckIn();
+
+        // Register device with backend for push notifications
+        await registerDeviceWithBackend({ silent: true });
       } else {
         // If disabling, cancel all scheduled notifications
         await cancelAllNotifications();

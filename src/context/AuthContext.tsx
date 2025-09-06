@@ -6,6 +6,7 @@ import { Alert } from 'react-native';
 import { saveTokens, clearTokens, getRefreshToken, getTokens } from '@/src/Storage/tokenStorage';
 import { apiClient, apiClientImage, refreshTokenManually } from '@/src/axios/apiClient';
 import axios from 'axios';
+import { registerDeviceWithBackend } from '@/src/services/pushService';
 
 interface AuthContextProps {
   isAuthenticated: boolean;
@@ -168,6 +169,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       apiClientImage.defaults.headers.common['Authorization'] = `Bearer ${userData.accessToken}`;
       
       console.log('[AuthContext] Sign in complete');
+
+      // Attempt to register device for push notifications (non-blocking)
+      try {
+        registerDeviceWithBackend({ silent: true });
+      } catch {}
     } catch (error) {
       console.error('[AuthContext] Error during sign in:', error);
       // Incrementăm contorul de erori
