@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -15,7 +15,7 @@ import LottieUniversal from '@/src/components/LottieUniversal';
 const AchievementsScreen = () => {
   const { theme } = useTheme();
   const { currentStreak, lastRelapseData } = useLogs();
-  const { achievements: storedAchievements, summary: storedSummary, setFromServer } = useAchievements();
+  const { achievements: storedAchievements, setFromServer } = useAchievements();
   const styles = createStyles(theme);
 
   // Helper: format date nice
@@ -44,7 +44,7 @@ const AchievementsScreen = () => {
     { id: 'STREAK_90', title: '90 Days Clean', desc: 'Stay clean for 90 consecutive days', icon: 'trophy-outline' as const, threshold: 90, xp: 1000 },
   ];
 
-  const [achievements, setAchievements] = React.useState<Array<{
+  const [achievements, setAchievements] = React.useState<{
     id: string;
     title: string;
     description: string;
@@ -52,7 +52,7 @@ const AchievementsScreen = () => {
     unlocked: boolean;
     date?: string;
     xp: number;
-  }>>([]);
+  }[]>([]);
 
   // Fetch achievements on mount
   React.useEffect(() => {
@@ -81,7 +81,7 @@ const AchievementsScreen = () => {
         setAchievements(mapped);
         // Persist to store for profile usage
         await setFromServer(list);
-      } catch (e) {
+      } catch {
         // Fallback to local calculation if API fails
         const fallback = milestoneDefs.map(def => ({
           id: def.id,
@@ -138,7 +138,7 @@ const AchievementsScreen = () => {
         headerShadowVisible: true,
       }} />
       
-      <ScrollView style={styles.container} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {/* Progress Header */}
         <Animated.View 
           entering={FadeInDown.delay(100).duration(600)} 
@@ -269,7 +269,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingTop: Platform.OS === 'android' ? 36 : 24,
     paddingBottom: 40,
   },
   header: {

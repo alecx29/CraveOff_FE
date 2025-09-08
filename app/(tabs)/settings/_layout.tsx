@@ -9,13 +9,13 @@ export default function SettingsLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
         headerStyle: { backgroundColor: theme.colors.background },
         headerTintColor: theme.colors.textPrimary,
         headerShadowVisible: true,
       }}
     >
-      <Stack.Screen name="index" />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="personal-details" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="achievements" />

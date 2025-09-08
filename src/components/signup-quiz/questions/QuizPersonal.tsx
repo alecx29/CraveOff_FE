@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, ActivityIndicator, Switch, Alert } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import { getExpoPushTokenAsync, registerDeviceWithBackend } from '@/src/services/pushService';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
@@ -25,6 +27,9 @@ const QuizPersonal = ({ personalInfo, onUpdateInfo, onComplete, isLoading = fals
   // Local state for form validation and focus
   const [isFormValid, setIsFormValid] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(false);
+  const [checkingPermission, setCheckingPermission] = useState<boolean>(true);
+  const [toggling, setToggling] = useState<boolean>(false);
   
   // Update info and check validation
   const handleInfoChange = (field: keyof PersonalInfo, value: string) => {
@@ -36,6 +41,72 @@ const QuizPersonal = ({ personalInfo, onUpdateInfo, onComplete, isLoading = fals
     const ageValid = /^\d+$/.test(updatedInfo.age) && Number(updatedInfo.age) > 0;
     
     setIsFormValid(nameValid && ageValid);
+  };
+
+  // Prompt for notifications permission on mount of this step
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        setCheckingPermission(true);
+        const { status } = await Notifications.getPermissionsAsync();
+        console.log('[QuizPersonal] Initial permission status:', status);
+        if (status !== 'granted') {
+          // Triggers OS prompt
+          console.log('[QuizPersonal] Requesting permission and token...');
+          await getExpoPushTokenAsync();
+        }
+        const { status: finalStatus } = await Notifications.getPermissionsAsync();
+        const granted = finalStatus === 'granted';
+        console.log('[QuizPersonal] Final permission status:', finalStatus);
+        if (isMounted) setNotificationsEnabled(granted);
+        if (granted) {
+          // Attempt to register device with backend; ignore result if unauthenticated yet
+          try { 
+            console.log('[QuizPersonal] Registering device after grant (mount)');
+            await registerDeviceWithBackend({ silent: true }); 
+          } catch {}
+        }
+      } catch {}
+      finally {
+        if (isMounted) setCheckingPermission(false);
+      }
+    })();
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleToggleNotifications = async (value: boolean) => {
+    if (toggling) return;
+    setToggling(true);
+    console.log('[QuizPersonal] Toggle notifications ->', value ? 'enable' : 'disable');
+    try {
+      if (value) {
+        // Check/request OS permission first; toggle reflects OS permission status
+        const { status } = await Notifications.getPermissionsAsync();
+        let finalStatus = status;
+        if (status !== 'granted') {
+          const req = await Notifications.requestPermissionsAsync();
+          finalStatus = req.status;
+        }
+        const grantedNow = finalStatus === 'granted';
+        setNotificationsEnabled(grantedNow);
+        if (grantedNow) {
+          console.log('[QuizPersonal] Registering device after toggle enable');
+          const ok = await registerDeviceWithBackend({ silent: true });
+          if (!ok) {
+            console.log('[QuizPersonal] Registration attempt failed after enable');
+          }
+        } else {
+          Alert.alert('Enable notifications', 'Please allow notifications in the system prompt or device Settings.');
+        }
+      } else {
+        // Cannot revoke OS permission programmatically
+        setNotificationsEnabled(false);
+        Alert.alert('Notifications disabled', 'You can re-enable notifications anytime from Settings.');
+      }
+    } finally {
+      setToggling(false);
+    }
   };
 
   return (
@@ -89,6 +160,20 @@ const QuizPersonal = ({ personalInfo, onUpdateInfo, onComplete, isLoading = fals
         </View>
       </View>
       
+      <View style={styles.notificationsRow}>
+        <View style={styles.notificationsTextContainer}>
+          <Text style={styles.notificationsTitle}>Allow notifications</Text>
+          <Text style={styles.notificationsSubtitle}>Get gentle reminders and progress updates</Text>
+        </View>
+        <Switch
+          value={notificationsEnabled}
+          onValueChange={handleToggleNotifications}
+          thumbColor={notificationsEnabled ? theme.colors.primary : theme.colors.cardBackground}
+          trackColor={{ false: theme.colors.textSecondary + '40', true: theme.colors.primary + '80' }}
+          disabled={checkingPermission || toggling}
+        />
+      </View>
+      
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[
@@ -135,6 +220,32 @@ const createStyles = (theme: any) => StyleSheet.create({
   formContainer: {
     marginTop: 16,
     gap: 24,
+  },
+  notificationsRow: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...theme.shadows.light,
+  },
+  notificationsTextContainer: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  notificationsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  notificationsSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: theme.colors.textSecondary,
   },
   inputLabel: {
     fontSize: 16,
