@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, Easing, useAnimatedProps } from 'react-native-reanimated';
 import { Svg, Circle, G } from 'react-native-svg';
@@ -810,9 +811,22 @@ export default function AnalyticsScreen() {
             <Ionicons name="calendar" size={22} color={theme.colors.primary} />
           </View>
           <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>Clean days this month: {monthlyCleanDays}/{daysInMonth}</Text>
+            <Text style={styles.progressText}>Clean days this month 🔥: {monthlyCleanDays}/{daysInMonth}</Text>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${monthlyProgressPercentage}%` }]} />
+              <View style={[styles.progressFillContainer, { width: `${monthlyProgressPercentage}%` }]}> 
+                <LinearGradient
+                  colors={["#fde047", "#fb923c", "#ef4444"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.progressFillGradient}
+                />
+                <LinearGradient
+                  colors={["#00000000", "#00000022", "#00000000"]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.progressEdgeGlow}
+                />
+              </View>
             </View>
           </View>
         </View>
@@ -913,21 +927,21 @@ export default function AnalyticsScreen() {
                   <View style={[styles.milestoneMarker, cleanDays >= 30 ? styles.milestoneCompleted : {}]}>
                     {cleanDays >= 30 && <Ionicons name="checkmark" size={12} color="#fff" />}
                   </View>
-                  <Text style={styles.milestoneText}>30 days</Text>
+                  <Text style={styles.milestoneText}>30 days 🔥</Text>
                 </View>
                 
                 <View style={styles.milestone}>
                   <View style={[styles.milestoneMarker, cleanDays >= 60 ? styles.milestoneCompleted : {}]}>
                     {cleanDays >= 60 && <Ionicons name="checkmark" size={12} color="#fff" />}
                   </View>
-                  <Text style={styles.milestoneText}>60 days</Text>
+                  <Text style={styles.milestoneText}>60 days 🚀</Text>
                 </View>
                 
                 <View style={styles.milestone}>
                   <View style={[styles.milestoneMarker, cleanDays >= 90 ? styles.milestoneCompleted : {}]}>
                     {cleanDays >= 90 && <Ionicons name="checkmark" size={12} color="#fff" />}
                   </View>
-                  <Text style={styles.milestoneText}>90 days</Text>
+                  <Text style={styles.milestoneText}>90 days 🏆</Text>
                 </View>
               </View>
             </View>
@@ -935,7 +949,20 @@ export default function AnalyticsScreen() {
           
           <View style={styles.challengeProgressBarContainer}>
             <View style={styles.challengeProgressBar}>
-              <View style={[styles.challengeProgress, { width: `${progressPercentage}%` }]} />
+              <View style={[styles.challengeFillContainer, { width: `${progressPercentage}%` }]}> 
+                <LinearGradient
+                  colors={["#fde047", "#fb923c", "#ef4444"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.challengeProgressGradient}
+                />
+                <LinearGradient
+                  colors={["#00000000", "#00000022", "#00000000"]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.challengeEdgeGlow}
+                />
+              </View>
             </View>
           </View>
         </View>
@@ -1081,6 +1108,20 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     backgroundColor: theme.colors.primary,
     borderRadius: 4,
   },
+  progressFillGradient: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressEdgeGlow: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  progressFillContainer: {
+    height: '100%',
+  },
   chartContainer: {
     alignItems: 'center',
     marginTop: 0,
@@ -1225,7 +1266,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     marginTop: 2,
   },
   challengeBadge: {
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: ((theme.colors as any).success || '#22c55e') + '20',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1233,7 +1274,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
   challengeBadgeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.primary,
+    color: (theme.colors as any).success || '#22c55e',
   },
   challengeContent: {
     flexDirection: 'row',
@@ -1246,7 +1287,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
   challengeDaysCount: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: theme.colors.primary,
+    color: (theme.colors as any).success || '#22c55e',
   },
   challengeDaysLabel: {
     fontSize: 14,
@@ -1297,5 +1338,19 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     height: '100%',
     backgroundColor: theme.colors.primary,
     borderRadius: 3,
+  },
+  challengeProgressGradient: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  challengeEdgeGlow: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  challengeFillContainer: {
+    height: '100%',
   },
 });

@@ -1,9 +1,8 @@
 // app/(auth)/login.tsx
 import { useRouter } from 'expo-router';
 import React, { useContext, useState } from 'react';
-import { Alert, StyleSheet, View, Image, TouchableOpacity, Text, Platform } from 'react-native';
+import { Alert, StyleSheet, View, Image, Platform } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import Constants from 'expo-constants';
 
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
@@ -13,6 +12,7 @@ import GoogleSignInButton from '@/src/google-sign-in/GoogleSignInButton';
 import { AppleSignInButton } from '@/src/apple-sign-in';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { saveTokens } from '@/src/Storage/tokenStorage';
+import LottieUniversal from '@/src/components/LottieUniversal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
@@ -21,14 +21,8 @@ const LoginScreen: React.FC = () => {
   const { signIn } = useContext(AuthContext);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isDevAppleLoading, setIsDevAppleLoading] = useState(false);
   const styles = createStyles(theme);
   
-  // Check if we're in development mode - show dev button for apple-signin channel or development builds
-  const isDevelopment = 
-    Constants.expoConfig?.extra?.eas?.build?.channel === 'apple-signin' || 
-    process.env.NODE_ENV === 'development' ||
-    __DEV__;
 
   const googleLogin = async (idToken: string) => {
     if (isLoading) return;
@@ -146,72 +140,19 @@ const LoginScreen: React.FC = () => {
     }
   };
 
-  // Development-only Apple Sign In
-  const handleDevAppleSignIn = async () => {
-    if (isDevAppleLoading) return;
-    
-    setIsDevAppleLoading(true);
-    console.log('[DevLogin] Starting dev Apple login process...');
-    
-    try {
-      console.log('[DevLogin] Sending authentication request to server...');
-      const response = await apiClient.post(BackendRoutes.DEV_LOGIN, { 
-        provider: 'APPLE',
-        signup_complete: true
-      });
-      
-      console.log('[DevLogin] Authentication successful, processing response');
-      console.log('[DevLogin] Full response structure:', JSON.stringify(response.data, null, 2));
-      
-      const { session, user } = response.data;
-      console.log('[DevLogin] Session object:', JSON.stringify(session, null, 2));
-      
-      const accessToken = session.access_token || session.accessToken;
-      const refreshToken = session.refresh_token || session.refreshToken;
-      
-      console.log('[DevLogin] Extracted tokens:');
-      console.log('[DevLogin] Access Token:', accessToken?.substring(0, 10) + '...');
-      console.log('[DevLogin] Refresh Token:', refreshToken?.substring(0, 10) + '...');
-      
-      if (!accessToken || !refreshToken) {
-        console.error('[DevLogin] ERROR: Missing tokens in response!');
-        Alert.alert('Authentication Error', 'Token information missing from response');
-        setIsDevAppleLoading(false);
-        return;
-      }
-      
-      console.log('[DevLogin] Saving tokens using tokenStorage...');
-      await saveTokens(accessToken, refreshToken);
-      console.log('[DevLogin] Tokens saved successfully');
-      
-      // Save authentication state
-      await signIn({
-        accessToken, 
-        refreshToken,
-        user
-      });
-      
-      // Add a small delay to ensure token is properly stored and available for subsequent requests
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // For dev login, always treat as completed signup
-      console.log('[DevLogin] Dev login successful, redirecting to home');
-      router.push('/');
-    } catch (error: any) {
-      console.error('[DevLogin] Dev Apple login error:', error.response?.data || error.message);
-      console.error('[DevLogin] Full error:', error);
-      Alert.alert(
-        'Login Error', 
-        error.response?.data?.message || 'Failed to login with Dev Apple. Please try again.'
-      );
-    } finally {
-      setIsDevAppleLoading(false);
-    }
-  };
+  // No dev-only sign-in in production builds
 
   return (
     <GradientBackground>
       <View style={styles.container}>
+        <LottieUniversal 
+          source={require('@/assets/images/Animation_SkyStar.json')}
+          autoPlay 
+          loop 
+          pointerEvents="none"
+          resizeMode="cover"
+          style={styles.bgLottie}
+        />
         <Animated.View 
           style={styles.content}
           entering={FadeIn.duration(600)}
@@ -245,30 +186,14 @@ const LoginScreen: React.FC = () => {
             style={styles.googleSignInContainer}
             entering={FadeInDown.duration(800).delay(500)}
           >
-            <GoogleSignInButton signInCallback={googleLogin} />
-            
-            {Platform.OS === 'ios' && <View style={styles.buttonSpacer} />}
-            
-            <AppleSignInButton />
-
-            {isDevelopment && Platform.OS === 'ios' && (
+            {Platform.OS !== 'ios' && (
               <>
+                <GoogleSignInButton signInCallback={googleLogin} />
                 <View style={styles.buttonSpacer} />
-                
-                <TouchableOpacity
-                  style={[
-                    styles.devButton,
-                    isDevAppleLoading ? { opacity: 0.6 } : null
-                  ]}
-                  onPress={handleDevAppleSignIn}
-                  disabled={isDevAppleLoading}
-                >
-                  <Text style={styles.devButtonText}>
-                    DEV ONLY - Apple Sign In
-                  </Text>
-                </TouchableOpacity>
               </>
             )}
+
+            <AppleSignInButton />
           </Animated.View>
         </Animated.View>
       </View>
@@ -283,11 +208,23 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  bgLottie: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.6,
+    width: '100%',
+    height: '100%',
   },
   content: {
     width: '100%',
     padding: 30,
     alignItems: 'center',
+    zIndex: 1,
   },
   logoContainer: {
     marginBottom: 30,

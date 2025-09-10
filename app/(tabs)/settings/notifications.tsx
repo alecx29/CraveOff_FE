@@ -260,21 +260,23 @@ const NotificationsScreen = () => {
           </View>
         )}
 
-        {/* Test notification button */}
-        <TouchableOpacity 
-          style={[
-            styles.testButton, 
-            !isNotificationsEnabled && styles.disabledButton
-          ]} 
-          onPress={sendTestNotification}
-          disabled={!isNotificationsEnabled || isLoading}
-        >
-          <Ionicons name="paper-plane-outline" size={20} color={isNotificationsEnabled ? theme.colors.primary : theme.colors.textMuted} />
-          <Text style={[
-            styles.testButtonText,
-            !isNotificationsEnabled && styles.disabledText
-          ]}>Send test notification</Text>
-        </TouchableOpacity>
+        {/* Test notification button - commented out */}
+        {false && (
+          <TouchableOpacity 
+            style={[
+              styles.testButton, 
+              !isNotificationsEnabled && styles.disabledButton
+            ]} 
+            onPress={sendTestNotification}
+            disabled={!isNotificationsEnabled || isLoading}
+          >
+            <Ionicons name="paper-plane-outline" size={20} color={isNotificationsEnabled ? theme.colors.primary : theme.colors.textMuted} />
+            <Text style={[
+              styles.testButtonText,
+              !isNotificationsEnabled && styles.disabledText
+            ]}>Send test notification</Text>
+          </TouchableOpacity>
+        )}
         
         {/* Help text */}
         <Text style={styles.helpText}>
