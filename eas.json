@@ -32,6 +32,12 @@
         "enterpriseProvisioning": "adhoc"
       },
       "channel": "apple-signin"
+    },
+    "simulator": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
     }
   },
   "submit": {

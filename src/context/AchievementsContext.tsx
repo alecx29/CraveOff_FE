@@ -47,6 +47,67 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Central milestone definitions used to normalize server data
+  const milestoneDefs: Array<{
+    code: string;
+    title: string;
+    description: string;
+    threshold: number;
+    xp: number;
+  }> = [
+    { code: 'WELCOME', title: 'Welcome to CraveOff', description: 'You took the first step towards a healthier life', threshold: 0, xp: 100 },
+    { code: 'STREAK_7', title: '7 Days Clean', description: 'Stay clean for 7 consecutive days', threshold: 7, xp: 150 },
+    { code: 'STREAK_30', title: '30 Days Clean', description: 'Stay clean for 30 consecutive days', threshold: 30, xp: 300 },
+    { code: 'STREAK_60', title: '60 Days Clean', description: 'Stay clean for 60 consecutive days', threshold: 60, xp: 600 },
+    { code: 'STREAK_90', title: '90 Days Clean', description: 'Stay clean for 90 consecutive days', threshold: 90, xp: 1000 },
+  ];
+
+  // Normalize and merge server payload with our known definitions
+  const mergeWithDefinitions = (serverList: any[]): AchievementItem[] => {
+    try {
+      const byCode = new Map<string, any>();
+      (Array.isArray(serverList) ? serverList : []).forEach((item: any) => {
+        const code = item?.code || item?.id;
+        if (code) byCode.set(code, item);
+      });
+
+      const merged = milestoneDefs.map(def => {
+        const serverItem = byCode.get(def.code);
+        const unlocked: boolean = typeof serverItem?.unlocked === 'boolean'
+          ? !!serverItem.unlocked
+          : def.threshold === 0; // default unlock for welcome
+
+        const unlockedAt: string | undefined = serverItem?.unlockedAt || serverItem?.unlocked_at || undefined;
+
+        return {
+          code: def.code,
+          threshold: def.threshold,
+          title: serverItem?.title || def.title,
+          description: serverItem?.description || def.description,
+          unlocked,
+          unlockedAt,
+          xp: typeof serverItem?.xp === 'number' ? serverItem.xp : def.xp,
+        } as AchievementItem;
+      });
+
+      console.log('[Achievements] mergeWithDefinitions input:', serverList);
+      console.log('[Achievements] mergeWithDefinitions output:', merged);
+      return merged;
+    } catch (e) {
+      console.warn('[Achievements] mergeWithDefinitions failed:', e);
+      // Fallback to defs with only welcome unlocked
+      return milestoneDefs.map(def => ({
+        code: def.code,
+        threshold: def.threshold,
+        title: def.title,
+        description: def.description,
+        unlocked: def.threshold === 0,
+        unlockedAt: undefined,
+        xp: def.xp,
+      }));
+    }
+  };
+
   const computeSummary = (items: AchievementItem[]): AchievementsSummary => {
     const total = Array.isArray(items) ? items.length : 0;
     const unlocked = Array.isArray(items) ? items.filter(i => !!i.unlocked).length : 0;
@@ -56,6 +117,8 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
   const persist = async (items: AchievementItem[]) => {
     try {
       const summ = computeSummary(items);
+      console.log('[Achievements] persist list:', items);
+      console.log('[Achievements] persist summary:', summ);
       await AsyncStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(items));
       await AsyncStorage.setItem(STORAGE_KEY_SUMMARY, JSON.stringify(summ));
       setAchievements(items);
@@ -75,12 +138,14 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
       ]);
       if (rawList) {
         const list: AchievementItem[] = JSON.parse(rawList);
-        setAchievements(list);
-        if (rawSummary) {
-          setSummary(JSON.parse(rawSummary));
-        } else {
-          setSummary(computeSummary(list));
-        }
+        // Always normalize stored list to keep in sync with definitions
+        const normalized = mergeWithDefinitions(list);
+        console.log('[Achievements] loadFromStorage raw list:', list);
+        console.log('[Achievements] loadFromStorage normalized:', normalized);
+        setAchievements(normalized);
+        const recomputed = computeSummary(normalized);
+        console.log('[Achievements] loadFromStorage summary:', recomputed);
+        setSummary(recomputed);
         return true;
       }
       return false;
@@ -91,7 +156,9 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setFromServer = async (items: AchievementItem[]) => {
-    await persist(items);
+    const normalized = mergeWithDefinitions(items as any);
+    console.log('[Achievements] setFromServer normalized:', normalized);
+    await persist(normalized);
   };
 
   const refreshFromApi = async () => {
@@ -99,8 +166,11 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       setError(null);
       const response = await apiClient.get(BackendRoutes.ACHIEVEMENTS);
-      const list: AchievementItem[] = response?.data?.achievements || [];
-      await persist(list);
+      const list: any[] = response?.data?.achievements || [];
+      console.log('[Achievements] refreshFromApi server list:', list);
+      const normalized = mergeWithDefinitions(list);
+      console.log('[Achievements] refreshFromApi normalized:', normalized);
+      await persist(normalized);
     } catch (e: any) {
       setError(e?.message || 'Failed to fetch achievements');
     } finally {
