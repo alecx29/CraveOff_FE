@@ -3,7 +3,7 @@ module.exports = {
   expo: {
     name: "CraveOff",
     slug: "craveoff-app",
-    version: "1.2.4",
+    version: "1.2.5",
     
     // Note: These properties will not be synced when android/ios folders are present
     orientation: "portrait",
@@ -24,8 +24,6 @@ module.exports = {
         usesAppleSignIn: true
       }
     },
-
-    
     
     android: {
       adaptiveIcon: {
@@ -34,7 +32,7 @@ module.exports = {
       },
       edgeToEdgeEnabled: true,
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 24,
+      versionCode: 26,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"

@@ -12,6 +12,7 @@ import { useLogs } from '@/src/context/LogsContext';
 import { useJournal } from '@/src/context/JournalContext';
 import { useAchievements } from '@/src/context/AchievementsContext';
 import AButton from '@/src/components/AButton/AButton';
+import DeleteAccountButton from '@/src/components/DeleteAccountButton';
 
 import SettingCard from './SettingsCard';
 
@@ -93,7 +94,7 @@ const SettingsScreen = () => {
   };
 
   const openSupport = async () => {
-    const emailUrl = 'mailto:romanalexandru123@gmail.com';
+    const emailUrl = 'mailto:romanalexandru29@gmail.com';
     try {
       const supported = await Linking.canOpenURL(emailUrl);
       if (supported) {
@@ -195,14 +196,18 @@ const SettingsScreen = () => {
         variant="primary"
       />
 
-      {/* Logout Button */}
-      <AButton 
-        customStyles={{ button: styles.logoutButton }} 
-        title="Log Out" 
+      {/* Logout Button (restyled to match Delete button dimensions) */}
+      <TouchableOpacity 
+        style={[styles.logoutButton, styles.logoutButtonNew]} 
         onPress={handleLogout}
-        variant="outline" 
-        leftIcon={<Ionicons name="log-out-outline" size={20} color={theme.colors.primary} />}
-      />
+        activeOpacity={0.85}
+      >
+        <Ionicons name="log-out-outline" size={20} color={theme.colors.textPrimary} style={{ marginRight: 8 }} />
+        <Text style={styles.logoutButtonText}>Log Out</Text>
+      </TouchableOpacity>
+
+      {/* Delete Account Button */}
+      <DeleteAccountButton onSuccess={handleLogout} />
     </ScrollView>
   );
 };
@@ -284,6 +289,21 @@ const createStyles = (theme: any) => StyleSheet.create({
   logoutButton: {
     marginTop: 30,
     marginBottom: 30,
+  },
+  logoutButtonNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.backgroundDeep,
+    paddingVertical: 14,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  logoutButtonText: {
+    color: theme.colors.textPrimary,
+    fontWeight: '700',
+    fontSize: 16,
   },
 });
 

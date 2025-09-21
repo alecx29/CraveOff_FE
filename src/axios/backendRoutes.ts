@@ -23,6 +23,9 @@ export const BackendRoutes = {
   DAILY_QUOTE: "/quote",
   ACHIEVEMENTS: "/achievements/",
 
+  // Account management
+  DELETE_ACCOUNT_CONFIRM: (token: string) => `/user/delete-account-confirm/${token}`,
+
   // Streaks
   STREAKS: "/streak/streaks",
 
