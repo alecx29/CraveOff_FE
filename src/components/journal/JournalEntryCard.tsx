@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { JournalEntry } from '@/src/context/JournalContext';
@@ -94,40 +95,45 @@ const JournalEntryCard: React.FC<JournalEntryCardProps> = ({ entry, onPress }) =
       onPress={() => onPress(entry.id)}
       activeOpacity={0.7}
     >
-      <View style={styles.cardHeader}>
-        <View style={styles.dateContainer}>
-          <Text style={styles.date}>{formattedDate}</Text>
+      <LinearGradient
+        colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+        style={styles.cardGradient}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.dateContainer}>
+            <Text style={styles.date}>{formattedDate}</Text>
+          </View>
+          <View style={[
+            styles.moodContainer, 
+            { 
+              borderColor: moodInfo.borderColor,
+              backgroundColor: moodInfo.backgroundColor
+            }
+          ]}>
+            <Text style={styles.emoji}>{moodInfo.emoji}</Text>
+            <Text style={[styles.moodLabel, { color: moodInfo.color }]}>{moodInfo.label}</Text>
+          </View>
         </View>
-        <View style={[
-          styles.moodContainer, 
-          { 
-            borderColor: moodInfo.borderColor,
-            backgroundColor: moodInfo.backgroundColor
-          }
-        ]}>
-          <Text style={styles.emoji}>{moodInfo.emoji}</Text>
-          <Text style={[styles.moodLabel, { color: moodInfo.color }]}>{moodInfo.label}</Text>
-        </View>
-      </View>
-      
-      <Text style={styles.title}>{entry.title}</Text>
-      
-      <Text style={styles.content} numberOfLines={1}>
-        {entry.content}
-      </Text>
-      
-      {entry.tags.length > 0 && (
-        <View style={styles.tagsContainer}>
-          {entry.tags.slice(0, 3).map((tag, index) => (
-            <View key={index} style={styles.tag}>
-              <Text style={styles.tagText}>#{tag}</Text>
-            </View>
-          ))}
-          {entry.tags.length > 3 && (
-            <Text style={styles.tagText}>+{entry.tags.length - 3}</Text>
-          )}
-        </View>
-      )}
+        
+        <Text style={styles.title}>{entry.title}</Text>
+        
+        <Text style={styles.content} numberOfLines={1}>
+          {entry.content}
+        </Text>
+        
+        {entry.tags.length > 0 && (
+          <View style={styles.tagsContainer}>
+            {entry.tags.slice(0, 3).map((tag, index) => (
+              <View key={index} style={styles.tag}>
+                <Text style={styles.tagText}>#{tag}</Text>
+              </View>
+            ))}
+            {entry.tags.length > 3 && (
+              <Text style={styles.tagText}>+{entry.tags.length - 3}</Text>
+            )}
+          </View>
+        )}
+      </LinearGradient>
     </TouchableOpacity>
   );
 };
@@ -135,11 +141,15 @@ const JournalEntryCard: React.FC<JournalEntryCardProps> = ({ entry, onPress }) =
 const createStyles = (theme: any, getColor: (theme: any, colorName: string, fallbackColor: string) => string) => {
   return StyleSheet.create({
     card: {
-      backgroundColor: theme.colors.cardBackground,
+      backgroundColor: 'transparent',
       borderRadius: 14,
-      padding: 16,
+      padding: 0,
       marginBottom: 12,
-      ...theme.shadows.light,
+      overflow: 'hidden',
+    },
+    cardGradient: {
+      padding: 16,
+      borderRadius: 14,
     },
     cardHeader: {
       flexDirection: 'row',

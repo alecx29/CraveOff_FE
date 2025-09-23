@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/context/ThemeProvider';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Helper function to safely access theme colors
 const getColor = (theme: any, colorName: string, fallbackColor: string): string => {
@@ -367,34 +368,39 @@ const WeekBar = ({
   
   return (
     <View style={styles.weekCard}>
-      <View style={styles.titleRow}>
-        <Text style={styles.sectionTitle}>
-          {weekTitle}
-        </Text>
+      <LinearGradient
+        colors={['rgba(59, 130, 246, 0.13)', 'rgba(37, 99, 235, 0.09)']}
+        style={styles.weekGradient}
+      >
+        <View style={styles.titleRow}>
+          <Text style={styles.sectionTitle}>
+            {weekTitle}
+          </Text>
+          
+          {/* Pagination dots */}
+          {paginationDots}
+        </View>
         
-        {/* Pagination dots */}
-        {paginationDots}
-      </View>
-      
-      <Animated.View style={[
-        styles.weekContentContainer,
-        { opacity: fadeAnim }
-      ]}>
-        {daysRow}
-      </Animated.View>
-      
-      {/* Navigation buttons */}
-      {navigationButtons}
+        <Animated.View style={[
+          styles.weekContentContainer,
+          { opacity: fadeAnim }
+        ]}>
+          {daysRow}
+        </Animated.View>
+        
+        {/* Navigation buttons */}
+        {navigationButtons}
+      </LinearGradient>
     </View>
   );
 };
 
 const createStyles = (theme: any) => StyleSheet.create({
   weekCard: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    padding: 16,
     marginBottom: 16,
+    overflow: 'hidden',
     ...Platform.select({
       android: {
         elevation: 1, // Add slight elevation on Android for better performance
@@ -403,6 +409,10 @@ const createStyles = (theme: any) => StyleSheet.create({
         shadowColor: 'transparent', // Disable shadows on iOS for better performance
       }
     }),
+  },
+  weekGradient: {
+    padding: 16,
+    borderRadius: theme.borderRadius.medium,
   },
   titleRow: {
     flexDirection: 'row',

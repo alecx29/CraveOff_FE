@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useContext, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import LottieUniversal from '@/src/components/LottieUniversal';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -124,9 +126,21 @@ const SettingsScreen = () => {
 
       {/* Profile Card */}
       <View style={styles.profileCard}>
-        <View style={styles.avatarContainer}>
-          <Ionicons name="person" size={40} color="#fff" />
-        </View>
+        <LinearGradient
+          colors={['rgba(255, 255, 255, 0.28)', 'rgba(255, 255, 255, 0.08)']}
+          style={styles.avatarRing}
+        >
+          <View style={styles.avatarContainer}>
+            <LottieUniversal
+              source={require('@/assets/images/circle.json')}
+              autoPlay
+              loop
+              resizeMode="cover"
+              pointerEvents="none"
+              style={styles.avatarLottie}
+            />
+          </View>
+        </LinearGradient>
         <Text style={styles.username}>{authUser?.name || 'Your Name'}</Text>
         <Text style={styles.memberSince}>Member since 2025</Text>
       </View>
@@ -135,23 +149,38 @@ const SettingsScreen = () => {
       <View style={styles.statsRow}>
         {/* Clean Days */}
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{cleanDays}</Text>
-          <Ionicons name="flame" size={16} color={getFlameColor()} style={styles.statIcon} />
-          <Text style={styles.statLabel}>Days Clean</Text>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.statGradient}
+          >
+            <Text style={styles.statNumber}>{cleanDays}</Text>
+            <Ionicons name="flame" size={16} color={getFlameColor()} style={styles.statIcon} />
+            <Text style={styles.statLabel}>Days Clean</Text>
+          </LinearGradient>
         </View>
         
         {/* Journal Entries */}
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{entries?.length || 0}</Text>
-          <Text style={styles.statLabel}>Journal Entries</Text>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.statGradient}
+          >
+            <Text style={styles.statNumber}>{entries?.length || 0}</Text>
+            <Text style={styles.statLabel}>Journal Entries</Text>
+          </LinearGradient>
         </View>
         
         {/* Achievements */}
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {summary ? `${summary.unlocked}/${summary.total}` : '—'}
-          </Text>
-          <Text style={styles.statLabel}>Achievements</Text>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.statGradient}
+          >
+            <Text style={styles.statNumber}>
+              {summary ? `${summary.unlocked}/${summary.total}` : '—'}
+            </Text>
+            <Text style={styles.statLabel}>Achievements</Text>
+          </LinearGradient>
         </View>
       </View>
 
@@ -240,14 +269,32 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  avatarRing: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    padding: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
   avatarContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  avatarLottie: {
+    width: 80,
+    height: 80,
   },
   username: {
     fontSize: 20,
@@ -266,11 +313,17 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    padding: 16,
+    padding: 0,
     alignItems: 'center',
     marginHorizontal: 4,
+    overflow: 'hidden',
+  },
+  statGradient: {
+    padding: 16,
+    borderRadius: theme.borderRadius.medium,
+    alignItems: 'center',
   },
   statNumber: {
     fontSize: 24,

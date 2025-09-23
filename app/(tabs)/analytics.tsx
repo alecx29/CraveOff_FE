@@ -745,6 +745,10 @@ export default function AnalyticsScreen() {
         
         {/* Main progress circle */}
         <View style={styles.circleProgressCard}>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.circleProgressGradient}
+          >
           <Text style={styles.circleTitle}>Days Until Clean</Text>
           <View style={styles.circleContainer}>
             <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -780,191 +784,212 @@ export default function AnalyticsScreen() {
             </Animated.View>
           </View>
           <Text style={styles.goalText}>Goal: 90 days porn-free</Text>
+          </LinearGradient>
         </View>
         
         {/* Streak Stats */}
         <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Streak Statistics</Text>
-            <Ionicons name="stats-chart" size={22} color={theme.colors.primary} />
-          </View>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{longestStreak}</Text>
-              <Text style={styles.statLabel}>Longest Streak</Text>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.cardGradient}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Streak Statistics</Text>
+              <Ionicons name="stats-chart" size={22} color={theme.colors.primary} />
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{cleanDays}</Text>
-              <Text style={styles.statLabel}>Current Streak</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{longestStreak}</Text>
+                <Text style={styles.statLabel}>Longest Streak</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{cleanDays}</Text>
+                <Text style={styles.statLabel}>Current Streak</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{averageStreak}</Text>
+                <Text style={styles.statLabel}>Avg. Streak</Text>
+              </View>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{averageStreak}</Text>
-              <Text style={styles.statLabel}>Avg. Streak</Text>
-            </View>
-          </View>
+          </LinearGradient>
         </View>
         
         {/* Monthly Progress */}
         <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Monthly Progress</Text>
-            <Ionicons name="calendar" size={22} color={theme.colors.primary} />
-          </View>
-          <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>Clean days this month 🔥: {monthlyCleanDays}/{daysInMonth}</Text>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFillContainer, { width: `${monthlyProgressPercentage}%` }]}> 
-                <LinearGradient
-                  colors={["#fde047", "#fb923c", "#ef4444"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.progressFillGradient}
-                />
-                <LinearGradient
-                  colors={["#00000000", "#00000022", "#00000000"]}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={styles.progressEdgeGlow}
-                />
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.cardGradient}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Monthly Progress</Text>
+              <Ionicons name="calendar" size={22} color={theme.colors.primary} />
+            </View>
+            <View style={styles.progressContainer}>
+              <Text style={styles.progressText}>Clean days this month 🔥: {monthlyCleanDays}/{daysInMonth}</Text>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFillContainer, { width: `${monthlyProgressPercentage}%` }]}> 
+                  <LinearGradient
+                    colors={["#fde047", "#fb923c", "#ef4444"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.progressFillGradient}
+                  />
+                  <LinearGradient
+                    colors={["#00000000", "#00000022", "#00000000"]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={styles.progressEdgeGlow}
+                  />
+                </View>
               </View>
             </View>
-          </View>
+          </LinearGradient>
         </View>
         
         {/* Progress Over Time */}
         <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>
-              <Ionicons name="trending-up" size={18} color={theme.colors.primary} /> Progress Over Time
-            </Text>
-            {progressTrend.value > 0 && (
-              <View style={styles.trendContainer}>
-                <Ionicons 
-                  name={progressTrend.isPositive ? "arrow-up" : "arrow-down"} 
-                  size={16} 
-                  color={progressTrend.isPositive ? "#22C55E" : "#EF4444"} 
-                />
-                <Text 
-                  style={[
-                    styles.trendText, 
-                    {color: progressTrend.isPositive ? "#22C55E" : "#EF4444"}
-                  ]}
-                >
-                  {progressTrend.value}%
-                </Text>
-              </View>
-            )}
-          </View>
-          
-          <View style={styles.chartContainer}>
-            {progressData.datasets[0].data.length > 0 ? (
-              <>
-            <LineChart
-                  data={{
-                    ...progressData,
-                    labels: ['', ''] // Ascundem etichetele originale
-                  }}
-              width={screenWidth - 70}
-                  height={240}
-              chartConfig={chartConfig}
-              bezier
-              style={styles.chart}
-                  withInnerLines={true}
-                  withVerticalLines={true}
-              withHorizontalLabels={true}
-                  withVerticalLabels={false} // Dezactivăm etichetele verticale originale
-              withDots={true}
-              formatYLabel={(value) => `${value}%`}
-                  yAxisInterval={25}
-                  yAxisSuffix="%"
-                  segments={4}
-              fromZero
-                  withOuterLines={false}
-                />
-                <View style={styles.chartLabelContainer}>
-                  <Text style={styles.chartLabel}>Join date</Text>
-                  <Text style={styles.chartLabel}>Present</Text>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.cardGradient}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>
+                <Ionicons name="trending-up" size={18} color={theme.colors.primary} /> Progress Over Time
+              </Text>
+              {progressTrend.value > 0 && (
+                <View style={styles.trendContainer}>
+                  <Ionicons 
+                    name={progressTrend.isPositive ? "arrow-up" : "arrow-down"} 
+                    size={16} 
+                    color={progressTrend.isPositive ? "#22C55E" : "#EF4444"} 
+                  />
+                  <Text 
+                    style={[
+                      styles.trendText, 
+                      {color: progressTrend.isPositive ? "#22C55E" : "#EF4444"}
+                    ]}
+                  >
+                    {progressTrend.value}%
+                  </Text>
                 </View>
-              </>
-            ) : (
-              <View style={styles.noDataContainer}>
-                <Text style={styles.noDataText}>Not enough data to display the chart</Text>
-              </View>
-            )}
-          </View>
-          
-          <Text style={styles.chartDescription}>
-            Recovery progress since app installation, with indicators reflecting your journey milestones and important moments in your recovery.
-          </Text>
+              )}
+            </View>
+            
+            <View style={styles.chartContainer}>
+              {progressData.datasets[0].data.length > 0 ? (
+                <>
+              <LineChart
+                    data={{
+                      ...progressData,
+                      labels: ['', ''] // Ascundem etichetele originale
+                    }}
+                width={screenWidth - 70}
+                    height={240}
+                chartConfig={chartConfig}
+                bezier
+                style={styles.chart}
+                    withInnerLines={true}
+                    withVerticalLines={true}
+                withHorizontalLabels={true}
+                    withVerticalLabels={false} // Dezactivăm etichetele verticale originale
+                withDots={true}
+                formatYLabel={(value) => `${value}%`}
+                    yAxisInterval={25}
+                    yAxisSuffix="%"
+                    segments={4}
+                fromZero
+                    withOuterLines={false}
+                  />
+                  <View style={styles.chartLabelContainer}>
+                    <Text style={styles.chartLabel}>Join date</Text>
+                    <Text style={styles.chartLabel}>Present</Text>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.noDataContainer}>
+                  <Text style={styles.noDataText}>Not enough data to display the chart</Text>
+                </View>
+              )}
+            </View>
+            
+            <Text style={styles.chartDescription}>
+              Recovery progress since app installation, with indicators reflecting your journey milestones and important moments in your recovery.
+            </Text>
+          </LinearGradient>
         </View>
         
         {/* 90 Day Challenge Banner - moved to the bottom */}
         <View style={styles.challengeBanner}>
-          <View style={styles.challengeHeader}>
-            <View style={styles.challengeTitleContainer}>
-              <Text style={styles.challengeTitle}>90 Day Challenge</Text>
-              <Text style={styles.challengeSubtitle}>Rewire your brain</Text>
-            </View>
-            <View style={styles.challengeBadge}>
-              <Text style={styles.challengeBadgeText}>{progressPercentage}%</Text>
-            </View>
-          </View>
-          
-          <View style={styles.challengeContent}>
-            <View style={styles.challengeStats}>
-              <Text style={styles.challengeDaysCount}>{cleanDays}</Text>
-              <Text style={styles.challengeDaysLabel}>days clean</Text>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.challengeBannerGradient}
+          >
+            <View style={styles.challengeHeader}>
+              <View style={styles.challengeTitleContainer}>
+                <Text style={styles.challengeTitle}>90 Day Challenge</Text>
+                <Text style={styles.challengeSubtitle}>Rewire your brain</Text>
+              </View>
+              <View style={styles.challengeBadge}>
+                <Text style={styles.challengeBadgeText}>{progressPercentage}%</Text>
+              </View>
             </View>
             
-            <View style={styles.challengeInfoContainer}>
-              <Text style={styles.challengeInfo}>
-                Studies show it takes about 90 days to rewire your brain and break free from addiction. 
-                Stay consistent and track your progress here.
-              </Text>
+            <View style={styles.challengeContent}>
+              <View style={styles.challengeStats}>
+                <Text style={styles.challengeDaysCount}>{cleanDays}</Text>
+                <Text style={styles.challengeDaysLabel}>days clean</Text>
+              </View>
               
-              <View style={styles.milestoneContainer}>
-                <View style={styles.milestone}>
-                  <View style={[styles.milestoneMarker, cleanDays >= 30 ? styles.milestoneCompleted : {}]}>
-                    {cleanDays >= 30 && <Ionicons name="checkmark" size={12} color="#fff" />}
-                  </View>
-                  <Text style={styles.milestoneText}>30 days 🔥</Text>
-                </View>
+              <View style={styles.challengeInfoContainer}>
+                <Text style={styles.challengeInfo}>
+                  Studies show it takes about 90 days to rewire your brain and break free from addiction. 
+                  Stay consistent and track your progress here.
+                </Text>
                 
-                <View style={styles.milestone}>
-                  <View style={[styles.milestoneMarker, cleanDays >= 60 ? styles.milestoneCompleted : {}]}>
-                    {cleanDays >= 60 && <Ionicons name="checkmark" size={12} color="#fff" />}
+                <View style={styles.milestoneContainer}>
+                  <View style={styles.milestone}>
+                    <View style={[styles.milestoneMarker, cleanDays >= 30 ? styles.milestoneCompleted : {}]}>
+                      {cleanDays >= 30 && <Ionicons name="checkmark" size={12} color="#fff" />}
+                    </View>
+                    <Text style={styles.milestoneText}>30 days 🔥</Text>
                   </View>
-                  <Text style={styles.milestoneText}>60 days 🚀</Text>
-                </View>
-                
-                <View style={styles.milestone}>
-                  <View style={[styles.milestoneMarker, cleanDays >= 90 ? styles.milestoneCompleted : {}]}>
-                    {cleanDays >= 90 && <Ionicons name="checkmark" size={12} color="#fff" />}
+                  
+                  <View style={styles.milestone}>
+                    <View style={[styles.milestoneMarker, cleanDays >= 60 ? styles.milestoneCompleted : {}]}>
+                      {cleanDays >= 60 && <Ionicons name="checkmark" size={12} color="#fff" />}
+                    </View>
+                    <Text style={styles.milestoneText}>60 days 🚀</Text>
                   </View>
-                  <Text style={styles.milestoneText}>90 days 🏆</Text>
+                  
+                  <View style={styles.milestone}>
+                    <View style={[styles.milestoneMarker, cleanDays >= 90 ? styles.milestoneCompleted : {}]}>
+                      {cleanDays >= 90 && <Ionicons name="checkmark" size={12} color="#fff" />}
+                    </View>
+                    <Text style={styles.milestoneText}>90 days 🏆</Text>
+                  </View>
                 </View>
               </View>
             </View>
-          </View>
-          
-          <View style={styles.challengeProgressBarContainer}>
-            <View style={styles.challengeProgressBar}>
-              <View style={[styles.challengeFillContainer, { width: `${progressPercentage}%` }]}> 
-                <LinearGradient
-                  colors={["#fde047", "#fb923c", "#ef4444"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.challengeProgressGradient}
-                />
-                <LinearGradient
-                  colors={["#00000000", "#00000022", "#00000000"]}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={styles.challengeEdgeGlow}
-                />
+            
+            <View style={styles.challengeProgressBarContainer}>
+              <View style={styles.challengeProgressBar}>
+                <View style={[styles.challengeFillContainer, { width: `${progressPercentage}%` }]}> 
+                  <LinearGradient
+                    colors={["#fde047", "#fb923c", "#ef4444"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.challengeProgressGradient}
+                  />
+                  <LinearGradient
+                    colors={["#00000000", "#00000022", "#00000000"]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={styles.challengeEdgeGlow}
+                  />
+                </View>
               </View>
             </View>
-          </View>
+          </LinearGradient>
         </View>
       
       </ScrollView>
@@ -991,12 +1016,18 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     marginBottom: 20,
   },
   circleProgressCard: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    padding: 16,
+    padding: 0,
     marginBottom: 16,
     alignItems: 'center',
-    ...theme.shadows.medium,
+    overflow: 'hidden',
+  },
+  circleProgressGradient: {
+    padding: 16,
+    borderRadius: theme.borderRadius.medium,
+    width: '100%',
+    alignItems: 'center',
   },
   circleTitle: {
     fontSize: 20,
@@ -1053,11 +1084,15 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     marginTop: 8,
   },
   card: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    padding: 16,
+    padding: 0,
     marginBottom: 16,
-    ...theme.shadows.light,
+    overflow: 'hidden',
+  },
+  cardGradient: {
+    padding: 16,
+    borderRadius: theme.borderRadius.medium,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1128,8 +1163,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     marginBottom: 10,
     paddingHorizontal: 10,
     paddingVertical: 0,
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.borderRadius.small,
+    backgroundColor: 'transparent',
   },
   chart: {
     borderRadius: theme.borderRadius.medium,
@@ -1144,8 +1178,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     textAlign: 'center',
     marginTop: 8,
     padding: 4,
-    backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
-    borderRadius: theme.borderRadius.small,
+    backgroundColor: 'transparent',
   },
   trendContainer: {
     flexDirection: 'row',
@@ -1216,8 +1249,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     height: 280,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.borderRadius.medium,
+    backgroundColor: 'transparent',
     padding: 20,
   },
   noDataText: {
@@ -1240,11 +1272,15 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
   },
   // 90 Day Challenge Banner styles
   challengeBanner: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    padding: 16,
+    padding: 0,
     marginBottom: 16,
-    ...theme.shadows.small,
+    overflow: 'hidden',
+  },
+  challengeBannerGradient: {
+    padding: 16,
+    borderRadius: theme.borderRadius.medium,
   },
   challengeHeader: {
     flexDirection: 'row',
@@ -1354,3 +1390,4 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     height: '100%',
   },
 });
+

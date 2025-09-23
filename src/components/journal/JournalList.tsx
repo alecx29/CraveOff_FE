@@ -129,7 +129,7 @@ const JournalList: React.FC<JournalListProps> = ({
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,

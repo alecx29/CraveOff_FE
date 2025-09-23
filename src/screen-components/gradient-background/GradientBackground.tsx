@@ -1,8 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, StyleSheet, AppState } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 
 import { useTheme } from '@/src/context/ThemeProvider';
+import LottieUniversal from '@/src/components/LottieUniversal';
 
 // Helper function to safely access theme colors
 const getColor = (theme: any, colorName: string, fallbackColor: string): string => {
@@ -15,11 +17,45 @@ const getColor = (theme: any, colorName: string, fallbackColor: string): string 
 
 // colors={['rgba(37, 41, 46, 1.00)', 'rgba(37, 41, 46, 0.89)']}
 
+// Static style for background Lottie to keep it stable across renders
+const BG_Lottie_Styles = StyleSheet.create({
+  bgLottie: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.5,
+    zIndex: 1,
+  },
+});
+
+const BackgroundLottie = React.memo(() => (
+  <LottieUniversal 
+    source={require('@/assets/images/Animation_SkyStar.json')}
+    autoPlay 
+    loop 
+    pointerEvents="none"
+    speed={0.9}
+    resizeMode="cover"
+    style={BG_Lottie_Styles.bgLottie}
+  />
+));
+BackgroundLottie.displayName = 'BackgroundLottie';
+
 const GradientBackground = ({ children }: any) => {
   const { theme } = useTheme();
-  const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+  const isFocused = useIsFocused();
+  const [isAppActive, setIsAppActive] = useState(true);
 
-  const styles = StyleSheet.create({
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      setIsAppActive(state === 'active');
+    });
+    return () => sub.remove();
+  }, []);
+
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       position: 'relative',
@@ -29,7 +65,7 @@ const GradientBackground = ({ children }: any) => {
       borderWidth: 1,
       borderColor: getColor(theme, 'emergency', '#ef4444'),
     },
-  });
+  }), [theme]);
 
   return (
     <View style={styles.container}>
@@ -40,7 +76,10 @@ const GradientBackground = ({ children }: any) => {
         ]}
         style={StyleSheet.absoluteFill} // Covers full screen
       />
-      {children}
+      {isFocused && isAppActive && <BackgroundLottie />}
+      <View style={{ flex: 1, zIndex: 2 }}>
+        {children}
+      </View>
     </View>
   );
 };

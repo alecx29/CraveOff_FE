@@ -299,7 +299,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent',
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -319,7 +319,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(200, 200, 200, 0.3)',
-    backgroundColor: getColor(theme, 'backgroundDeep', '#1a1c20'),
+    backgroundColor: 'transparent',
   },
   headerButton: {
     padding: 6,

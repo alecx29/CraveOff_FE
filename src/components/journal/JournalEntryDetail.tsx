@@ -290,7 +290,7 @@ const JournalEntryDetail: React.FC<JournalEntryDetailProps> = ({
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,

@@ -1,6 +1,7 @@
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { View, Text, Switch, StyleSheet, TouchableOpacity } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
@@ -63,6 +64,10 @@ const SettingCard: React.FC<SettingCardProps> = ({
       disabled={showSwitch || !onPress}
       activeOpacity={0.7}
   >
+    <LinearGradient
+      colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+      style={styles.cardGradient}
+    >
     <View style={styles.cardContent}>
         <View style={[styles.cardIcon, { backgroundColor: variant === 'default' ? getCardInteractiveColor() : `${getIconColor()}20` }]}>
           <IconComponent name={icon} size={22} color={getIconColor()} />
@@ -83,17 +88,20 @@ const SettingCard: React.FC<SettingCardProps> = ({
           <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
         ) : null}
     </View>
+    </LinearGradient>
   </TouchableOpacity>
 );
 };
 
 const createStyles = (theme: any) => StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
     marginBottom: theme.spacing.sm,
     overflow: 'hidden',
-    ...theme.shadows.light,
+  },
+  cardGradient: {
+    borderRadius: theme.borderRadius.medium,
   },
   cardInteractive: {
     // Removed border from left side

@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Linking } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
+ 
 
 export default function CommunityScreen() {
   const { theme } = useTheme();
@@ -20,102 +22,122 @@ export default function CommunityScreen() {
         
         {/* Hero Section */}
         <View style={styles.heroCard}>
-          <Image 
-            source={require('@/assets/images/logo.png')} 
-            style={styles.heroImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.heroTitle}>You're Not Alone</Text>
-          <Text style={styles.heroText}>
-            Thousands of people are on the same journey as you. Share experiences, find accountability partners, and get support from a community that understands.
-          </Text>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.heroGradient}
+          >
+            <Image 
+              source={require('@/assets/images/logo.png')} 
+              style={styles.heroImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.heroTitle}>You're Not Alone</Text>
+            <Text style={styles.heroText}>
+              Thousands of people are on the same journey as you. Share experiences, find accountability partners, and get support from a community that understands.
+            </Text>
+          </LinearGradient>
         </View>
         
         {/* Reddit Community Card */}
         <View style={styles.redditCard}>
-          <View style={styles.redditHeader}>
-            <View style={styles.redditIconContainer}>
-              <FontAwesome name="reddit-alien" size={32} color="#FF4500" />
-            </View>
-            <View style={styles.redditTitleContainer}>
-              <Text style={styles.redditTitle}>r/CraveOff</Text>
-              <Text style={styles.redditMembers}>5.2k members • Private community</Text>
-            </View>
-          </View>
-          
-          <Text style={styles.redditDescription}>
-            Join our private Reddit community where you can share your journey, ask questions, and get support from people who understand what you're going through.
-          </Text>
-          
-          <View style={styles.benefitsContainer}>
-            <View style={styles.benefitItem}>
-              <Ionicons name="shield-checkmark-outline" size={22} color="rgb(255, 69, 0)" />
-              <Text style={styles.benefitText}>Private & Anonymous</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Ionicons name="people-outline" size={22} color="rgb(255, 69, 0)" />
-              <Text style={styles.benefitText}>Supportive Members</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Ionicons name="trophy-outline" size={22} color="rgb(255, 69, 0)" />
-              <Text style={styles.benefitText}>Success Stories</Text>
-            </View>
-          </View>
-          
-          <TouchableOpacity 
-            style={styles.redditButton} 
-            onPress={openReddit}
-            activeOpacity={0.8}
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.redditGradient}
           >
-            <FontAwesome name="reddit" size={24} color="#FFFFFF" />
-            <Text style={styles.redditButtonText}>Join r/CraveOff</Text>
-          </TouchableOpacity>
+            <View style={styles.redditHeader}>
+              <View style={styles.redditIconContainer}>
+                <FontAwesome name="reddit-alien" size={32} color="#FF4500" />
+              </View>
+              <View style={styles.redditTitleContainer}>
+                <Text style={styles.redditTitle}>r/CraveOff</Text>
+                <Text style={styles.redditMembers}>5.2k members • Private community</Text>
+              </View>
+            </View>
+            
+            <Text style={styles.redditDescription}>
+              Join our private Reddit community where you can share your journey, ask questions, and get support from people who understand what you're going through.
+            </Text>
+            
+            <View style={styles.benefitsContainer}>
+              <View style={styles.benefitItem}>
+                <Ionicons name="shield-checkmark-outline" size={22} color="rgb(255, 69, 0)" />
+                <Text style={styles.benefitText}>Private & Anonymous</Text>
+              </View>
+              <View style={styles.benefitItem}>
+                <Ionicons name="people-outline" size={22} color="rgb(255, 69, 0)" />
+                <Text style={styles.benefitText}>Supportive Members</Text>
+              </View>
+              <View style={styles.benefitItem}>
+                <Ionicons name="trophy-outline" size={22} color="rgb(255, 69, 0)" />
+                <Text style={styles.benefitText}>Success Stories</Text>
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.redditButton} 
+              onPress={openReddit}
+              activeOpacity={0.8}
+            >
+              <FontAwesome name="reddit" size={24} color="#FFFFFF" />
+              <Text style={styles.redditButtonText}>Join r/CraveOff</Text>
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
         
         {/* Community Tips */}
         <View style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>Community Tips</Text>
-          
-          <View style={styles.tipItem}>
-            <View style={styles.tipNumber}>
-              <Text style={styles.tipNumberText}>1</Text>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.tipsGradient}
+          >
+            <Text style={styles.tipsTitle}>Community Tips</Text>
+            
+            <View style={styles.tipItem}>
+              <View style={styles.tipNumber}>
+                <Text style={styles.tipNumberText}>1</Text>
+              </View>
+              <View style={styles.tipContent}>
+                <Text style={styles.tipContentTitle}>Introduce Yourself</Text>
+                <Text style={styles.tipContentText}>Start by sharing your story and goals with the community.</Text>
+              </View>
             </View>
-            <View style={styles.tipContent}>
-              <Text style={styles.tipContentTitle}>Introduce Yourself</Text>
-              <Text style={styles.tipContentText}>Start by sharing your story and goals with the community.</Text>
+            
+            <View style={styles.tipItem}>
+              <View style={styles.tipNumber}>
+                <Text style={styles.tipNumberText}>2</Text>
+              </View>
+              <View style={styles.tipContent}>
+                <Text style={styles.tipContentTitle}>Be Respectful</Text>
+                <Text style={styles.tipContentText}>Everyone is at different stages in their journey. Be kind and supportive.</Text>
+              </View>
             </View>
-          </View>
-          
-          <View style={styles.tipItem}>
-            <View style={styles.tipNumber}>
-              <Text style={styles.tipNumberText}>2</Text>
+            
+            <View style={styles.tipItem}>
+              <View style={styles.tipNumber}>
+                <Text style={styles.tipNumberText}>3</Text>
+              </View>
+              <View style={styles.tipContent}>
+                <Text style={styles.tipContentTitle}>Share Your Progress</Text>
+                <Text style={styles.tipContentText}>Celebrate wins and be honest about setbacks. The community is here to support you.</Text>
+              </View>
             </View>
-            <View style={styles.tipContent}>
-              <Text style={styles.tipContentTitle}>Be Respectful</Text>
-              <Text style={styles.tipContentText}>Everyone is at different stages in their journey. Be kind and supportive.</Text>
-            </View>
-          </View>
-          
-          <View style={styles.tipItem}>
-            <View style={styles.tipNumber}>
-              <Text style={styles.tipNumberText}>3</Text>
-            </View>
-            <View style={styles.tipContent}>
-              <Text style={styles.tipContentTitle}>Share Your Progress</Text>
-              <Text style={styles.tipContentText}>Celebrate wins and be honest about setbacks. The community is here to support you.</Text>
-            </View>
-          </View>
+          </LinearGradient>
         </View>
         
         {/* Coming Soon Section */}
         <View style={styles.comingSoonCard}>
-          <Text style={styles.comingSoonTitle}>Coming Soon</Text>
-          <Text style={styles.comingSoonText}>
-            We're working on more community features, including direct messaging, accountability partners, and live support groups.
-          </Text>
-          <View style={styles.comingSoonBadge}>
-            <Text style={styles.comingSoonBadgeText}>Stay Tuned</Text>
-          </View>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.comingSoonGradient}
+          >
+            <Text style={styles.comingSoonTitle}>Coming Soon</Text>
+            <Text style={styles.comingSoonText}>
+              We're working on more community features, including direct messaging, accountability partners, and live support groups.
+            </Text>
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonBadgeText}>Stay Tuned</Text>
+            </View>
+          </LinearGradient>
         </View>
       </ScrollView>
     </GradientBackground>
@@ -137,12 +159,17 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 16,
   },
   heroCard: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.large,
-    padding: 24,
+    padding: 0,
     marginBottom: 20,
     alignItems: 'center',
-    ...theme.shadows.medium,
+    overflow: 'hidden',
+  },
+  heroGradient: {
+    padding: 24,
+    borderRadius: theme.borderRadius.large,
+    alignItems: 'center',
   },
   heroImage: {
     width: 150,
@@ -163,11 +190,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     lineHeight: 22,
   },
   redditCard: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    padding: 20,
+    padding: 0,
     marginBottom: 20,
-    ...theme.shadows.light,
+    overflow: 'hidden',
+  },
+  redditGradient: {
+    padding: 20,
+    borderRadius: theme.borderRadius.medium,
   },
   redditHeader: {
     flexDirection: 'row',
@@ -233,11 +264,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginLeft: 10,
   },
   tipsCard: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    padding: 20,
+    padding: 0,
     marginBottom: 20,
-    ...theme.shadows.light,
+    overflow: 'hidden',
+  },
+  tipsGradient: {
+    padding: 20,
+    borderRadius: theme.borderRadius.medium,
   },
   tipsTitle: {
     fontSize: 18,
@@ -280,12 +315,17 @@ const createStyles = (theme: any) => StyleSheet.create({
     lineHeight: 20,
   },
   comingSoonCard: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    padding: 20,
+    padding: 0,
     marginBottom: 40,
     alignItems: 'center',
-    ...theme.shadows.light,
+    overflow: 'hidden',
+  },
+  comingSoonGradient: {
+    padding: 20,
+    borderRadius: theme.borderRadius.medium,
+    alignItems: 'center',
   },
   comingSoonTitle: {
     fontSize: 18,
@@ -311,4 +351,4 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textPrimary,
     fontWeight: '500',
   },
-}); 
+});

@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, FlatList, SafeAreaView, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList, SafeAreaView, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
@@ -24,6 +24,8 @@ import PetComingSoonModal from '@/src/components/PetComingSoonModal';
 import LeaderboardComingSoon from '@/src/components/LeaderboardComingSoon';
 import DeepBreathingComingSoonModal from '@/src/components/DeepBreathingComingSoonModal';
 import { useAchievements } from '@/src/context/AchievementsContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import HomeTopBar from '@/src/components/header/HomeTopBar';
 
 // Helper function to format time with more precision
 const formatTimeCounter = (seconds: number) => {
@@ -1208,42 +1210,14 @@ export default function HomeScreen() {
         contentContainerStyle={styles.contentContainer}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}>
-        {/* Header cu salut */}
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Image 
-              source={require('@/assets/images/logo.png')} 
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.subGreeting}>Stay strong today</Text>
-            {!isConnected && (
-              <Text style={styles.offlineMessage}>You're currently offline</Text>
-            )}
-          </View>
-          
-          <View style={styles.headerButtons}>
-            <TouchableOpacity
-              style={[styles.petButton, {marginRight: 10}]}
-              activeOpacity={0.8}
-              onPress={() => setShowOriaModal(true)}
-            >
-              <Ionicons name="chatbubble-outline" size={22} color={theme.colors.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.petButton}
-              onPress={() => {
-                animatePet();
-                setShowPetModal(true);
-              }}
-              activeOpacity={0.8}
-            >
-              <Animated.View style={petAnimatedStyle}>
-                <Text style={styles.petEmoji}>🐶</Text>
-              </Animated.View>
-            </TouchableOpacity>
-          </View>
-        </View>
+        {/* Header moved to component */}
+        <HomeTopBar
+          cleanDays={cleanDays}
+          isConnected={isConnected}
+          onChatPress={() => setShowOriaModal(true)}
+          onPetPress={() => { animatePet(); setShowPetModal(true); }}
+          petAnimatedStyle={petAnimatedStyle}
+        />
         
         {/* Calendar săptămânal */}
         <WeekBar 
@@ -1268,7 +1242,7 @@ export default function HomeScreen() {
             decelerationRate="fast"
           >
             {/* Card timer */}
-            <View style={[styles.widgetCard, { width: cardWidth, marginRight: 20 }]}>
+            <View style={[styles.widgetCard, styles.widgetCardTransparent, { width: cardWidth, marginRight: 20 }]}>
               <View style={styles.timerContainer}>
                 <View style={styles.timerRow}>
                   {/* Display only the largest time unit */}
@@ -1298,7 +1272,7 @@ export default function HomeScreen() {
             </View>
             
             {/* Card zile curate */}
-            <View style={[styles.widgetCard, { width: cardWidth, marginLeft: 20 }]}>
+            <View style={[styles.widgetCard, styles.widgetCardTransparent, { width: cardWidth, marginLeft: 20 }]}>
               <View style={styles.cleanDaysContent}>
                 <Text style={styles.cleanDaysNumber}>{cleanDays}</Text>
                 <Ionicons name="flame" size={28} color={getFlameColor()} style={styles.flameIcon} />
@@ -1307,7 +1281,7 @@ export default function HomeScreen() {
               {cleanDays === 0 ? (
                 <Text style={styles.cleanDaysSubtext}>Keep going! Enter the streak</Text>
               ) : (
-                <Text style={styles.cleanDaysSubtext}>Keep going! You&apos;re on fire <Ionicons name="flame" size={14} color={getFlameColor()} /></Text>
+                <Text style={styles.cleanDaysSubtext}>Keep going! You&apos;re on fire</Text>
               )}
             </View>
           </Animated.ScrollView>
@@ -1356,15 +1330,17 @@ export default function HomeScreen() {
             onPress={handlePledgeButtonPress}
             activeOpacity={canMakePledge ? 0.7 : 1}
           >
-            <View style={[
-              styles.actionButton,
-              !canMakePledge && styles.disabledActionButton
-            ]}>
+            <View style={styles.actionButton}>
+              <LinearGradient
+                colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+                style={[styles.actionButtonGradient, !canMakePledge && styles.disabledActionButton]}
+              >
               {!canMakePledge ? (
                 <Ionicons name="shield-checkmark" size={24} color={theme.colors.success || '#4ade80'} />
               ) : (
                 <Ionicons name="hand-left-outline" size={24} color={theme.colors.textPrimary} />
               )}
+              </LinearGradient>
             </View>
             <Text style={[
               styles.actionButtonLabel,
@@ -1381,7 +1357,12 @@ export default function HomeScreen() {
             onPress={() => setShowDeepBreathingModal(true)}
           >
             <View style={styles.actionButton}>
+              <LinearGradient
+                colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+                style={styles.actionButtonGradient}
+              >
               <Ionicons name="leaf-outline" size={22} color={theme.colors.textPrimary} />
+              </LinearGradient>
             </View>
             <Text style={styles.actionButtonLabel}>Deep Breathing</Text>
           </TouchableOpacity>
@@ -1390,7 +1371,12 @@ export default function HomeScreen() {
             onPress={() => setShowReflectionModal(true)}
           >
             <View style={styles.actionButton}>
+              <LinearGradient
+                colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+                style={styles.actionButtonGradient}
+              >
               <Ionicons name="flower-outline" size={22} color={theme.colors.textPrimary} />
+              </LinearGradient>
             </View>
             <Text style={styles.actionButtonLabel}>Meditate</Text>
           </TouchableOpacity>
@@ -1399,7 +1385,12 @@ export default function HomeScreen() {
             onPress={() => setShowRelapsedModal(true)}
           >
             <View style={styles.actionButton}>
+              <LinearGradient
+                colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+                style={styles.actionButtonGradient}
+              >
               <Ionicons name="refresh-outline" size={22} color={theme.colors.textPrimary} />
+              </LinearGradient>
             </View>
             <Text style={styles.actionButtonLabel}>Reset</Text>
           </TouchableOpacity>
@@ -1420,6 +1411,10 @@ export default function HomeScreen() {
             style={styles.challengeCard}
             onPress={() => router.push('/analytics')}
           >
+              <LinearGradient
+                colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+                style={styles.challengeGradient}
+          >
             <View style={styles.challengeContent}>
               <Text style={styles.challengeNumber}>90</Text>
               <View style={styles.challengeTextContainer}>
@@ -1430,19 +1425,29 @@ export default function HomeScreen() {
             <View style={styles.challengeProgressBar}>
               <View style={[styles.challengeProgress, { width: `${Math.min(100, (cleanDays / 90) * 100)}%` }]} />
             </View>
+            </LinearGradient>
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.petCard}
             onPress={() => setShowPetModal(true)}
           >
-            <Text style={styles.petEmoji}>🐶</Text>
+              <LinearGradient
+                colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+                style={styles.petGradient}
+          >
+            <Text style={styles.petCardEmoji}>🐶</Text>
             <Text style={styles.petCardText}>Your buddy</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
         
         {/* Speak to Oria Section */}
         <View style={styles.oriaCard}>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            style={styles.oriaGradient}
+          >
           <View style={styles.oriaHeader}>
             <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.colors.textPrimary} />
             <Text style={styles.oriaTitle}>Speak to Oria</Text>
@@ -1458,10 +1463,15 @@ export default function HomeScreen() {
             <Ionicons name="arrow-forward" size={16} color={theme.colors.primary} />
           </TouchableOpacity>
           <Text style={styles.oriaHint}>Also accessible from the chat icon in the header</Text>
+          </LinearGradient>
         </View>
         
         {/* Card motivațional */}
         <View style={styles.motivationCard}>
+            <LinearGradient
+             colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+              style={styles.motivationGradient}
+            >
           <View style={styles.motivationHeader}>
             <Text style={styles.sectionTitle}>Daily Motivation</Text>
             <TouchableOpacity onPress={fetchDailyQuote}>
@@ -1475,6 +1485,7 @@ export default function HomeScreen() {
           ) : (
             <Text style={styles.quoteText}>&quot;{quote}&quot;</Text>
           )}
+          </LinearGradient>
         </View>
         
         {/* Leaderboard Coming Soon - under Daily Motivation */}
@@ -1779,21 +1790,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingBottom: 60, // Increased bottom padding to ensure content is fully visible
     paddingTop: 8,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  logoContainer: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
-  logo: {
-    width: 150,
-    height: 50,
-    marginBottom: 6,
-  },
+  // header moved to HomeTopBar
+  // moved to HomeTopBar
+  // moved to HomeTopBar
   greeting: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -1805,12 +1804,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: 5,
   },
-  offlineMessage: {
-    fontSize: 12,
-    color: theme.colors.emergency || '#dc2626',
-    marginTop: 2,
-    fontStyle: 'italic',
-  },
+  // moved to HomeTopBar
+  // moved to HomeTopBar
   cleanDaysCard: {
     backgroundColor: theme.colors.backgroundDeep,
     borderRadius: theme.borderRadius.medium,
@@ -1865,16 +1860,24 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginLeft: 8,
   },
   motivationCard: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    padding: 16,
     marginBottom: 20,
+    overflow: 'hidden',
+  },
+  motivationGradient: {
+    padding: 16,
+    borderRadius: theme.borderRadius.medium,
   },
   oriaCard: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    padding: 16,
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  oriaGradient: {
+    padding: 16,
+    borderRadius: theme.borderRadius.medium,
   },
   oriaHeader: {
     flexDirection: 'row',
@@ -2179,6 +2182,13 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: theme.borderRadius.medium,
     padding: 24,
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  widgetCardTransparent: {
+    backgroundColor: 'transparent',
+  },
+  widgetBgLottie: {
+    display: 'none',
   },
   indicatorsContainer: {
     flexDirection: 'row',
@@ -2305,11 +2315,19 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
+    marginBottom: 6,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(209, 213, 219, 0.25)',
+    ...theme.shadows.light,
+  },
+  actionButtonGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 29,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
-    ...theme.shadows.light,
   },
   actionButtonLabel: {
     fontSize: 10,
@@ -2344,10 +2362,15 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   challengeCard: {
     flex: 2,
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    padding: 16,
     marginRight: 8,
+    overflow: 'hidden',
+  },
+  challengeGradient: {
+    flex: 1,
+    padding: 16,
+    borderRadius: theme.borderRadius.medium,
   },
   challengeContent: {
     flexDirection: 'row',
@@ -2385,11 +2408,19 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   petCard: {
     flex: 1,
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
+    overflow: 'hidden',
+  },
+  petGradient: {
+    flex: 1,
     padding: 16,
+    borderRadius: theme.borderRadius.medium,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  petCardEmoji: {
+    fontSize: 22,
   },
   petCardText: {
     fontSize: 12,
@@ -2406,18 +2437,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  petButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: theme.colors.cardBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...theme.shadows.light,
-  },
-  petEmoji: {
-    fontSize: 26,
-  },
+  // moved to HomeTopBar
+  // moved to HomeTopBar
   quoteText: {
     fontSize: 16,
     fontStyle: 'italic',

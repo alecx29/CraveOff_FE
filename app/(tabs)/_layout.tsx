@@ -22,7 +22,9 @@ export default function TabLayout() {
   
   return (
     <Tabs
+      detachInactiveScreens
       screenOptions={{
+        lazy: true,
         tabBarActiveTintColor: theme.colors.primary,
         headerShown: false,
         tabBarStyle: {
