@@ -19,6 +19,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="personal-details" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="achievements" />
+      <Stack.Screen name="account-options" options={{ title: 'Account Options' }} />
     </Stack>
   );
 }

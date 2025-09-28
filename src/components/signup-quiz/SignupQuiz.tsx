@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -390,6 +390,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    paddingTop: Platform.OS === 'android' ? 22 : 16,
   },
   contentContainer: {
     flex: 1,

@@ -12,7 +12,7 @@ const LeaderboardComingSoon: React.FC = () => {
   return (
     <View style={styles.card}>
       <LinearGradient
-        colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+        colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
         style={styles.leaderboardGradient}
       >
         <View style={styles.headerRow}>
@@ -44,11 +44,13 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: theme.borderRadius.medium,
     marginBottom: 16,
     overflow: 'hidden',
-    ...theme.shadows.light,
+    // ...theme.shadows.light,
   },
   leaderboardGradient: {
     padding: 16,
     borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
   },
   headerRow: {
     flexDirection: 'row',
@@ -88,8 +90,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.backgroundDeep,
-    borderRadius: 12,
+    borderRadius: 9999,
     paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   ctaText: {
     fontSize: 14,

@@ -8,7 +8,7 @@ export default function ConquerLayout() {
         screenOptions={{
           headerShown: false,
           animation: Platform.OS === 'ios' ? 'fade' : 'none',
-          contentStyle: { backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#db042c' }
+          contentStyle: { backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#0B0A10' }
         }}
       />
     </View>
@@ -18,6 +18,6 @@ export default function ConquerLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#db042c',
+    backgroundColor: '#0B0A10',
   },
 }); 

@@ -8,7 +8,7 @@ import Animated, {
   Easing,
   FadeIn,
 } from 'react-native-reanimated';
-import { Svg, Circle, G } from 'react-native-svg';
+import LottieUniversal from '@/src/components/LottieUniversal';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
@@ -27,9 +27,6 @@ const CustomPlanLoadingScreen = ({
   // Animation progress value (0 to 1)
   const progress = useSharedValue(0);
   
-  // Rotation animation value
-  const rotation = useSharedValue(0);
-  
   // Percentage text scale animation
   const scaleText = useSharedValue(1);
   
@@ -43,17 +40,6 @@ const CustomPlanLoadingScreen = ({
         easing: Easing.bezier(0.22, 1, 0.36, 1), // iOS-like easing
       });
       
-      // Rotation animation
-      rotation.value = 0;
-      rotation.value = withRepeat(
-        withTiming(1, { 
-          duration: 1500,
-          easing: Easing.linear
-        }),
-        -1, // Infinite repeat
-        false // No reverse
-      );
-      
       // Subtle pulse animation for percentage text
       scaleText.value = 1;
       scaleText.value = withRepeat(
@@ -65,16 +51,7 @@ const CustomPlanLoadingScreen = ({
         true // With reverse (ping-pong)
       );
     }
-  }, [visible, duration]);
-  
-  // Animated style for rotation
-  const spinAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { rotate: `${rotation.value * 360}deg` }
-      ],
-    };
-  });
+  }, [visible, duration, progress, scaleText]);
   
   // Animated style for percentage text
   const textAnimatedStyle = useAnimatedStyle(() => {
@@ -89,17 +66,6 @@ const CustomPlanLoadingScreen = ({
   // Don't render if not visible
   if (!visible) return null;
   
-  // Circle parameters
-  const size = 120;
-  const strokeWidth = 6;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  
-  // Helper function to get background circle color
-  const getBackgroundColor = (): string => {
-    if ('cardInteractive' in theme.colors) return theme.colors.cardInteractive;
-    return theme.colors.cardBackgroundAlt || theme.colors.neutral400 || '#E0E0E0';
-  };
   
   return (
     <Animated.View 
@@ -109,46 +75,23 @@ const CustomPlanLoadingScreen = ({
       <Animated.View style={styles.content}>
         <Text style={styles.title}>Building your custom plan</Text>
         
-        <View style={styles.spinnerContainer}>
-          {/* Background Circle */}
-          <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-            <Circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              stroke={getBackgroundColor()}
-              strokeWidth={strokeWidth}
-              fill="transparent"
-            />
-          </Svg>
-          
-          {/* Animated Progress Circle */}
-          <Animated.View style={[StyleSheet.absoluteFill, spinAnimatedStyle]}>
-            <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-              <G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
-                <Circle
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={radius}
-                  stroke={theme.colors.primary}
-                  strokeWidth={strokeWidth}
-                  fill="transparent"
-                  strokeDasharray={[circumference * 0.7, circumference * 0.3]}
-                  strokeLinecap="round"
-                />
-              </G>
-            </Svg>
-          </Animated.View>
-          
-          {/* Percentage Text Background */}
-          <View style={styles.percentageBackground} />
-          
-          {/* Percentage Text */}
-          <Animated.Text 
-            style={[styles.percentageText, textAnimatedStyle]}
-          >
-            {Math.round(progress.value * 100)}%
-          </Animated.Text>
+        <View style={styles.animationContainer}>
+          <LottieUniversal
+            source={require('@/assets/images/loading.json')}
+            autoPlay
+            loop
+            pointerEvents="none"
+            resizeMode="cover"
+            style={styles.lottie}
+          />
+          <View style={styles.overlayCenter}>
+            <View style={styles.percentageBackground} />
+            <Animated.Text 
+              style={[styles.percentageText, textAnimatedStyle]}
+            >
+              {Math.round(progress.value * 100)}%
+            </Animated.Text>
+          </View>
         </View>
         
         <Text style={styles.subtitle}>
@@ -162,7 +105,7 @@ const CustomPlanLoadingScreen = ({
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -194,23 +137,41 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     marginVertical: 16,
   },
-  percentageBackground: {
+  animationContainer: {
+    width: 220,
+    height: 220,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  lottie: {
+    width: '100%',
+    height: '100%',
+  },
+  overlayCenter: {
     position: 'absolute',
-    width: 60,
-    height: 60,
-    backgroundColor: theme.colors.background,
-    opacity: 0.8,
-    borderRadius: 30,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  percentageBackground: {
+    width: 78,
+    height: 78,
+    // backgroundColor: 'rgba(0,0,0,0.28)',
+    borderRadius: 39,
   },
   percentageText: {
     position: 'absolute',
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: 'bold',
     color: theme.colors.primary,
     textAlign: 'center',
-    textShadowColor: 'rgba(255, 255, 255, 0.5)',
+    textShadowColor: 'rgba(255, 255, 255, 0.35)',
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
+    textShadowRadius: 6,
   },
 });
 

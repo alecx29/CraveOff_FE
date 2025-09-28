@@ -43,7 +43,7 @@ const BackgroundLottie = React.memo(() => (
 ));
 BackgroundLottie.displayName = 'BackgroundLottie';
 
-const GradientBackground = ({ children }: any) => {
+const GradientBackground = ({ children, paused = false, ignoreFocus = false }: { children: React.ReactNode; paused?: boolean; ignoreFocus?: boolean }) => {
   const { theme } = useTheme();
   const isFocused = useIsFocused();
   const [isAppActive, setIsAppActive] = useState(true);
@@ -76,7 +76,7 @@ const GradientBackground = ({ children }: any) => {
         ]}
         style={StyleSheet.absoluteFill} // Covers full screen
       />
-      {isFocused && isAppActive && <BackgroundLottie />}
+      {(isAppActive && !paused && (ignoreFocus || isFocused)) && <BackgroundLottie />}
       <View style={{ flex: 1, zIndex: 2 }}>
         {children}
       </View>

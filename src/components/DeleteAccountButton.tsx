@@ -103,7 +103,7 @@ const DeleteAccountButton: React.FC<DeleteAccountButtonProps> = ({ onSuccess }) 
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     marginTop: 6,
-    marginBottom: 30,
+    marginBottom: 20,
   },
   button: {
     flexDirection: 'row',
@@ -111,7 +111,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: theme.colors.error || '#dc2626',
     paddingVertical: 14,
-    borderRadius: theme.borderRadius.medium || 12,
+    borderRadius: theme.borderRadius.pill || 48,
   },
   buttonText: {
     color: '#fff',
@@ -169,7 +169,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   actionBtn: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: theme.borderRadius.small || 10,
+    borderRadius: theme.borderRadius.pill || 40,
   },
   cancelBtn: {
     backgroundColor: theme.colors.backgroundDeep,

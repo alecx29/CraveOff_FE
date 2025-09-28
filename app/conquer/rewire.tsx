@@ -93,20 +93,24 @@ export default function ConquerRewire() {
 const createStyles = (insets: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#db042c',
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#0B0A10',
   },
   backgroundContainer: {
     position: 'absolute',
-    top: -insets.top, // Extend above status bar
-    left: -insets.left, // Extend to left edge
-    right: -insets.right, // Extend to right edge
-    bottom: -insets.bottom, // Extend below safe area
-    width: width + insets.left + insets.right,
-    height: height + insets.top + insets.bottom,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 0,
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#db042c',
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#0B0A10',
+    overflow: 'hidden',
   },
   backgroundAnimation: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
     height: '100%',
   },

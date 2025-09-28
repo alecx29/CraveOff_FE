@@ -96,7 +96,7 @@ const JournalEntryCard: React.FC<JournalEntryCardProps> = ({ entry, onPress }) =
       activeOpacity={0.7}
     >
       <LinearGradient
-        colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+        colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
         style={styles.cardGradient}
       >
         <View style={styles.cardHeader}>

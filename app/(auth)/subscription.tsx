@@ -12,7 +12,7 @@ export default function Subscription() {
   // Add onComplete handler to navigate to main app
   const handleComplete = () => {
     // Navigation to main app is now handled after authentication in FreeJourneyContent
-    router.push('/(tabs)');
+    router.replace('/(tabs)');
   };
   
   return (

@@ -161,7 +161,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: 9999,
   },
   addButtonText: {
     color: 'white',

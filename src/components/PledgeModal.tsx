@@ -113,7 +113,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
             >
               <View style={styles.iconContainer}>
                 <LinearGradient
-                  colors={['rgb(175, 15, 81)', 'rgb(93, 107, 250)']}
+                  colors={['rgb(74, 15, 175)', 'rgb(108, 111, 148)']}
                   style={styles.iconBackground}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}

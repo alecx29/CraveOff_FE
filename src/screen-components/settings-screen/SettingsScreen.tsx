@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieUniversal from '@/src/components/LottieUniversal';
 import { router } from 'expo-router';
@@ -9,23 +9,19 @@ import * as WebBrowser from 'expo-web-browser';
 import { useTheme } from '@/src/context/ThemeProvider';
 import { useNotifications } from '@/src/context/NotificationsContext';
 import { AuthContext } from '@/src/context/AuthContext';
-import { useUser } from '@/src/context/UserContext';
 import { useLogs } from '@/src/context/LogsContext';
 import { useJournal } from '@/src/context/JournalContext';
 import { useAchievements } from '@/src/context/AchievementsContext';
-import AButton from '@/src/components/AButton/AButton';
-import DeleteAccountButton from '@/src/components/DeleteAccountButton';
 
 import SettingCard from './SettingsCard';
 
 const SettingsScreen = () => {
   const { theme } = useTheme();
-  const { isNotificationsEnabled, setNotificationsEnabled, requestPermissions } = useNotifications();
-  const { signOut, user: authUser } = useContext(AuthContext);
-  const { resetUser } = useUser();
-  const { resetLogs, lastRelapseData } = useLogs();
-  const { resetJournal, entries } = useJournal();
-  const { summary, refreshFromApi } = useAchievements();
+  const { isNotificationsEnabled } = useNotifications();
+  const { user: authUser } = useContext(AuthContext);
+  const { lastRelapseData } = useLogs();
+  const { entries } = useJournal();
+  const { summary } = useAchievements();
   const styles = createStyles(theme);
   
   // State pentru clean days
@@ -75,13 +71,7 @@ const SettingsScreen = () => {
     return theme.colors.accent as string || '#f97316'; // Default orange
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    resetUser();
-    resetLogs();
-    resetJournal();
-    router.push('/login');
-  };
+  // Removed local logout button; handled in Account Options screen
 
   const navigateToNotifications = () => {
     router.push('/settings/notifications');
@@ -116,41 +106,52 @@ const SettingsScreen = () => {
   const openTermsOfService = async () => {
     await WebBrowser.openBrowserAsync('https://www.craveoffapp.com/terms-and-conditions');
   };
+  
+  const openAccountOptions = () => {
+    router.push('/settings/account-options');
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false}>
       {/* Header */}
+      
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
       </View>
 
       {/* Profile Card */}
       <View style={styles.profileCard}>
-        <LinearGradient
-          colors={['rgba(255, 255, 255, 0.28)', 'rgba(255, 255, 255, 0.08)']}
-          style={styles.avatarRing}
-        >
-          <View style={styles.avatarContainer}>
-            <LottieUniversal
-              source={require('@/assets/images/circle.json')}
-              autoPlay
-              loop
-              resizeMode="cover"
-              pointerEvents="none"
-              style={styles.avatarLottie}
-            />
-          </View>
-        </LinearGradient>
-        <Text style={styles.username}>{authUser?.name || 'Your Name'}</Text>
-        <Text style={styles.memberSince}>Member since 2025</Text>
+        {/* <LinearGradient
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
+          style={styles.profileGradient}
+        > */}
+          <LinearGradient
+            colors={['rgba(255, 255, 255, 0.28)', 'rgba(255, 255, 255, 0.08)']}
+            style={styles.avatarRing}
+          >
+            <View style={styles.avatarContainer}>
+              <LottieUniversal
+                source={require('@/assets/images/circle.json')}
+                autoPlay
+                loop
+                resizeMode="cover"
+                pointerEvents="none"
+                style={styles.avatarLottie}
+              />
+            </View>
+          </LinearGradient>
+          <Text style={styles.username}>{authUser?.name || 'Your Name'}</Text>
+          <Text style={styles.memberSince}>Member since 2025</Text>
+        {/* </LinearGradient> */}
       </View>
+      
 
       {/* Stats Row */}
       <View style={styles.statsRow}>
         {/* Clean Days */}
         <View style={styles.statCard}>
           <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
             style={styles.statGradient}
           >
             <Text style={styles.statNumber}>{cleanDays}</Text>
@@ -162,7 +163,7 @@ const SettingsScreen = () => {
         {/* Journal Entries */}
         <View style={styles.statCard}>
           <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
             style={styles.statGradient}
           >
             <Text style={styles.statNumber}>{entries?.length || 0}</Text>
@@ -173,7 +174,7 @@ const SettingsScreen = () => {
         {/* Achievements */}
         <View style={styles.statCard}>
           <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
             style={styles.statGradient}
           >
             <Text style={styles.statNumber}>
@@ -224,19 +225,15 @@ const SettingsScreen = () => {
         iconComponent={Ionicons}
         variant="primary"
       />
+      <SettingCard
+        icon="person-circle-outline"
+        title="Account Options"
+        value="Manage account actions"
+        onPress={openAccountOptions}
+        iconComponent={Ionicons}
+        variant="primary"
+      />
 
-      {/* Logout Button (restyled to match Delete button dimensions) */}
-      <TouchableOpacity 
-        style={[styles.logoutButton, styles.logoutButtonNew]} 
-        onPress={handleLogout}
-        activeOpacity={0.85}
-      >
-        <Ionicons name="log-out-outline" size={20} color={theme.colors.textPrimary} style={{ marginRight: 8 }} />
-        <Text style={styles.logoutButtonText}>Log Out</Text>
-      </TouchableOpacity>
-
-      {/* Delete Account Button */}
-      <DeleteAccountButton onSuccess={handleLogout} />
     </ScrollView>
   );
 };
@@ -263,11 +260,17 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   // settingsIcon removed
   profileCard: {
-    backgroundColor: theme.colors.backgroundDeep,
+    backgroundColor: 'transparent',
+    borderRadius: theme.borderRadius.medium,
+    padding: 0,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  profileGradient: {
+    width: '100%',
     borderRadius: theme.borderRadius.medium,
     padding: 24,
     alignItems: 'center',
-    marginBottom: 20,
   },
   avatarRing: {
     width: 88,
@@ -339,25 +342,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textMuted,
     textAlign: 'center',
   },
-  logoutButton: {
-    marginTop: 30,
-    marginBottom: 30,
-  },
-  logoutButtonNew: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.backgroundDeep,
-    paddingVertical: 14,
-    borderRadius: theme.borderRadius.medium,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  logoutButtonText: {
-    color: theme.colors.textPrimary,
-    fontWeight: '700',
-    fontSize: 16,
-  },
+  // Removed logout button styles (moved to Account Options)
 });
 
 export default SettingsScreen;

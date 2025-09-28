@@ -1,7 +1,8 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList, SafeAreaView, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat } from 'react-native-reanimated';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 
@@ -18,7 +19,7 @@ import { BackendRoutes } from '@/src/axios/backendRoutes';
 import WeekBar from '@/src/components/WeekBar';
 import oriaService, { StreamEventSource } from '@/src/services/oriaService';
 import quotesService from '@/src/services/quotesService';
-import { OriaChat, OriaChatWithMessages } from '@/src/types/oria';
+import { OriaChat, OriaChatWithMessages, SendMessageResponse } from '@/src/types/oria';
 import { usePledge } from '@/src/context/PledgeContext';
 import PetComingSoonModal from '@/src/components/PetComingSoonModal';
 import LeaderboardComingSoon from '@/src/components/LeaderboardComingSoon';
@@ -736,8 +737,62 @@ export default function HomeScreen() {
       // Clear the timeout since we received a response
       clearTimeout(responseTimeoutId);
       
-      // Check if we got an EventSource (streaming mode) or a regular response
-      if ('onmessage' in response && 'close' in response) {
+      // Prefer HTTP payload when available; otherwise handle streaming
+      const isHttpResponse = (resp: any): resp is SendMessageResponse => !!resp && typeof resp === 'object' && typeof resp.content === 'string';
+      if (isHttpResponse(response)) {
+        // Non-streaming mode - use the HTTP response payload directly
+        const result = response as SendMessageResponse;
+        const hasContent = typeof result.content === 'string' && result.content.length > 0;
+        console.log('HTTP result received:', {
+          id: result.id,
+          len: hasContent ? result.content.length : 0,
+          time: result.created_at,
+        });
+        
+        setSelectedChat(prevChat => {
+          if (!prevChat) return prevChat;
+          
+          const updatedMessages = [...prevChat.messages];
+          // Find the latest assistant loading bubble (more robust than assuming last index)
+          let loadingIdx = -1;
+          for (let i = updatedMessages.length - 1; i >= 0; i--) {
+            const msg = updatedMessages[i];
+            if (msg.role === 'assistant' && (msg as any).isLoading) {
+              loadingIdx = i;
+              break;
+            }
+          }
+
+          if (loadingIdx !== -1) {
+            console.log('Updating loading bubble at index', loadingIdx, 'with content length', hasContent ? result.content.length : 0);
+            // Update placeholder atomically with final content
+            updatedMessages[loadingIdx] = {
+              ...updatedMessages[loadingIdx],
+              id: result.id,
+              content: result.content,
+              created_at: result.created_at,
+              isLoading: false,
+            };
+          } else if (hasContent) {
+            // No loading bubble found; append as a new assistant message with content
+            updatedMessages.push({
+              id: result.id,
+              role: 'assistant',
+              content: result.content,
+              created_at: result.created_at,
+            });
+            console.log('Appended assistant message, new total:', updatedMessages.length);
+          }
+          
+          return {
+            ...prevChat,
+            messages: updatedMessages,
+          };
+        });
+        
+        setIsGeneratingResponse(false);
+        setIsSendingMessage(false);
+      } else if (response && typeof (response as any).onmessage === 'function' && typeof (response as any).close === 'function') {
         // This is streaming mode
         let assistantMessageContent = '';
         let hasReceivedFirstChunk = false;
@@ -953,25 +1008,20 @@ export default function HomeScreen() {
         // Implement the stop generation functionality for streaming mode
         globalStopGenerationSource.current = response;
       } else {
-        // Non-streaming mode - fetch the updated chat to get the response
-        const updatedChat = await oriaService.getChat(selectedChat.id);
-        
-        // Replace the loading message with the actual response
+        // Fallback: treat as HTTP response missing content; stop loading and show error
         setSelectedChat(prevChat => {
           if (!prevChat) return prevChat;
-          
-          // Find the last message and replace it with the actual response from updatedChat
-          const lastMessage = updatedChat.messages[updatedChat.messages.length - 1];
-          
-          return {
-            ...updatedChat,
-            messages: updatedChat.messages.map((msg) => ({
-              ...msg,
-              isLoading: false, // Ensure no messages have loading state
-            })),
-          };
+          const updated = [...prevChat.messages];
+          const lastIdx = updated.length - 1;
+          if (lastIdx >= 0 && updated[lastIdx].role === 'assistant') {
+            updated[lastIdx] = {
+              ...updated[lastIdx],
+              isLoading: false,
+              content: updated[lastIdx].content || 'No response content received.',
+            } as any;
+          }
+          return { ...prevChat, messages: updated };
         });
-        
         setIsGeneratingResponse(false);
         setIsSendingMessage(false);
       }
@@ -1256,11 +1306,15 @@ export default function HomeScreen() {
                         
                         {/* Bubble for smaller time units */}
                         {smallerUnits.length > 0 && (
-                          <View style={styles.timerBubble}>
+                          <Animated.View
+                            entering={SlideInDown.duration(220)}
+                            exiting={SlideOutUp.duration(180)}
+                            style={styles.timerBubble}
+                          >
                             <Text style={styles.timerBubbleText}>
                               {smallerUnits.join(' ')}
                             </Text>
-                          </View>
+                          </Animated.View>
                         )}
                       </>
                     );
@@ -1412,7 +1466,7 @@ export default function HomeScreen() {
             onPress={() => router.push('/analytics')}
           >
               <LinearGradient
-                colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+                colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
                 style={styles.challengeGradient}
           >
             <View style={styles.challengeContent}>
@@ -1433,7 +1487,7 @@ export default function HomeScreen() {
             onPress={() => setShowPetModal(true)}
           >
               <LinearGradient
-                colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+                colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
                 style={styles.petGradient}
           >
             <Text style={styles.petCardEmoji}>🐶</Text>
@@ -1445,8 +1499,8 @@ export default function HomeScreen() {
         {/* Speak to Oria Section */}
         <View style={styles.oriaCard}>
           <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
-            style={styles.oriaGradient}
+              colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
+              style={styles.oriaGradient}
           >
           <View style={styles.oriaHeader}>
             <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.colors.textPrimary} />
@@ -1469,7 +1523,7 @@ export default function HomeScreen() {
         {/* Card motivațional */}
         <View style={styles.motivationCard}>
             <LinearGradient
-             colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+             colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
               style={styles.motivationGradient}
             >
           <View style={styles.motivationHeader}>
@@ -1545,17 +1599,20 @@ export default function HomeScreen() {
           animationType="slide"
           transparent={false}
           visible={true}
+          presentationStyle="fullScreen"
           onRequestClose={() => {
             setSelectedChat(null);
             setShowOriaModal(false);
           }}
         >
+          <GradientBackground ignoreFocus>
           <SafeAreaView style={styles.oriaModalContainer}>
             <KeyboardAvoidingView
               style={{ flex: 1 }}
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
               keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
             >
+            
             {!selectedChat ? (
               // Conversation list view
               <View style={styles.oriaModalContainer}>
@@ -1761,6 +1818,7 @@ export default function HomeScreen() {
             )}
             </KeyboardAvoidingView>
           </SafeAreaView>
+          </GradientBackground>
         </Modal>
       )}
       
@@ -1868,16 +1926,23 @@ const createStyles = (theme: any) => StyleSheet.create({
   motivationGradient: {
     padding: 16,
     borderRadius: theme.borderRadius.medium,
+    // Slight inner border to lift from background very subtly
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
   },
   oriaCard: {
     backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
     marginBottom: 16,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
   },
   oriaGradient: {
     padding: 16,
     borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
   },
   oriaHeader: {
     flexDirection: 'row',
@@ -1901,7 +1966,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: theme.colors.backgroundDeep,
-    borderRadius: 14,
+    borderRadius: 9999,
     paddingVertical: 10,
     paddingHorizontal: 16,
     marginTop: 4,
@@ -1913,7 +1978,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   oriaModalContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent',
   },
   oriaModalHeader: {
     flexDirection: 'row',
@@ -2211,22 +2276,22 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
   },
   timerNumber: {
-    fontSize: 46,
+    fontSize: 58,
     fontWeight: 'bold',
     color: theme.colors.primary,
     textAlign: 'center',
   },
   timerBubble: {
     backgroundColor: theme.colors.cardBackground,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     marginTop: 12,
     alignSelf: 'center',
     ...theme.shadows.light,
   },
   timerBubbleText: {
-    fontSize: 12,
+    fontSize: 16,
     color: theme.colors.textSecondary,
     fontWeight: '500',
   },
@@ -2277,7 +2342,8 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   progressBarBackground: {
     flex: 1,
-    backgroundColor: theme.colors.cardBackground,
+    // Subtle translucent track to sit well on the dark background
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -2286,6 +2352,12 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderRadius: 3,
     position: 'relative',
+    // Soft glow for a cleaner look
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 2,
   },
   growingIndicator: {
     position: 'absolute',
@@ -2336,7 +2408,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   panicButton: {
     backgroundColor: 'rgba(216, 85, 85, 0.85)', // Roșu mai atenuat
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: theme.borderRadius.pill,
     paddingVertical: 16,
     flexDirection: 'row',
     justifyContent: 'center',
@@ -2366,6 +2438,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: theme.borderRadius.medium,
     marginRight: 8,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
   },
   challengeGradient: {
     flex: 1,
@@ -2397,7 +2471,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   challengeProgressBar: {
     height: 4,
-    backgroundColor: theme.colors.cardInteractive,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -2411,6 +2485,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
   },
   petGradient: {
     flex: 1,
@@ -2418,6 +2494,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: theme.borderRadius.medium,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
   },
   petCardEmoji: {
     fontSize: 22,
@@ -2511,18 +2589,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
-  },
-  comingSoonButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    marginTop: 8,
-  },
-  comingSoonButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
   },
   petModalEmoji: {
     fontSize: 36,

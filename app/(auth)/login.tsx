@@ -12,6 +12,7 @@ import GoogleSignInButton from '@/src/google-sign-in/GoogleSignInButton';
 import { AppleSignInButton } from '@/src/apple-sign-in';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { saveTokens } from '@/src/Storage/tokenStorage';
+import LottieUniversal from '@/src/components/LottieUniversal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
@@ -123,9 +124,9 @@ const LoginScreen: React.FC = () => {
         console.log('[Login] Incomplete signup detected, redirecting to symptoms screen');
         router.push('/(auth)/symptoms');
       } else {
-        // For existing users with completed signup, redirect to home
-        console.log('[Login] Existing user with completed signup, redirecting to home');
-        router.push('/');
+        // For existing users with completed signup, go to tabs and clear auth history
+        console.log('[Login] Existing user with completed signup, redirecting to tabs');
+        router.replace('/(tabs)');
       }
     } catch (error: any) {
       console.error('[Login] Google login error:', error.response?.data || error.message);
@@ -144,6 +145,14 @@ const LoginScreen: React.FC = () => {
   return (
     <GradientBackground>
       <View style={styles.container}>
+        <LottieUniversal 
+          source={require('@/assets/images/Animation_SkyStar.json')}
+          autoPlay 
+          loop 
+          pointerEvents="none"
+          resizeMode="cover"
+          style={styles.bgLottie}
+        />
         <Animated.View 
           style={styles.content}
           entering={FadeIn.duration(600)}
@@ -200,6 +209,16 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+  },
+  bgLottie: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.6,
+    width: '100%',
+    height: '100%',
   },
   content: {
     width: '100%',

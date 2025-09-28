@@ -368,10 +368,7 @@ const WeekBar = ({
   
   return (
     <View style={styles.weekCard}>
-      <LinearGradient
-        colors={['rgba(59, 130, 246, 0.13)', 'rgba(37, 99, 235, 0.09)']}
-        style={styles.weekGradient}
-      >
+
         <View style={styles.titleRow}>
           <Text style={styles.sectionTitle}>
             {weekTitle}
@@ -390,7 +387,7 @@ const WeekBar = ({
         
         {/* Navigation buttons */}
         {navigationButtons}
-      </LinearGradient>
+
     </View>
   );
 };
@@ -404,16 +401,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     ...Platform.select({
       android: {
         elevation: 1, // Add slight elevation on Android for better performance
+        shadowColor: 'transparent',
       },
       ios: {
         shadowColor: 'transparent', // Disable shadows on iOS for better performance
       }
     }),
   },
-  weekGradient: {
-    padding: 16,
-    borderRadius: theme.borderRadius.medium,
-  },
+
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -23,7 +23,7 @@ export default function CommunityScreen() {
         {/* Hero Section */}
         <View style={styles.heroCard}>
           <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
             style={styles.heroGradient}
           >
             <Image 
@@ -41,7 +41,7 @@ export default function CommunityScreen() {
         {/* Reddit Community Card */}
         <View style={styles.redditCard}>
           <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
             style={styles.redditGradient}
           >
             <View style={styles.redditHeader}>
@@ -87,7 +87,7 @@ export default function CommunityScreen() {
         {/* Community Tips */}
         <View style={styles.tipsCard}>
           <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
             style={styles.tipsGradient}
           >
             <Text style={styles.tipsTitle}>Community Tips</Text>
@@ -127,7 +127,7 @@ export default function CommunityScreen() {
         {/* Coming Soon Section */}
         <View style={styles.comingSoonCard}>
           <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.28)']}
+            colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
             style={styles.comingSoonGradient}
           >
             <Text style={styles.comingSoonTitle}>Coming Soon</Text>
@@ -252,9 +252,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: 9999,
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     ...theme.shadows.light,
   },
   redditButtonText: {
