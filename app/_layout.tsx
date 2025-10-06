@@ -3,7 +3,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View, StatusBar, AppState, Image } from 'react-native';
 import { router, Stack, SplashScreen, usePathname } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 import { apiClient } from '@/src/axios/apiClient';
 import { AuthContext, AuthProvider } from '@/src/context/AuthContext';
@@ -19,6 +19,7 @@ import { getTokens, clearTokens } from '@/src/Storage/tokenStorage';
 import HomeOnlyCheckInController from '@/src/components/HomeOnlyCheckInController';
 import NotificationInitializer from '@/src/components/NotificationInitializer';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
+import { setCurrentPath } from '@/src/navigation/routeTracker';
 
 // Keep native splash visible for a controlled duration on app start
 void SplashScreen.preventAutoHideAsync();
@@ -31,12 +32,12 @@ export default function RootLayout() {
     SplashScreen.hideAsync().catch(() => {});
     const timer = setTimeout(() => {
       setShowInitialSplash(false);
-    }, 3000);
+    }, 3500);
     return () => clearTimeout(timer);
   }, []);
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-    <SafeAreaProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <AuthProvider>
         <ThemeProvider>
@@ -75,7 +76,7 @@ export default function RootLayout() {
 }
 
 const AuthNavigation: React.FC = () => {
-  const { isAuthenticated, signIn, accessToken, setAccessToken, setIsAuthenticated, loading } = useContext(AuthContext);
+  const { isAuthenticated, signIn, setAccessToken, setIsAuthenticated, loading, user } = useContext(AuthContext);
   const pathname = usePathname();
 
   // Funcție pentru verificarea și reînnoirea token-urilor
@@ -166,22 +167,26 @@ const AuthNavigation: React.FC = () => {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    // Track current route for interceptors to make smarter redirects
+    if (pathname) setCurrentPath(pathname);
+  }, [pathname]);
+
+  useEffect(() => {
     if (loading) return;
+    const isOnAuthOrOnboarding = pathname === '/login' || pathname.startsWith('/onboarding') || pathname.startsWith('/(auth)');
+    const isSignupComplete = !!(user && user.signup_complete === true);
+
     if (!isAuthenticated) {
-      // Always keep unauthenticated users on login
       if (pathname !== '/login') router.replace('/login');
-    } else {
-      // When authenticated, redirect only if still on auth/onboarding routes
-      if (
-        pathname === '/login' ||
-        pathname.startsWith('/onboarding') ||
-        pathname.startsWith('/(auth)')
-      ) {
-        router.replace('/(tabs)');
-      }
-      // Do not force replace when already inside any tab route so tab switching works
+      return;
     }
-  }, [loading, isAuthenticated, pathname]);
+
+    // Authenticated users: only redirect to tabs if signup is complete and they are still on auth/onboarding screens
+    if (isSignupComplete && isOnAuthOrOnboarding) {
+      router.replace('/(tabs)');
+    }
+    // Otherwise, allow the signup/onboarding flow to proceed without forced redirects
+  }, [loading, isAuthenticated, pathname, user]);
 
   if (loading) {
     return (

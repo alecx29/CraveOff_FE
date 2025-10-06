@@ -2,123 +2,54 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
-import { useLogs } from '@/src/context/LogsContext';
-import { apiClient } from '@/src/axios/apiClient';
-import { BackendRoutes } from '@/src/axios/backendRoutes';
 import { useAchievements } from '@/src/context/AchievementsContext';
 import LottieUniversal from '@/src/components/LottieUniversal';
 
 const AchievementsScreen = () => {
   const { theme } = useTheme();
-  const { currentStreak, lastRelapseData } = useLogs();
-  const { achievements: storedAchievements, setFromServer } = useAchievements();
+  const { achievements: ctxAchievements } = useAchievements();
   const styles = createStyles(theme);
 
   // Helper: format date nice
   const formatDate = (d: Date) => d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 
-  // Helper: estimate unlock date from last relapse
-  const estimateUnlockDate = (days: number): string | undefined => {
+  // Helper: format server ISO-like timestamps nicely
+  const formatUnlockedAt = (raw?: string): string | undefined => {
+    if (!raw) return undefined;
     try {
-      const relapse = lastRelapseData?.last_relapse_date ? new Date(lastRelapseData.last_relapse_date) : null;
-      if (!relapse || isNaN(relapse.getTime())) return undefined;
-      const unlockDate = new Date(relapse.getTime() + days * 24 * 3600 * 1000);
-      const now = new Date();
-      // If threshold already passed, cap at today for display
-      return formatDate(unlockDate > now ? now : unlockDate);
+      const parsed = new Date(raw);
+      if (isNaN(parsed.getTime())) return undefined;
+      return formatDate(parsed);
     } catch {
       return undefined;
     }
   };
 
-  // Dynamic achievements driven by backend codes; fallback definitions
-  const milestoneDefs = [
-    { id: 'WELCOME', title: 'Welcome to CraveOff', desc: 'You took the first step towards a healthier life', icon: 'ribbon-outline' as const, threshold: 0, xp: 100 },
-    { id: 'STREAK_7', title: '7 Days Clean', desc: 'Stay clean for 7 consecutive days', icon: 'medal-outline' as const, threshold: 7, xp: 150 },
-    { id: 'STREAK_30', title: '30 Days Clean', desc: 'Stay clean for 30 consecutive days', icon: 'trophy-outline' as const, threshold: 30, xp: 300 },
-    { id: 'STREAK_60', title: '60 Days Clean', desc: 'Stay clean for 60 consecutive days', icon: 'trophy-outline' as const, threshold: 60, xp: 600 },
-    { id: 'STREAK_90', title: '90 Days Clean', desc: 'Stay clean for 90 consecutive days', icon: 'trophy-outline' as const, threshold: 90, xp: 1000 },
-  ];
+  // Map context achievements to UI items with icons
+  const codeToIcon: Record<string, any> = {
+    WELCOME: 'ribbon-outline',
+    STREAK_1: 'calendar-outline',
+    STREAK_3: 'star-outline',
+    STREAK_7: 'medal-outline',
+    STREAK_30: 'trophy-outline',
+    STREAK_60: 'trophy-outline',
+    STREAK_90: 'trophy-outline',
+  };
 
-  const [achievements, setAchievements] = React.useState<{
-    id: string;
-    title: string;
-    description: string;
-    icon: any;
-    unlocked: boolean;
-    date?: string;
-    xp: number;
-  }[]>([]);
-
-  // Fetch achievements on mount
-  React.useEffect(() => {
-    const fetchAchievements = async () => {
-      try {
-        const response = await apiClient.get(BackendRoutes.ACHIEVEMENTS);
-        const list = response?.data?.achievements || [];
-
-        // Map backend items by code
-        const mapped = milestoneDefs.map(def => {
-          const serverItem = list.find((it: any) => it.code === def.id);
-          const isUnlocked = serverItem ? !!serverItem.unlocked : (def.threshold === 0 ? true : currentStreak >= def.threshold);
-          // Only show date if provided by backend; no fallback date
-          const unlockedAt = serverItem?.unlockedAt;
-          return {
-            id: def.id,
-            title: serverItem?.title || def.title,
-            description: serverItem?.description || def.desc,
-            icon: def.icon,
-            unlocked: isUnlocked,
-            date: unlockedAt,
-            xp: serverItem?.xp ?? def.xp,
-          };
-        });
-
-        setAchievements(mapped);
-        // Persist to store for profile usage
-        await setFromServer(list);
-      } catch {
-        // Fallback to local calculation if API fails
-        const fallback = milestoneDefs.map(def => ({
-          id: def.id,
-          title: def.title,
-          description: def.desc,
-          icon: def.icon,
-          unlocked: def.threshold === 0 ? true : currentStreak >= def.threshold,
-          date: def.threshold > 0 && currentStreak >= def.threshold ? estimateUnlockDate(def.threshold) : (def.threshold === 0 ? formatDate(new Date()) : undefined),
-          xp: def.xp,
-        }));
-        setAchievements(fallback);
-      }
-    };
-
-    // Prefer store if available; otherwise fetch
-    if (storedAchievements && storedAchievements.length > 0) {
-      // Map store entries to UI using defs for icons/xp
-      const mapped = milestoneDefs.map(def => {
-        const serverItem = storedAchievements.find((it: any) => it.code === def.id);
-        const isUnlocked = serverItem ? !!serverItem.unlocked : (def.threshold === 0 ? true : currentStreak >= def.threshold);
-        const unlockedAt = serverItem?.unlockedAt;
-        return {
-          id: def.id,
-          title: serverItem?.title || def.title,
-          description: serverItem?.description || def.desc,
-          icon: def.icon,
-          unlocked: isUnlocked,
-          date: unlockedAt,
-          xp: serverItem?.xp ?? def.xp,
-        };
-      });
-      setAchievements(mapped);
-    } else {
-      fetchAchievements();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const achievements = (ctxAchievements || []).map(it => ({
+    id: it.code,
+    title: it.title,
+    description: it.description || '',
+    icon: codeToIcon[it.code] || 'trophy-outline',
+    unlocked: !!it.unlocked,
+    date: it.unlocked ? formatUnlockedAt(it.unlockedAt) : undefined,
+    xp: typeof it.xp === 'number' ? it.xp : 0,
+  }));
 
   // Calculăm progresul total
   const totalAchievements = achievements.length;
@@ -144,31 +75,36 @@ const AchievementsScreen = () => {
           entering={FadeInDown.delay(100).duration(600)} 
           style={styles.progressCard}
         >
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Achievement Progress</Text>
-            <View style={styles.progressBadge}>
-              <Text style={styles.progressBadgeText}>{unlockedAchievements}/{totalAchievements}</Text>
+          <LinearGradient
+            colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
+            style={styles.progressGradient}
+          >
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressTitle}>Achievement Progress</Text>
+              <View style={styles.progressBadge}>
+                <Text style={styles.progressBadgeText}>{unlockedAchievements}/{totalAchievements}</Text>
+              </View>
             </View>
-          </View>
-          
-          <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarBackground}>
-              <View 
-                style={[
-                  styles.progressBarFill, 
-                  { width: `${progressPercentage}%` }
-                ]} 
-              />
+            
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBarBackground}>
+                <View 
+                  style={[
+                    styles.progressBarFill, 
+                    { width: `${progressPercentage}%` }
+                  ]} 
+                />
+              </View>
             </View>
-          </View>
-          
-          <View style={styles.progressInfo}>
-            <View style={styles.xpContainer}>
-              <Ionicons name="flash" size={16} color={theme.colors.primary} />
-              <Text style={styles.xpText}>{totalXP} XP</Text>
+            
+            <View style={styles.progressInfo}>
+              <View style={styles.xpContainer}>
+                <Ionicons name="flash" size={16} color={theme.colors.primary} />
+                <Text style={styles.xpText}>{totalXP} XP</Text>
+              </View>
+              <Text style={styles.progressPercentText}>{Math.round(progressPercentage)}% Complete</Text>
             </View>
-            <Text style={styles.progressPercentText}>{Math.round(progressPercentage)}% Complete</Text>
-          </View>
+          </LinearGradient>
         </Animated.View>
         
         {/* Achievements List */}
@@ -187,62 +123,67 @@ const AchievementsScreen = () => {
                 achievement.unlocked ? styles.achievementUnlocked : styles.achievementLocked
               ]}
             >
-              <View style={styles.achievementIconContainer}>
-                {achievement.unlocked ? (
-                  <View style={styles.achievementIconBg}>
-                    <Ionicons 
-                      name={achievement.icon as any} 
-                      size={24} 
-                      color={theme.colors.textPrimary} 
-                    />
-                    <View style={styles.checkmarkBadge}>
-                      <Ionicons name="checkmark-circle" size={16} color={theme.colors.success || '#22c55e'} />
+              <LinearGradient
+                colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
+                style={styles.achievementGradient}
+              >
+                <View style={styles.achievementIconContainer}>
+                  {achievement.unlocked ? (
+                    <View style={styles.achievementIconBg}>
+                      <Ionicons 
+                        name={achievement.icon as any} 
+                        size={24} 
+                        color={theme.colors.textPrimary} 
+                      />
+                      <View style={styles.checkmarkBadge}>
+                        <Ionicons name="checkmark-circle" size={16} color={theme.colors.success || '#22c55e'} />
+                      </View>
                     </View>
-                  </View>
-                ) : (
-                  <View style={styles.achievementIconBgLocked}>
-                    <Ionicons 
-                      name={achievement.icon as any} 
-                      size={24} 
-                      color={theme.colors.textMuted} 
-                    />
-                    <View style={styles.lockBadge}>
-                      <Ionicons name="lock-closed" size={12} color={theme.colors.textMuted} />
+                  ) : (
+                    <View style={styles.achievementIconBgLocked}>
+                      <Ionicons 
+                        name={achievement.icon as any} 
+                        size={24} 
+                        color={theme.colors.textMuted} 
+                      />
+                      <View style={styles.lockBadge}>
+                        <Ionicons name="lock-closed" size={12} color={theme.colors.textMuted} />
+                      </View>
                     </View>
-                  </View>
-                )}
-              </View>
-              
-              <View style={styles.achievementContent}>
-                <Text style={[
-                  styles.achievementTitle,
-                  !achievement.unlocked && styles.achievementTitleLocked
-                ]}>
-                  {achievement.title}
-                </Text>
-                <Text style={[
-                  styles.achievementDescription,
-                  !achievement.unlocked && styles.achievementDescriptionLocked
-                ]}>
-                  {achievement.description}
-                </Text>
+                  )}
+                </View>
                 
-                {achievement.unlocked && achievement.date && (
-                  <View style={styles.achievementDateContainer}>
-                    <Ionicons name="calendar-outline" size={12} color={theme.colors.textMuted} />
-                    <Text style={styles.achievementDate}>Unlocked on {achievement.date}</Text>
-                  </View>
-                )}
-              </View>
-              
-              <View style={styles.achievementXpContainer}>
-                <Text style={[
-                  styles.achievementXp,
-                  !achievement.unlocked && styles.achievementXpLocked
-                ]}>
-                  {achievement.xp} XP
-                </Text>
-              </View>
+                <View style={styles.achievementContent}>
+                  <Text style={[
+                    styles.achievementTitle,
+                    !achievement.unlocked && styles.achievementTitleLocked
+                  ]}>
+                    {achievement.title}
+                  </Text>
+                  <Text style={[
+                    styles.achievementDescription,
+                    !achievement.unlocked && styles.achievementDescriptionLocked
+                  ]}>
+                    {achievement.description}
+                  </Text>
+                  
+                  {achievement.unlocked && achievement.date && (
+                    <View style={styles.achievementDateContainer}>
+                      <Ionicons name="calendar-outline" size={12} color={theme.colors.textMuted} />
+                      <Text style={styles.achievementDate}>Unlocked on {achievement.date}</Text>
+                    </View>
+                  )}
+                </View>
+                
+                <View style={styles.achievementXpContainer}>
+                  <Text style={[
+                    styles.achievementXp,
+                    !achievement.unlocked && styles.achievementXpLocked
+                  ]}>
+                    {achievement.xp} XP
+                  </Text>
+                </View>
+              </LinearGradient>
             </Animated.View>
           ))}
           
@@ -277,11 +218,18 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 12,
   },
   progressCard: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium || 12,
-    padding: 16,
     marginBottom: 24,
-    ...theme.shadows.small,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
+  },
+  progressGradient: {
+    padding: 16,
+    borderRadius: theme.borderRadius.medium || 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
   },
   progressHeader: {
     flexDirection: 'row',
@@ -352,11 +300,19 @@ const createStyles = (theme: any) => StyleSheet.create({
   achievementCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium || 12,
-    padding: 16,
     marginBottom: 12,
-    ...theme.shadows.small,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
+  },
+  achievementGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: theme.borderRadius.medium || 12,
   },
   achievementUnlocked: {
     borderLeftWidth: 4,

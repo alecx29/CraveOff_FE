@@ -14,7 +14,7 @@ export default function Goals() {
   
   // Add onComplete handler to navigate to subscription
   const handleComplete = () => {
-    router.replace('/(auth)/subscription');
+    router.push('/(auth)/subscription');
   };
   
   // Error handling

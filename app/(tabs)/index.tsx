@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
@@ -142,6 +142,7 @@ interface PledgeHistoryResponse {
 
 export default function HomeScreen() {
   const { theme } = useTheme();
+  const oriaInsets = useSafeAreaInsets();
   const { user } = useUser();
   const { logs, lastRelapseData, fetchLogs, isLoading } = useLogs();
   const { refreshFromApi } = useAchievements();
@@ -1606,7 +1607,13 @@ export default function HomeScreen() {
           }}
         >
           <GradientBackground ignoreFocus>
-          <SafeAreaView style={styles.oriaModalContainer}>
+          <SafeAreaView
+            style={[
+              styles.oriaModalContainer,
+              { paddingTop: oriaInsets.top || 12, paddingBottom: oriaInsets.bottom || 12 },
+            ]}
+            edges={[]}
+          >
             <KeyboardAvoidingView
               style={{ flex: 1 }}
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -2094,8 +2101,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: theme.borderRadius.pill,
     paddingVertical: 12,
+    paddingHorizontal: 20,
     marginHorizontal: 16,
     marginBottom: 16,
   },

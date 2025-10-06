@@ -124,9 +124,9 @@ const LoginScreen: React.FC = () => {
         console.log('[Login] Incomplete signup detected, redirecting to symptoms screen');
         router.push('/(auth)/symptoms');
       } else {
-        // For existing users with completed signup, go to tabs and clear auth history
-        console.log('[Login] Existing user with completed signup, redirecting to tabs');
-        router.replace('/(tabs)');
+        // For existing users with completed signup, redirect to home
+        console.log('[Login] Existing user with completed signup, redirecting to home');
+        router.push('/');
       }
     } catch (error: any) {
       console.error('[Login] Google login error:', error.response?.data || error.message);

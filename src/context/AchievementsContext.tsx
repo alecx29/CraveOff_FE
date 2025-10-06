@@ -48,14 +48,16 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   // Central milestone definitions used to normalize server data
-  const milestoneDefs: Array<{
+  const milestoneDefs: {
     code: string;
     title: string;
     description: string;
     threshold: number;
     xp: number;
-  }> = [
+  }[] = [
     { code: 'WELCOME', title: 'Welcome to CraveOff', description: 'You took the first step towards a healthier life', threshold: 0, xp: 100 },
+    { code: 'STREAK_1', title: '1 Day Clean', description: 'Stay clean for 1 day', threshold: 1, xp: 80 },
+    { code: 'STREAK_3', title: '3 Days Clean', description: 'Stay clean for 3 consecutive days', threshold: 3, xp: 120 },
     { code: 'STREAK_7', title: '7 Days Clean', description: 'Stay clean for 7 consecutive days', threshold: 7, xp: 150 },
     { code: 'STREAK_30', title: '30 Days Clean', description: 'Stay clean for 30 consecutive days', threshold: 30, xp: 300 },
     { code: 'STREAK_60', title: '60 Days Clean', description: 'Stay clean for 60 consecutive days', threshold: 60, xp: 600 },
@@ -132,7 +134,7 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
 
   const loadFromStorage = async (): Promise<boolean> => {
     try {
-      const [rawList, rawSummary] = await Promise.all([
+      const [rawList] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEY_LIST),
         AsyncStorage.getItem(STORAGE_KEY_SUMMARY),
       ]);
@@ -173,6 +175,12 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
       await persist(normalized);
     } catch (e: any) {
       setError(e?.message || 'Failed to fetch achievements');
+      // Persist fallback from local definitions so UI has data even without network
+      try {
+        const fallback = mergeWithDefinitions([]);
+        console.log('[Achievements] using fallback definitions due to API error');
+        await persist(fallback);
+      } catch {}
     } finally {
       setLoading(false);
     }

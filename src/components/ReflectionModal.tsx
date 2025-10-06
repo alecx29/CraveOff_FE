@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -25,7 +25,7 @@ interface ReflectionModalProps {
   onClose: () => void;
 }
 
-const { height, width } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 // Define height thresholds for responsive design
 const IS_SMALL_DEVICE = height < 700;
 const IS_VERY_SMALL_DEVICE = height < 600;
@@ -46,19 +46,56 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
   const [phase, setPhase] = useState<Phase>('intro');
   const [countdownValue, setCountdownValue] = useState<number>(3);
   const [countupValue, setCountupValue] = useState<number>(0);
-  const timeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
-  const intervalsRef = useRef<Array<ReturnType<typeof setInterval>>>([]);
+  // Controls whether the final message should be shown (only on the first run)
+  const [finalTextVisible, setFinalTextVisible] = useState<boolean>(true);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
   
-  const clearAllTimers = () => {
+  const clearAllTimers = useCallback(() => {
     timeoutsRef.current.forEach((t) => clearTimeout(t));
     intervalsRef.current.forEach((i) => clearInterval(i));
     timeoutsRef.current = [];
     intervalsRef.current = [];
-  };
+  }, []);
   
   // Adjust for safe areas
   const bottomPadding = Math.max(insets.bottom, 20);
   const topPadding = Math.max(insets.top, 20);
+
+  // Helper to run countdown and then countup
+  const startCountdownAndCountup = useCallback(() => {
+    clearAllTimers();
+    setPhase('countdown');
+    setCountdownValue(3);
+    const countdownInterval = setInterval(() => {
+      setCountdownValue((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          // Vibrate at 0
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          // Move to count up
+          setPhase('countup');
+          setCountupValue(0);
+          const countupInterval = setInterval(() => {
+            setCountupValue((prevUp) => {
+              if (prevUp >= 7) {
+                clearInterval(countupInterval);
+                // Vibrate at 7
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                setPhase('outro');
+                return prevUp;
+              }
+              return prevUp + 1;
+            });
+          }, 1000);
+          intervalsRef.current.push(countupInterval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    intervalsRef.current.push(countdownInterval);
+  }, [clearAllTimers]);
   
   useEffect(() => {
     if (visible) {
@@ -73,6 +110,7 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
       setPhase('intro');
       setCountdownValue(3);
       setCountupValue(0);
+      setFinalTextVisible(true);
       
       // Animate title
       RNAnimated.timing(titleOpacity, {
@@ -108,36 +146,8 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
       timeoutsRef.current.push(toInstruction);
 
       const toCountdown = setTimeout(() => {
-        setPhase('countdown');
-        setCountdownValue(3);
-        const countdownInterval = setInterval(() => {
-          setCountdownValue((prev) => {
-            if (prev <= 1) {
-              clearInterval(countdownInterval);
-              // Vibrate at 0
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              // Move to count up
-              setPhase('countup');
-              setCountupValue(0);
-              const countupInterval = setInterval(() => {
-                setCountupValue((prevUp) => {
-                  if (prevUp >= 7) {
-                    clearInterval(countupInterval);
-                    // Vibrate at 7
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    setPhase('outro');
-                    return prevUp;
-                  }
-                  return prevUp + 1;
-                });
-              }, 1000);
-              intervalsRef.current.push(countupInterval);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        intervalsRef.current.push(countdownInterval);
+        // Kick off countdown + countup sequence
+        startCountdownAndCountup();
       }, 3500 + 3000);
       timeoutsRef.current.push(toCountdown);
     }
@@ -149,7 +159,7 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
       }
       clearAllTimers();
     };
-  }, [visible]);
+  }, [visible, titleOpacity, titleScale, contentOpacity, buttonOpacity, startCountdownAndCountup, clearAllTimers]);
 
   // Animate content on phase change and reveal button only at outro
   useEffect(() => {
@@ -171,7 +181,15 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
     } else {
       buttonOpacity.setValue(0);
     }
-  }, [phase, visible]);
+  }, [phase, visible, contentOpacity, buttonOpacity]);
+
+  // (moved above)
+
+  const handleReflectAgain = useCallback(() => {
+    // After the first run, do not show the final text anymore
+    setFinalTextVisible(false);
+    startCountdownAndCountup();
+  }, [startCountdownAndCountup]);
   
   if (!visible) return null;
   
@@ -221,7 +239,7 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
           <RNAnimated.View style={[styles.textContainer, { opacity: contentOpacity }]}>
             {phase === 'intro' && (
               <Text style={styles.reflectionText}>
-                You&apos;re feeling the urge o relapse again, and that&apos;s okay.
+                You&apos;re feeling the urge to relapse again, and that&apos;s okay.
               </Text>
             )}
             {phase === 'instruction' && (
@@ -239,7 +257,7 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
                 {countupValue}
               </Text>
             )}
-            {phase === 'outro' && (
+            {phase === 'outro' && finalTextVisible && (
               <>
                 <Text style={styles.reflectionText}>
                   It&apos;s love you&apos;re looking for.
@@ -256,13 +274,22 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
       {/* Button - Now positioned outside ScrollView with fixed position */}
       {phase === 'outro' && (
         <RNAnimated.View style={[styles.fixedButtonContainer, { opacity: buttonOpacity }]}>
-          <TouchableOpacity 
-            style={styles.finishButton}
-            onPress={onClose}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.buttonText}>Finish Reflecting</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={[styles.secondaryButton, { marginBottom: 12 }]}
+              onPress={handleReflectAgain}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.secondaryButtonText}>Reflect Again</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.finishButton}
+              onPress={onClose}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>Finish Reflecting</Text>
+            </TouchableOpacity>
+          </View>
         </RNAnimated.View>
       )}
     </Animated.View>
@@ -353,6 +380,27 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     alignItems: 'center',
     paddingHorizontal: 30,
     paddingVertical: 20,
+  },
+  buttonRow: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: IS_SMALL_DEVICE ? 12 : 16,
+    paddingHorizontal: 24,
+    borderRadius: 30,
+    minWidth: 160,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  secondaryButtonText: {
+    color: '#fff',
+    fontSize: IS_SMALL_DEVICE ? 16 : 18,
+    fontWeight: '600',
+    lineHeight: 22,
   },
   finishButton: {
     backgroundColor: theme.colors.primary,

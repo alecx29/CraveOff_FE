@@ -24,7 +24,8 @@ export const BackendRoutes = {
   ACHIEVEMENTS: "/achievements/",
 
   // Account management
-  DELETE_ACCOUNT_CONFIRM: (token: string) => `/user/delete-account-confirm/${token}`,
+  DELETE_ACCOUNT_CONFIRM: (token: string) =>
+    `/user/delete-account-confirm/${token}`,
 
   // Streaks
   STREAKS: "/streak/streaks",

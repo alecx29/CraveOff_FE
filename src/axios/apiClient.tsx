@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getTokens, saveTokens, getRefreshToken, clearTokens } from '@/src/Storage/tokenStorage';
 import { baseURL } from '@/src/config-files/constants/backend-url';
+import routeTracker, { getCurrentPath, isOnboardingPath } from '@/src/navigation/routeTracker';
 
 // Create a lock mechanism to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
@@ -99,6 +100,22 @@ apiClient.interceptors.response.use(
     }
     
     const originalRequest = error.config;
+    // Handle 428 Precondition Required: signup not complete → redirect to onboarding
+    if (error.response && error.response.status === 428) {
+      try {
+        // Import dynamically to avoid circular deps when this file is imported in layout
+        const { router } = await import('expo-router');
+        const path = getCurrentPath();
+        // If already in onboarding/auth, don't bounce them away from the current step
+        if (!isOnboardingPath(path)) {
+          console.log('[API Client] 428 received - redirecting to signup flow');
+          router.replace('/signup');
+        } else {
+          console.log('[API Client] 428 received while on onboarding/auth; staying on current step');
+        }
+      } catch {}
+      return Promise.reject(error);
+    }
     
     // If the error is not 401 or the request has already been retried, reject
     if (!error.response || error.response.status !== 401 || originalRequest._retry) {
@@ -318,6 +335,21 @@ apiClientImage.interceptors.response.use(
   },
   async error => {
     const originalRequest = error.config;
+
+    // Handle 428 for image client as well
+    if (error.response?.status === 428) {
+      try {
+        const { router } = await import('expo-router');
+        const path = getCurrentPath();
+        if (!isOnboardingPath(path)) {
+          console.log('[Image Response Interceptor] 428 received - redirecting to signup flow');
+          router.replace('/signup');
+        } else {
+          console.log('[Image Response Interceptor] 428 received while on onboarding/auth; staying on current step');
+        }
+      } catch {}
+      return Promise.reject(error);
+    }
 
     // If access token expired, try to refresh it
     if (error.response?.status === 401 && !originalRequest._retry) {

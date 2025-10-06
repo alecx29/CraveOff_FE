@@ -41,7 +41,7 @@ export default function AnalyticsScreen() {
   const [cleanDays, setCleanDays] = useState(0);
   const [progressPercentage, setProgressPercentage] = useState(0);
 
-  // Stats for streak statistics
+  // Stats for streak statistics (from backend only)
   const [longestStreak, setLongestStreak] = useState(0);
   const [averageStreak, setAverageStreak] = useState(0);
 
@@ -89,10 +89,9 @@ export default function AnalyticsScreen() {
     setProgressPercentage(percentage);
   }, [currentStreak]);
 
-  // Calculate streak statistics from logs
+  // Use backend streaks only; still compute progress over time locally
   useEffect(() => {
     if (logs && logs.length > 0) {
-      calculateStreakStats(logs);
       fetchBackendStreaks();
       calculateProgressOverTime(logs);
     }
@@ -108,80 +107,7 @@ export default function AnalyticsScreen() {
     checkActivePledge();
   }, []);
 
-  // Function to calculate streak statistics
-  const calculateStreakStats = (logEntries: LogEntry[]) => {
-    if (!logEntries || logEntries.length === 0) {
-      setLongestStreak(0);
-      setAverageStreak(0);
-      return;
-    }
-
-    // Sort logs by date
-    const sortedLogs = [...logEntries].sort((a, b) => {
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
-    });
-
-    // Initialize variables for streak calculation
-    let currentStreak = 0;
-    let maxStreak = 0;
-    let streaks: number[] = [];
-    let lastDate: Date | null = null;
-
-    // Process each log entry
-    sortedLogs.forEach(log => {
-      const logDate = new Date(log.date);
-
-      // If this is a clean day, increment the streak
-      if (log.is_clean) {
-        // Check if this is a consecutive day
-        if (lastDate) {
-          const dayDiff = Math.floor((logDate.getTime() - lastDate.getTime()) / (24 * 3600 * 1000));
-
-          // If consecutive day or same day, continue streak
-          if (dayDiff <= 1) {
-            currentStreak++;
-          } else {
-            // Break in streak, record previous streak and start new one
-            if (currentStreak > 0) {
-              streaks.push(currentStreak);
-            }
-            currentStreak = 1;
-          }
-        } else {
-          // First clean day
-          currentStreak = 1;
-        }
-
-        // Update max streak
-        maxStreak = Math.max(maxStreak, currentStreak);
-      } else {
-        // Not a clean day, break the streak
-        if (currentStreak > 0) {
-          streaks.push(currentStreak);
-        }
-        currentStreak = 0;
-      }
-
-      // Update last date
-      lastDate = logDate;
-    });
-
-    // Add the final streak if exists
-    if (currentStreak > 0) {
-      streaks.push(currentStreak);
-    }
-
-    // Calculate average streak
-    const totalStreaks = streaks.length;
-    const sumStreaks = streaks.reduce((sum, streak) => sum + streak, 0);
-    const avgStreak = totalStreaks > 0 ? Math.round(sumStreaks / totalStreaks) : 0;
-
-    // Update state
-    setLongestStreak(maxStreak);
-    setAverageStreak(avgStreak);
-
-    console.log('Streak stats calculated:', { longestStreak: maxStreak, averageStreak: avgStreak, streaks });
-  };
+  // Removed local longest/average streak calculations to rely solely on backend values
 
   // Fetch longest and average streak from backend
   const fetchBackendStreaks = async () => {
