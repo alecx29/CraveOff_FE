@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, SafeAreaView } from 'react-native';
+import { StyleSheet, SafeAreaView, View } from 'react-native';
 import { router } from 'expo-router';
 
 import GoalsScreen from '@/src/screen-components/goals/GoalsScreen';
 import { useTheme } from '@/src/context/ThemeProvider';
 import { CustomAlert } from '@/src/components/alert';
-import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function Goals() {
-  useTheme();
+  const { theme } = useTheme();
   const [showError, setShowError] = useState(false);
   const [errorMessage] = useState('');
   
@@ -24,8 +24,18 @@ export default function Goals() {
     setShowError(false);
   };
   
+  // Gradient identical cu rating screen
+  const colorsMap = theme.colors as Record<string, string>;
+  const topPurple = (colorsMap && (colorsMap as any)['primaryDark']) || theme.colors.primary;
+
   return (
-    <GradientBackground>
+    <View style={{ flex: 1 }}>
+      <LinearGradient
+        colors={[topPurple || '#4f46e5', '#2a2654', '#0f0f17', '#000000']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
       <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]}>
         <StatusBar style="auto" />
         <GoalsScreen onComplete={handleComplete} />
@@ -39,7 +49,7 @@ export default function Goals() {
           type="error"
         />
       </SafeAreaView>
-    </GradientBackground>
+    </View>
   );
 }
 

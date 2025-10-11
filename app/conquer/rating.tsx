@@ -8,7 +8,6 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LottieUniversal from '@/src/components/LottieUniversal';
 import Constants from 'expo-constants';
-import * as StoreReview from 'expo-store-review';
 
 export default function ConquerRating() {
   const insets = useSafeAreaInsets();
@@ -16,6 +15,19 @@ export default function ConquerRating() {
   const styles = createStyles(insets);
   const colorsMap = theme.colors as Record<string, string>;
   const topPurple = colorsMap['primaryDark'] ?? colorsMap['primary'];
+
+  // Safely load store review only if native module exists in the binary
+  const getStoreReview = async (): Promise<any | null> => {
+    try {
+      const g: any = globalThis as any;
+      const hasNative = !!(g?.ExpoModules?.ExpoStoreReview) || !!(g?.NativeModules?.ExpoStoreReview);
+      if (!hasNative) return null;
+      const mod = await import('expo-store-review');
+      return mod;
+    } catch {
+      return null;
+    }
+  };
 
   const handleNext = () => {
     router.push('/(auth)/subscription');
@@ -26,7 +38,8 @@ export default function ConquerRating() {
       try {
         // Dynamic import guarded to avoid TS resolution error when module not installed
         await new Promise(res => setTimeout(res, 1600)); // 1.6s polite delay
-        if (await StoreReview.isAvailableAsync()) {
+        const StoreReview = await getStoreReview();
+        if (StoreReview && (await StoreReview.isAvailableAsync())) {
           await StoreReview.requestReview();
           return;
         }
@@ -44,7 +57,8 @@ export default function ConquerRating() {
   const openStoreManually = async () => {
     try {
       await new Promise(res => setTimeout(res, 300)); // tiny UX delay
-      if (await StoreReview.isAvailableAsync()) {
+      const StoreReview = await getStoreReview();
+      if (StoreReview && (await StoreReview.isAvailableAsync())) {
         await StoreReview.requestReview();
         return;
       }
@@ -57,8 +71,9 @@ export default function ConquerRating() {
     try {
       if (Platform.OS === 'android') {
         const pkg = ((Constants as any).expoConfig?.android?.package) || 'com.usualsuspect29.craveoffapp';
-        const marketUrl = `market://details?id=${pkg}`;
-        const webUrl = `https://play.google.com/store/apps/details?id=${pkg}`;
+        // Try to open Play review composer directly when possible
+        const marketUrl = `market://details?id=${pkg}&reviewId=0`;
+        const webUrl = `https://play.google.com/store/apps/details?id=${pkg}&reviewId=0`;
         try {
           const supported = await Linking.canOpenURL(marketUrl);
           if (supported) {
@@ -70,7 +85,8 @@ export default function ConquerRating() {
       } else if (Platform.OS === 'ios') {
         const appId = ((Constants as any).expoConfig?.extra?.iosAppStoreId) || '';
         if (appId) {
-          const url = `itms-apps://itunes.apple.com/app/id${appId}?action=write-review`;
+          // Use apps.apple.com for modern deep links
+          const url = `itms-apps://apps.apple.com/app/id${appId}?action=write-review`;
           try {
             await Linking.openURL(url);
             return;

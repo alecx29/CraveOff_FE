@@ -99,7 +99,7 @@ module.exports = {
       googleIosClientId: "391159890839-bh8c7d8toeqfjbg4cj1k2438ao5pajon.apps.googleusercontent.com",
       appleServiceId: "com.usualsuspect29.craveoffapp",
       // Set this when you have the App Store id to deep-link to rating
-      iosAppStoreId: process.env.IOS_APP_STORE_ID || ""
+      iosAppStoreId: "6748585691"
     },
     
     // Disable the development status bar

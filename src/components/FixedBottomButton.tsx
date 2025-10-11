@@ -15,6 +15,7 @@ interface FixedBottomButtonProps {
   textStyle?: TextStyle;
   customStyle?: ViewStyle;
   absolute?: boolean;
+  extendUnderIOSBottom?: boolean; // if true, iOS bar extends under home indicator
 }
 
 const FixedBottomButton: React.FC<FixedBottomButtonProps> = ({
@@ -27,10 +28,11 @@ const FixedBottomButton: React.FC<FixedBottomButtonProps> = ({
   textStyle,
   customStyle,
   absolute = true,
+  extendUnderIOSBottom = true,
 }) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = createStyles(theme, insets, absolute);
+  const styles = createStyles(theme, insets, absolute, extendUnderIOSBottom);
 
   return (
     <View style={[styles.container, customStyle]}>
@@ -59,11 +61,11 @@ const FixedBottomButton: React.FC<FixedBottomButtonProps> = ({
   );
 };
 
-const createStyles = (theme: any, insets: any, absolute: boolean) => StyleSheet.create({
+const createStyles = (theme: any, insets: any, absolute: boolean, extendUnderIOSBottom: boolean) => StyleSheet.create({
   container: {
     position: absolute ? 'absolute' : 'relative',
     // iOS: extend under safe area; Android: stay flush at 0
-    bottom: absolute ? (Platform.OS === 'ios' ? -insets.bottom : 0) : undefined,
+    bottom: absolute ? (Platform.OS === 'ios' && extendUnderIOSBottom ? -insets.bottom : 0) : undefined,
     left: absolute ? 0 : undefined,
     right: absolute ? 0 : undefined,
     backgroundColor: 'rgb(3 7 18)',

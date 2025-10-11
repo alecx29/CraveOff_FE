@@ -134,6 +134,7 @@ export default function AnalysisComplete() {
             shadowOpacity: 0
           }}
           buttonStyle={{ backgroundColor: theme.colors.primary }}
+          extendUnderIOSBottom={false}
         />
       </SafeAreaView>
     </GradientBackground>
