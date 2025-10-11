@@ -3,7 +3,7 @@ module.exports = {
   expo: {
     name: "CraveOff",
     slug: "craveoff-app",
-    version: "1.2.7",
+    version: "1.2.8",
     
     // Note: These properties will not be synced when android/ios folders are present
     orientation: "portrait",
@@ -32,7 +32,7 @@ module.exports = {
       },
       edgeToEdgeEnabled: true,
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 27,
+      versionCode: 28,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"
@@ -97,7 +97,9 @@ module.exports = {
       googleWebClientId: "391159890839-orc2jub1onifvuqgtchj0tonpsd5jn61.apps.googleusercontent.com",
       googleAndroidClientId: "391159890839-va2ga57lfrnfugnhn4mvm01jdug850rv.apps.googleusercontent.com",
       googleIosClientId: "391159890839-bh8c7d8toeqfjbg4cj1k2438ao5pajon.apps.googleusercontent.com",
-      appleServiceId: "com.usualsuspect29.craveoffapp"
+      appleServiceId: "com.usualsuspect29.craveoffapp",
+      // Set this when you have the App Store id to deep-link to rating
+      iosAppStoreId: process.env.IOS_APP_STORE_ID || ""
     },
     
     // Disable the development status bar

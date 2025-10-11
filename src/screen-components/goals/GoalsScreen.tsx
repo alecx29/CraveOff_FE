@@ -132,9 +132,9 @@ const GoalsScreen = ({ onComplete }: GoalsScreenProps) => {
     }
   };
   
-  // Funcție pentru a naviga înapoi
+  // Funcție pentru a naviga înapoi la ecranul anterior (ex: /conquer/rating)
   const handleBackPress = () => {
-    router.push('/onboarding/drug');
+    router.back();
   };
 
   return (
@@ -248,7 +248,7 @@ const GoalsScreen = ({ onComplete }: GoalsScreenProps) => {
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    // backgroundColor: theme.colors.background,
   },
   headerContainer: {
     paddingHorizontal: 20,

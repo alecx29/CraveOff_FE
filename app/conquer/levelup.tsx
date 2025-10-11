@@ -13,7 +13,7 @@ export default function ConquerLevelUp() {
   const insets = useSafeAreaInsets();
   const styles = createStyles(insets);
   
-  // Handler to navigate to goals page
+  // Handler: go to goals next (rating will be after goals)
   const handleNext = () => {
     router.replace('/(auth)/goals');
   };

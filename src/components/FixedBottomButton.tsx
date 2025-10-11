@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, Text, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Text, ActivityIndicator, ViewStyle, TextStyle, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -62,13 +62,15 @@ const FixedBottomButton: React.FC<FixedBottomButtonProps> = ({
 const createStyles = (theme: any, insets: any, absolute: boolean) => StyleSheet.create({
   container: {
     position: absolute ? 'absolute' : 'relative',
-    bottom: absolute ? 0 : undefined,
+    // iOS: extend under safe area; Android: stay flush at 0
+    bottom: absolute ? (Platform.OS === 'ios' ? -insets.bottom : 0) : undefined,
     left: absolute ? 0 : undefined,
     right: absolute ? 0 : undefined,
     backgroundColor: 'rgb(3 7 18)',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: Math.max(insets.bottom + 16, 32),
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    // Add back the safe-area as inner padding so content sits above the home indicator
+    paddingBottom: Math.max(insets.bottom + 10, 20),
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     ...(absolute ? theme.shadows.medium : {}),
@@ -77,8 +79,8 @@ const createStyles = (theme: any, insets: any, absolute: boolean) => StyleSheet.
   button: {
     backgroundColor: theme.colors.primary,
     borderRadius: 30,
-    paddingVertical: 18,
-    paddingHorizontal: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 22,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
