@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView, Keyboard } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { JournalEntry } from '@/src/context/JournalContext';
@@ -28,6 +30,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
 }) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const insets = useSafeAreaInsets();
   
   const today = new Date().toISOString();
   
@@ -166,17 +169,18 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-      >
-        <ScrollView 
+      {Platform.OS === 'android' ? (
+        <KeyboardAwareScrollView
+          enableOnAndroid
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={Platform.OS === 'ios' ? 'on-drag' : 'none'}
+          enableAutomaticScroll
+          extraScrollHeight={100}
+          extraHeight={100}
+          keyboardOpeningTime={0}
           onScrollBeginDrag={() => Keyboard.dismiss()}
+          showsVerticalScrollIndicator={false}
         >
           {/* Title Input */}
           <View style={styles.inputContainer}>
@@ -295,8 +299,142 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
               ))}
             </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      ) : (
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={'position'}
+          keyboardVerticalOffset={Math.max(insets.top, 8)}
+        >
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollViewContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            onScrollBeginDrag={() => Keyboard.dismiss()}
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustContentInsets={false}
+          >
+            {/* Title Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Title</Text>
+              <TextInput
+                style={styles.input}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="Enter a title..."
+                placeholderTextColor={theme.colors.textMuted}
+                editable={!isSaving}
+                returnKeyType="done"
+                blurOnSubmit
+                onSubmitEditing={() => Keyboard.dismiss()}
+              />
+            </View>
+            
+            {/* Mood Selector */}
+            <View style={styles.moodContainer}>
+              <Text style={styles.label}>How are you feeling?</Text>
+              <View style={styles.moodButtonsContainer}>
+                {(['difficult', 'okay', 'good', 'great'] as MoodOption[]).map((moodOption) => {
+                  const moodDetails = getMoodDetails(moodOption);
+                  return (
+                    <TouchableOpacity
+                      key={moodOption}
+                      style={[
+                        styles.moodButton,
+                        { 
+                          borderColor: moodDetails.borderColor,
+                          backgroundColor: moodDetails.backgroundColor
+                        },
+                        mood === moodOption && styles.selectedMoodButton,
+                        isSaving && styles.disabledButton
+                      ]}
+                      onPress={() => setMood(moodOption)}
+                      disabled={isSaving}
+                    >
+                      <Text style={styles.emoji}>{moodDetails.emoji}</Text>
+                      <Text 
+                        style={[
+                          styles.moodLabel,
+                          { color: moodDetails.color },
+                          mood === moodOption && styles.selectedMoodLabel,
+                          isSaving && styles.disabledText
+                        ]}
+                      >
+                        {moodDetails.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+            
+            {/* Content Input - with fixed height */}
+            <View style={styles.journalEntryContainer}>
+              <TextInput
+                style={styles.textArea}
+                value={content}
+                onChangeText={setContent}
+                placeholder="Write your thoughts..."
+                placeholderTextColor={theme.colors.textMuted}
+                multiline
+                textAlignVertical="top"
+                editable={!isSaving}
+              />
+            </View>
+            
+            {/* Tags Input - at the bottom */}
+            <View style={styles.tagsContainer}>
+              <Text style={styles.label}>Tags</Text>
+              <View style={styles.tagInputContainer}>
+                <TextInput
+                  style={styles.tagInput}
+                  value={tagInput}
+                  onChangeText={setTagInput}
+                  placeholder="Add a tag..."
+                  placeholderTextColor={theme.colors.textMuted}
+                  onSubmitEditing={addTag}
+                  editable={!isSaving}
+                />
+                <TouchableOpacity 
+                  style={[
+                    styles.addTagButton,
+                    isSaving && styles.disabledButton
+                  ]}
+                  onPress={addTag}
+                  disabled={isSaving}
+                >
+                  <Ionicons 
+                    name="add" 
+                    size={24} 
+                    color={isSaving ? theme.colors.textMuted : theme.colors.primary} 
+                  />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Tags Display */}
+              <View style={styles.tagsListContainer}>
+                {tags.map((tag, index) => (
+                  <View key={index} style={styles.tag}>
+                    <Text style={styles.tagText}>#{tag}</Text>
+                    <TouchableOpacity
+                      onPress={() => removeTag(index)}
+                      style={styles.removeTagButton}
+                      disabled={isSaving}
+                    >
+                      <Ionicons 
+                        name="close-circle" 
+                        size={16} 
+                        color={isSaving ? theme.colors.textSecondary : theme.colors.textMuted} 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      )}
     </View>
   );
 };

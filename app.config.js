@@ -31,6 +31,7 @@ module.exports = {
         backgroundColor: "#000000"
       },
       edgeToEdgeEnabled: true,
+      softwareKeyboardLayoutMode: "resize",
       package: "com.usualsuspect29.craveoffapp",
       versionCode: 31,
       notification: {
