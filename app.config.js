@@ -32,7 +32,7 @@ module.exports = {
       },
       edgeToEdgeEnabled: true,
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 30,
+      versionCode: 31,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"

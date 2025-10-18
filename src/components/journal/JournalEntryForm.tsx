@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView, Keyboard } from 'react-native';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { JournalEntry } from '@/src/context/JournalContext';
@@ -175,6 +175,8 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'on-drag' : 'none'}
+          onScrollBeginDrag={() => Keyboard.dismiss()}
         >
           {/* Title Input */}
           <View style={styles.inputContainer}>
@@ -186,6 +188,9 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
               placeholder="Enter a title..."
               placeholderTextColor={theme.colors.textMuted}
               editable={!isSaving}
+              returnKeyType="done"
+              blurOnSubmit
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
           

@@ -154,8 +154,10 @@ const SettingsScreen = () => {
             colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
             style={styles.statGradient}
           >
-            <Text style={styles.statNumber}>{cleanDays}</Text>
-            <Ionicons name="flame" size={16} color={getFlameColor()} style={styles.statIcon} />
+            <View style={styles.statInlineRow}>
+              <Text style={styles.statNumber}>{cleanDays}</Text>
+              <Ionicons name="flame" size={16} color={getFlameColor()} style={styles.statIcon} />
+            </View>
             <Text style={styles.statLabel}>Days Clean</Text>
           </LinearGradient>
         </View>
@@ -321,12 +323,21 @@ const createStyles = (theme: any) => StyleSheet.create({
     padding: 0,
     alignItems: 'center',
     marginHorizontal: 4,
+    height: 88,
     overflow: 'hidden',
   },
   statGradient: {
     padding: 16,
     borderRadius: theme.borderRadius.medium,
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    minHeight: 88,
+  },
+  statInlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statNumber: {
     fontSize: 24,
@@ -335,7 +346,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 4,
   },
   statIcon: {
-    marginBottom: 4,
+    marginLeft: 6,
   },
   statLabel: {
     fontSize: 12,

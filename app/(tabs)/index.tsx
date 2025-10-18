@@ -1896,7 +1896,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginRight: 8,
   },
   flameIcon: {
-    marginTop: 4,
+     // align vertically with the number
+    marginTop: 0,
   },
   cleanDaysText: {
     fontSize: 18,

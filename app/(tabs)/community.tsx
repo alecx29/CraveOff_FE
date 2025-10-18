@@ -15,6 +15,10 @@ export default function CommunityScreen() {
     Linking.openURL('https://www.reddit.com/r/CraveOff/');
   };
 
+  const openTelegram = () => {
+    Linking.openURL('https://t.me/+csKNRFfBgRc1ZTFk');
+  };
+
   return (
     <GradientBackground>
       <ScrollView style={styles.container} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false}>
@@ -31,7 +35,7 @@ export default function CommunityScreen() {
               style={styles.heroImage}
               resizeMode="contain"
             />
-            <Text style={styles.heroTitle}>You're Not Alone</Text>
+            <Text style={styles.heroTitle}>You&apos;re Not Alone</Text>
             <Text style={styles.heroText}>
               Thousands of people are on the same journey as you. Share experiences, find accountability partners, and get support from a community that understands.
             </Text>
@@ -50,12 +54,12 @@ export default function CommunityScreen() {
               </View>
               <View style={styles.redditTitleContainer}>
                 <Text style={styles.redditTitle}>r/CraveOff</Text>
-                <Text style={styles.redditMembers}>5.2k members • Private community</Text>
+                <Text style={styles.redditMembers}>500+ members • Private community</Text>
               </View>
             </View>
             
             <Text style={styles.redditDescription}>
-              Join our private Reddit community where you can share your journey, ask questions, and get support from people who understand what you're going through.
+              Join our private Telegram and Reddit communities where you can share your journey, ask questions, and get support from people who understand what you&apos;re going through.
             </Text>
             
             <View style={styles.benefitsContainer}>
@@ -72,6 +76,15 @@ export default function CommunityScreen() {
                 <Text style={styles.benefitText}>Success Stories</Text>
               </View>
             </View>
+
+            <TouchableOpacity 
+              style={styles.telegramButton} 
+              onPress={openTelegram}
+              activeOpacity={0.8}
+            >
+              <FontAwesome name="telegram" size={24} color="#FFFFFF" />
+              <Text style={styles.telegramButtonText}>Join our Telegram</Text>
+            </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.redditButton} 
@@ -132,7 +145,7 @@ export default function CommunityScreen() {
           >
             <Text style={styles.comingSoonTitle}>Coming Soon</Text>
             <Text style={styles.comingSoonText}>
-              We're working on more community features, including direct messaging, accountability partners, and live support groups.
+              We&apos;re working on more community features, including direct messaging, accountability partners, and live support groups.
             </Text>
             <View style={styles.comingSoonBadge}>
               <Text style={styles.comingSoonBadgeText}>Stay Tuned</Text>
@@ -255,9 +268,26 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: 9999,
     paddingVertical: 14,
     paddingHorizontal: 24,
+    marginTop: 12,
     ...theme.shadows.light,
   },
   redditButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  telegramButton: {
+    backgroundColor: '#229ED9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 9999,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    ...theme.shadows.light,
+  },
+  telegramButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
