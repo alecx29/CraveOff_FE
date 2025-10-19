@@ -30,7 +30,7 @@ export default function ConquerRating() {
   };
 
   const handleNext = () => {
-    router.push('/(auth)/subscription');
+    router.push('/conquer/commitment');
   };
 
   React.useEffect(() => {

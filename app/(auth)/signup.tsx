@@ -3,6 +3,7 @@
 import { router } from 'expo-router';
 import { useCallback, useContext, useState } from 'react';
 import { StyleSheet, SafeAreaView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
@@ -79,6 +80,12 @@ export default function Signup() {
     setQuizCompleted(true);
     
     try {
+      // Persist the entered name for later personalization
+      if (quizData?.personalInfo?.name) {
+        try {
+          await AsyncStorage.setItem('signup.personalName', quizData.personalInfo.name);
+        } catch {}
+      }
       // Set analyzing state to true
       setIsAnalyzing(true);
       

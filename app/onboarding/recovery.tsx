@@ -18,7 +18,7 @@ export default function RecoveryOnboarding() {
   };
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#db042c' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.primary }]}>
       <StatusBar style="light" />
       
       {/* Logo at the top */}

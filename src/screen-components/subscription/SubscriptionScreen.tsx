@@ -30,7 +30,8 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
   
   // Adăugăm un buton de back
   const handleBackPress = () => {
-    router.back();
+    // Always go back to the plan built (typing) screen
+    router.replace('/conquer/planBuilt');
   };
 
   return (
