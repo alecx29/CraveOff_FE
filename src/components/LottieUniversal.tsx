@@ -7,11 +7,11 @@ export default function LottieUniversal(props: any) {
   useEffect(() => {
     const load = async () => {
       if (Platform.OS === 'web') {
-        // const mod = await import('lottie-react');
-        // setLottieView(() => mod.default);
+        const mod = await import('lottie-react');
+        setLottieView(() => mod.default);
       } else {
-        // const mod = await import('lottie-react-native');
-        // setLottieView(() => mod.default);
+        const mod = await import('lottie-react-native');
+        setLottieView(() => mod.default);
       }
     };
     load();

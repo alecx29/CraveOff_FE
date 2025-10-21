@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LottieUniversal from '@/src/components/LottieUniversal';
 import Svg, { Path } from 'react-native-svg';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 
@@ -81,31 +82,33 @@ export default function ConquerCommitment() {
             <Text style={[styles.subtitle, { color: '#ffffff' }]}>Finally, promise yourself that you will never watch porn again.</Text>
 
             <View style={styles.signatureWrapper}>
-              <View style={styles.signatureBox} {...panResponder.panHandlers}>
-                <Svg width="100%" height="100%">
-                  {paths.map((d, idx) => (
-                    <Path
-                      key={idx}
-                      d={d}
-                      stroke="#111827"
-                      strokeWidth={3}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      fill="none"
-                    />
-                  ))}
-                  {currentPath ? (
-                    <Path
-                      d={currentPath}
-                      stroke="#111827"
-                      strokeWidth={3}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      fill="none"
-                    />
-                  ) : null}
-                </Svg>
-              </View>
+              <Animated.View entering={ZoomIn.duration(450).springify()}>
+                <View style={styles.signatureBox} {...panResponder.panHandlers}>
+                  <Svg width="100%" height="100%">
+                    {paths.map((d, idx) => (
+                      <Path
+                        key={idx}
+                        d={d}
+                        stroke="#111827"
+                        strokeWidth={3}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                      />
+                    ))}
+                    {currentPath ? (
+                      <Path
+                        d={currentPath}
+                        stroke="#111827"
+                        strokeWidth={3}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                      />
+                    ) : null}
+                  </Svg>
+                </View>
+              </Animated.View>
               <TouchableOpacity onPress={handleClear} activeOpacity={0.7} style={styles.clearButton}>
                 <Text style={styles.clearText}>Clear</Text>
               </TouchableOpacity>
@@ -121,7 +124,7 @@ export default function ConquerCommitment() {
               activeOpacity={0.8}
             >
               <Text style={styles.finishButtonText}>Finish</Text>
-              <Ionicons name="checkmark" size={20} color="#6366f1" />
+              {/* <Ionicons name="checkmark" size={20} color="#000" /> */}
             </TouchableOpacity>
           </View>
         </View>
@@ -264,7 +267,7 @@ const createStyles = (insets: any) => StyleSheet.create({
     elevation: 3,
   },
   finishButtonText: {
-    color: '#6366f1',
+    color: '#000',
     fontSize: 16,
     fontWeight: 'bold',
     marginRight: 8,

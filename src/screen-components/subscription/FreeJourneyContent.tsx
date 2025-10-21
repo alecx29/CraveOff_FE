@@ -29,7 +29,6 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
   // Features with icons
   const features: FeatureItem[] = [
     { text: 'Personalized recovery plan', icon: 'document-text' },
-    { text: 'Daily motivational content', icon: 'flame' },
     { text: 'Progress tracking', icon: 'trending-up' },
     { text: 'Community support', icon: 'people' },
     { text: 'Advanced analytics', icon: 'analytics' },
@@ -245,9 +244,7 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
   return (
     <>
       <Animated.View entering={FadeInDown.duration(600).delay(200)}>
-        <Text style={styles.subtitle}>
-          Get unlimited access to CraveOff including: Personalized and Science-Based Custom Plan, Content Blocker, Streak Track, Daily Pledges, Recovery Progress + much more!
-        </Text>
+        <View style={{ height: 8 }} />
       </Animated.View>
       
       <Animated.View 
@@ -257,22 +254,15 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         <View style={styles.badgeContainer}>
           <Text style={styles.badgeText}>EARLY ACCESS</Text>
         </View>
-        
-        <Text style={styles.offerTitle}>
-          Start Your Journey For Free
-        </Text>
-        
+        <Text style={styles.offerTitle}>Start Your Journey For Free</Text>
         <Text style={styles.offerDescription}>
           As we are just launching, we are offering all premium features for free for a limited time. Be among the first to experience the full power of CraveOff.
         </Text>
-        
-        <View style={styles.featuresContainer}>
+        <View style={styles.featuresGrid}>
           {features.map((feature, index) => (
-            <View key={index} style={styles.featureItem}>
-              <View style={styles.iconContainer}>
-                <Ionicons name={feature.icon as any} size={18} color="white" />
-              </View>
-              <Text style={styles.featureText}>{feature.text}</Text>
+            <View key={index} style={styles.featureChip}>
+              <Ionicons name={feature.icon as any} size={14} color="#fff" />
+              <Text style={styles.featureChipText}>{feature.text}</Text>
             </View>
           ))}
         </View>
@@ -307,24 +297,25 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
   );
 };
 
-const createStyles = (theme: any) => StyleSheet.create({
+const createStyles = (_theme: any) => StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 16,
     lineHeight: 22,
   },
   freeOfferContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 30,
     borderWidth: 1,
-    borderColor: 'rgba(129, 140, 248, 0.3)',
+    borderColor: 'rgba(129, 140, 248, 0.28)',
     position: 'relative',
-    paddingTop: 36,
+    paddingTop: 38,
     backdropFilter: 'blur(10px)',
+    marginTop: 50,
   },
   badgeContainer: {
     position: 'absolute',
@@ -359,33 +350,28 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 15,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 14,
     lineHeight: 22,
   },
-  featuresContainer: {
-    marginBottom: 10,
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  featureItem: {
+  featureChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: 'rgba(99, 102, 241, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(129, 140, 248, 0.35)'
   },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#6366F1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-  },
-  featureText: {
-    fontSize: 16,
-    color: 'white',
+  featureChipText: {
+    color: '#fff',
+    fontSize: 13,
+    marginLeft: 6,
   },
   actionContainer: {
     marginTop: 16,
