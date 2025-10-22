@@ -75,6 +75,7 @@ module.exports = {
       "expo-notifications",
       "expo-secure-store",
       "expo-dev-client",
+      "react-native-iap",
       "expo-web-browser",
       [
         "expo-apple-authentication",

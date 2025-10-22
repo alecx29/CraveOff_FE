@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import FreeJourneyContent from './FreeJourneyContent';
+import PaywallTest from './PaywallTest';
 
 interface SubscriptionScreenProps {
   onComplete?: () => void;
@@ -116,6 +117,11 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
           
           {/* Free Journey Content */}
           <FreeJourneyContent onContinue={handleContinue} />
+
+          {/* Test paywall (non-blocking) */}
+          <Animated.View entering={FadeInDown.duration(500).delay(600)}>
+            <PaywallTest onSubscribed={handleContinue} />
+          </Animated.View>
         </ScrollView>
       </View>
     </ImageBackground>
