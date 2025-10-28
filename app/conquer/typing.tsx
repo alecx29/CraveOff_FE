@@ -2,7 +2,6 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Text, Platform, TouchableOpacity, Dimensions } from 'react-native';
 // import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -168,26 +167,11 @@ export default function ConquerTyping() {
       </View>
       {isComplete && (
         <Animated.View entering={FadeInUp.duration(400)} style={styles.ctaContainer}>
-          {Platform.OS === 'android' ? (
-            <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.85}>
-              <View style={styles.continueContent}>
-                <Text style={styles.continueText}>Continue</Text>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <LinearGradient
-              colors={['#8B5CF6', '#6366F1']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.ctaGradientBorder}
-            >
-              <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.85}>
-                <View style={styles.continueContent}>
-                  <Text style={styles.continueText}>Continue</Text>
-                </View>
-              </TouchableOpacity>
-            </LinearGradient>
-          )}
+          <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.85}>
+            <View style={styles.continueContent}>
+              <Text style={styles.continueText}>Continue</Text>
+            </View>
+          </TouchableOpacity>
         </Animated.View>
       )}
       {!isComplete && (
@@ -266,10 +250,6 @@ const createStyles = (insets: any) => StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
-  },
-  ctaGradientBorder: {
-    borderRadius: 34,
-    padding: 2,
   },
   continueContent: {
     flexDirection: 'row',

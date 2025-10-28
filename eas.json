@@ -9,10 +9,8 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal",
-      "ios": {
-        "simulator": false
-      }
+      "distribution": "store",
+      "channel": "preview"
     },
     "production": {
       "distribution": "store",
