@@ -186,7 +186,7 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
       }
 
       // First API call: Mark signup as complete, including the idToken and provider if available
-      const doRequest = async () => apiClient.post(BackendRoutes.SIGNUP_COMPLETE || '/profile/signup-complete', requestBody);
+      const doRequest = async () => apiClient.post(BackendRoutes.SIGNUP_COMPLETE_ALT, requestBody);
       let response = await doRequest();
       console.log('Signup marked as complete');
       console.log('Response structure:', JSON.stringify(response.data, null, 2));
@@ -284,7 +284,7 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
           const resolvedTimeZone = (Intl as any)?.DateTimeFormat?.().resolvedOptions?.().timeZone || (Intl as any)?.resolvedOptions?.().timeZone || 'UTC';
           const retryBody: any = { signup_complete: true, timezone: resolvedTimeZone, idToken: freshIdToken, provider: freshProvider };
           try {
-            const retryResponse = await apiClient.post(BackendRoutes.SIGNUP_COMPLETE || '/profile/signup-complete', retryBody);
+            const retryResponse = await apiClient.post(BackendRoutes.SIGNUP_COMPLETE_ALT, retryBody);
             // mimic success path
             console.log('Signup marked as complete (after retry)');
             console.log('Response structure:', JSON.stringify(retryResponse.data, null, 2));

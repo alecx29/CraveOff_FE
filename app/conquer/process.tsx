@@ -2,31 +2,70 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Text, TouchableOpacity, Image, ScrollView, Dimensions, Platform } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ConquerProgressDots from '@/src/components/ConquerProgressDots';
+import { Ionicons } from '@expo/vector-icons';
 import LottieUniversal from '@/src/components/LottieUniversal';
+import ConquerProgressDots from '@/src/components/ConquerProgressDots';
 
 const { width, height } = Dimensions.get('window');
 
-export default function ConquerLevelUp() {
+type Step = {
+  lottie: any;
+  title: string;
+  subtitle: string;
+};
+
+const STEPS: Step[] = [
+  {
+    lottie: require('@/assets/images/Animation - Superman2.json'),
+    title: 'Welcome to CraveOff',
+    subtitle: 'The class-leading porn addiction recovery app that helps you quit for good.',
+  },
+  {
+    lottie: require('@/assets/images/Animation - brainRewire.json'),
+    title: 'Rewire your brain with CraveOff',
+    subtitle: 'Science-backed exercises help you rewire your brain, rebuild your dopamine receptors, and avoid setbacks.',
+  },
+  {
+    lottie: require('@/assets/images/Animation - winner.json'),
+    title: 'Level up your life',
+    subtitle: 'Rebooting has immense psychological and physical benefits. Grow stronger, healthier, and happier.',
+  },
+];
+
+export default function ConquerProcess() {
   const insets = useSafeAreaInsets();
   const styles = createStyles(insets);
+  const scrollRef = React.useRef<ScrollView | null>(null);
+  const [index, setIndex] = React.useState(0);
   const lastNavAtRef = React.useRef(0);
-  
-  // Handler: go to goals next (rating will be after goals)
+
+  const isLast = index >= STEPS.length - 1;
+
   const handleNext = () => {
     const now = Date.now();
-    if (now - lastNavAtRef.current < 600) return;
+    if (now - lastNavAtRef.current < 400) return;
     lastNavAtRef.current = now;
-    router.replace('/(auth)/goals');
+    if (isLast) {
+      router.replace('/(auth)/goals');
+      return;
+    }
+    const next = Math.min(index + 1, STEPS.length - 1);
+    setIndex(next);
+    scrollRef.current?.scrollTo({ x: next * width, animated: true });
   };
-  
+
+  const onMomentumEnd = (e: any) => {
+    const x = e?.nativeEvent?.contentOffset?.x || 0;
+    const idx = Math.round(x / width);
+    if (!Number.isNaN(idx)) setIndex(Math.max(0, Math.min(idx, STEPS.length - 1)));
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
-      {/* Background Animation - positioned absolutely to cover the entire screen */}
+
+      {/* Background Animation */}
       <View style={styles.backgroundContainer}>
         <LottieUniversal
           source={require('@/assets/images/Animation_SkyStar.json')}
@@ -36,7 +75,7 @@ export default function ConquerLevelUp() {
           resizeMode="cover"
         />
       </View>
-      
+
       {/* Content Container */}
       <View style={styles.contentWrapper}>
         {/* Logo at the top */}
@@ -47,36 +86,39 @@ export default function ConquerLevelUp() {
             resizeMode="contain"
           />
         </View>
-        
+
         <View style={styles.mainContainer}>
           <ScrollView 
-            contentContainerStyle={styles.scrollContainer}
-            showsVerticalScrollIndicator={false}
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={onMomentumEnd}
+            contentContainerStyle={{ alignItems: 'stretch' }}
+            scrollEventThrottle={16}
           >
-            <View style={styles.contentContainer}>
-              <View style={styles.imageContainer}>
-                <LottieUniversal
-                  source={require('@/assets/images/Animation - winner.json')}
-                  autoPlay
-                  loop
-                  style={styles.lottie}
-                />
+            {STEPS.map((step, i) => (
+              <View key={i} style={{ width, paddingHorizontal: width * 0.06 }}>
+                <View style={styles.contentContainer}>
+                  <View style={styles.imageContainer}>
+                    <LottieUniversal
+                      source={step.lottie}
+                      autoPlay
+                      loop
+                      style={styles.lottie}
+                    />
+                  </View>
+                  <Text style={[styles.title, { color: '#ffffff' }]}>{step.title}</Text>
+                  <Text style={[styles.subtitle, { color: '#ffffff' }]}>{step.subtitle}</Text>
+                </View>
               </View>
-              
-              <Text style={[styles.title, { color: '#ffffff' }]}>
-                Level up your life
-              </Text>
-              
-              <Text style={[styles.subtitle, { color: '#ffffff' }]}>
-                Rebooting has immense psychological and physical benefits. Grow stronger, healthier, and happier.
-              </Text>
-            </View>
+            ))}
           </ScrollView>
-          
+
           {/* Fixed position elements at bottom */}
           <View style={styles.bottomContainer}>
             {/* Progress dots */}
-            <ConquerProgressDots activeIndex={2} />
+            <ConquerProgressDots activeIndex={index} />
             
             {/* Custom button */}
             <TouchableOpacity 
@@ -84,7 +126,7 @@ export default function ConquerLevelUp() {
               onPress={handleNext}
               activeOpacity={0.8}
             >
-              <Text style={styles.nextButtonText}>Next</Text>
+              <Text style={styles.nextButtonText}>{isLast ? 'Continue' : 'Next'}</Text>
               <Ionicons name="arrow-forward" size={20} color="#6366f1" />
             </TouchableOpacity>
           </View>
@@ -140,12 +182,7 @@ const createStyles = (insets: any) => StyleSheet.create({
     position: 'relative',
     zIndex: 1,
   },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: height * 0.15, // Add padding to account for bottom container
-  },
   contentContainer: {
-    paddingHorizontal: width * 0.06,
     paddingVertical: height * 0.04,
     alignItems: 'center',
     justifyContent: 'center',
@@ -179,7 +216,7 @@ const createStyles = (insets: any) => StyleSheet.create({
   },
   bottomContainer: {
     position: 'absolute',
-    bottom: height * 0.08 + insets.bottom, // Account for safe area to match onboarding
+    bottom: height * 0.08 + insets.bottom,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -202,9 +239,11 @@ const createStyles = (insets: any) => StyleSheet.create({
     marginTop: height * 0.02,
   },
   nextButtonText: {
-    color: "#6366f1",
+    color: '#6366f1',
     fontSize: 16,
     fontWeight: 'bold',
     marginRight: 8,
   },
-}); 
+});
+
+

@@ -116,7 +116,7 @@ const SymptomsScreen: React.FC<SymptomsScreenProps> = ({ onComplete }) => {
       onComplete();
     } else {
       // Fallback to default navigation if no callback provided
-      router.replace('/onboarding/drug');
+      router.replace('/onboarding/process');
     }
   };
   

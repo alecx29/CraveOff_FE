@@ -9,9 +9,9 @@ import { useTheme } from '@/src/context/ThemeProvider';
 export default function Symptoms() {
   const { theme } = useTheme();
   
-  // Add onComplete handler to navigate to onboarding/drug
+  // After symptoms, go to onboarding process
   const handleComplete = () => {
-    router.replace('/onboarding/drug');
+    router.replace('/onboarding/process');
   };
   
   return (

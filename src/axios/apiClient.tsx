@@ -126,7 +126,7 @@ apiClient.interceptors.response.use(
     // The endpoint only cares about provider idToken; allow caller to handle.
     try {
       const url = originalRequest?.url as string | undefined;
-      if (url === '/profile/signup-complete') {
+      if (url === '/profile/signup-complete' || url === '/signup-complete') {
         return Promise.reject(error);
       } 
     } catch {}
