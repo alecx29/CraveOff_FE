@@ -11,6 +11,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/context/ThemeProvider';
 import FreeJourneyContent from './FreeJourneyContent';
 import PaywallTest from './PaywallTest';
+import { flags } from '@/src/utils/featureFlags';
+import { apiClient } from '@/src/axios/apiClient';
+import { BackendRoutes } from '@/src/axios/backendRoutes';
 
 interface SubscriptionScreenProps {
   onComplete?: () => void;
@@ -21,6 +24,17 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const styles = createStyles(theme, insets);
+  
+  // Mark paywall reached when this screen mounts (idempotent backend)
+  React.useEffect(() => {
+    (async () => {
+      try {
+        await apiClient.post(BackendRoutes.PAYWALL_REACHED);
+      } catch (e) {
+        // non-blocking
+      }
+    })();
+  }, []);
   
   // Handler pentru continuarea spre aplicație
   const handleContinue = () => {
@@ -119,9 +133,11 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
           <FreeJourneyContent onContinue={handleContinue} />
 
           {/* Test paywall (non-blocking) */}
-          <Animated.View entering={FadeInDown.duration(500).delay(600)}>
-            <PaywallTest onSubscribed={handleContinue} />
-          </Animated.View>
+          {flags.testPayments && (
+            <Animated.View entering={FadeInDown.duration(500).delay(600)}>
+              <PaywallTest onSubscribed={handleContinue} />
+            </Animated.View>
+          )}
         </ScrollView>
       </View>
     </ImageBackground>

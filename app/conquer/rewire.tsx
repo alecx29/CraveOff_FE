@@ -12,9 +12,13 @@ const { width, height } = Dimensions.get('window');
 export default function ConquerRewire() {
   const insets = useSafeAreaInsets();
   const styles = createStyles(insets);
+  const lastNavAtRef = React.useRef(0);
   
   // Handler to navigate to next page
   const handleNext = () => {
+    const now = Date.now();
+    if (now - lastNavAtRef.current < 600) return;
+    lastNavAtRef.current = now;
     router.push('/conquer/levelup');
   };
   
@@ -120,7 +124,7 @@ const createStyles = (insets: any) => StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    paddingTop: insets.top + 10,
+    paddingTop: insets.top + (Platform.OS === 'android' ? 18 : 10),
     paddingBottom: 10,
     zIndex: 1,
   },
@@ -148,8 +152,8 @@ const createStyles = (insets: any) => StyleSheet.create({
     minHeight: height * 0.6,
   },
   imageContainer: {
-    width: Math.min(width * 0.5, 200),
-    height: Math.min(width * 0.5, 200),
+    width: Math.min(width * 0.6, 240),
+    height: Math.min(width * 0.6, 240),
     overflow: 'hidden',
     marginBottom: height * 0.03,
     alignItems: 'center',

@@ -5,6 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import { useRouter } from 'expo-router';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { apiClient } from '@/src/axios/apiClient';
@@ -25,6 +26,118 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
   const { signIn } = useContext(AuthContext);
   const styles = createStyles(theme);
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  // Helpers
+  const isValidToken = (token?: string | null) => {
+    if (!token) return false;
+    const trimmed = token.trim();
+    if (!trimmed) return false;
+    const lowered = trimmed.toLowerCase();
+    if (lowered === 'null' || lowered === 'undefined') return false;
+    return true;
+  };
+
+  const decodeJwtExp = (token?: string | null): number | undefined => {
+    try {
+      if (!isValidToken(token)) return undefined;
+      const parts = token!.split('.');
+      if (parts.length < 2) return undefined;
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return typeof payload?.exp === 'number' ? payload.exp : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const ensureFreshIdToken = async (): Promise<{ idToken?: string; provider?: 'google' | 'apple' }> => {
+    const [rawGoogleIdToken, rawAppleIdToken, lastAuthProvider] = await Promise.all([
+      AsyncStorage.getItem('googleIdToken'),
+      AsyncStorage.getItem('appleIdToken'),
+      AsyncStorage.getItem('lastAuthProvider')
+    ]);
+
+    let provider: 'google' | 'apple' | undefined;
+    let idToken = isValidToken(rawGoogleIdToken) ? rawGoogleIdToken!.trim() : undefined;
+    if (isValidToken(rawAppleIdToken)) {
+      provider = 'apple';
+      idToken = rawAppleIdToken!.trim();
+    } else if (isValidToken(rawGoogleIdToken)) {
+      provider = 'google';
+      idToken = rawGoogleIdToken!.trim();
+    }
+    if (lastAuthProvider === 'google' && isValidToken(rawGoogleIdToken)) provider = 'google';
+    if (lastAuthProvider === 'apple' && isValidToken(rawAppleIdToken)) provider = 'apple';
+
+    // Determine near-expiry window (<= 120s)
+    const exp = decodeJwtExp(idToken);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const nearExpiry = exp !== undefined ? exp - nowSec <= 120 : false;
+
+    // Try refresh if missing or near expiry
+    if (!idToken || !provider || nearExpiry) {
+      // Google silent first
+      if (provider === 'google' || (!provider && isValidToken(rawGoogleIdToken))) {
+        try {
+          const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+          const tokens = await GoogleSignin.getTokens();
+          if (tokens?.idToken) {
+            await AsyncStorage.setItem('googleIdToken', tokens.idToken);
+            await AsyncStorage.setItem('lastAuthProvider', 'google');
+            await AsyncStorage.setItem('idTokenSavedAt', Date.now().toString());
+            return { idToken: tokens.idToken, provider: 'google' };
+          }
+        } catch {}
+      }
+
+      // Interactive path
+      if (provider === 'google' || (!provider && !isValidToken(rawAppleIdToken))) {
+        try {
+          const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+          await GoogleSignin.hasPlayServices();
+          const userInfo = await GoogleSignin.signIn();
+          // @ts-ignore
+          const freshRaw = userInfo?.idToken || userInfo?.data?.idToken;
+          const freshIdToken: string | undefined = typeof freshRaw === 'string' ? freshRaw : undefined;
+          if (isValidToken(freshIdToken)) {
+            await AsyncStorage.setItem('googleIdToken', freshIdToken!.trim());
+            await AsyncStorage.setItem('lastAuthProvider', 'google');
+            await AsyncStorage.setItem('idTokenSavedAt', Date.now().toString());
+            return { idToken: freshIdToken!.trim(), provider: 'google' };
+          }
+        } catch {}
+      }
+
+      if (provider === 'apple' || (!provider && !isValidToken(rawGoogleIdToken))) {
+        try {
+          const AppleAuth = await import('expo-apple-authentication');
+          // @ts-ignore
+          if (await AppleAuth.isAvailableAsync?.()) {
+            // @ts-ignore
+            const credential = await AppleAuth.signInAsync?.({
+              requestedScopes: [
+                // @ts-ignore
+                AppleAuth.AppleAuthenticationScope.FULL_NAME,
+                // @ts-ignore
+                AppleAuth.AppleAuthenticationScope.EMAIL,
+              ],
+            });
+            const freshRaw = credential?.identityToken;
+            const freshIdToken: string | undefined = typeof freshRaw === 'string' ? freshRaw : undefined;
+            if (isValidToken(freshIdToken)) {
+              await AsyncStorage.setItem('appleIdToken', freshIdToken!.trim());
+              await AsyncStorage.setItem('lastAuthProvider', 'apple');
+              await AsyncStorage.setItem('idTokenSavedAt', Date.now().toString());
+              return { idToken: freshIdToken!.trim(), provider: 'apple' };
+            }
+          }
+        } catch {}
+      }
+      return {};
+    }
+
+    return { idToken, provider };
+  };
 
   // Features with icons
   const features: FeatureItem[] = [
@@ -41,84 +154,13 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
     setIsLoading(true);
     
     try {
-      // Retrieve the saved idTokens (Google or Apple) and validate them
-      const [rawGoogleIdToken, rawAppleIdToken, lastAuthProvider, idTokenSavedAtStr] = await Promise.all([
-        AsyncStorage.getItem('googleIdToken'),
-        AsyncStorage.getItem('appleIdToken'),
-        AsyncStorage.getItem('lastAuthProvider'),
-        AsyncStorage.getItem('idTokenSavedAt')
-      ]);
-
-      const isValidToken = (token?: string | null) => {
-        if (!token) return false;
-        const trimmed = token.trim();
-        if (!trimmed) return false;
-        const lowered = trimmed.toLowerCase();
-        if (lowered === 'null' || lowered === 'undefined') return false;
-        return true;
-      };
-
-      const googleIdToken = isValidToken(rawGoogleIdToken) ? rawGoogleIdToken!.trim() : undefined;
-      const appleIdToken = isValidToken(rawAppleIdToken) ? rawAppleIdToken!.trim() : undefined;
-
-      // Determine age of idToken if metadata exists
-      const idTokenSavedAt = idTokenSavedAtStr ? parseInt(idTokenSavedAtStr, 10) : undefined;
-      const tokenAgeSec = idTokenSavedAt ? Math.floor((Date.now() - idTokenSavedAt) / 1000) : undefined;
-
-      // Clean up invalid persisted tokens to avoid future confusion
-      if (rawGoogleIdToken && !googleIdToken) {
-        await AsyncStorage.removeItem('googleIdToken');
-        console.warn('Removed invalid persisted Google idToken');
-      }
-      if (rawAppleIdToken && !appleIdToken) {
-        await AsyncStorage.removeItem('appleIdToken');
-        console.warn('Removed invalid persisted Apple idToken');
-      }
-      const idToken = googleIdToken || appleIdToken;
+      // Ensure we have a fresh idToken just-in-time
+      const { idToken, provider } = await ensureFreshIdToken();
       
-      // Determine the provider based on explicit lastAuthProvider fallback to presence
-      let provider: string | undefined;
-      if (lastAuthProvider === 'google' && googleIdToken) {
-        provider = 'google';
-      } else if (lastAuthProvider === 'apple' && appleIdToken) {
-        provider = 'apple';
-      } else if (googleIdToken) {
-        provider = 'google';
-      } else if (appleIdToken) {
-        provider = 'apple';
-      }
-      
-      console.log('Retrieved Google idToken for signup-complete:', googleIdToken ? 'Yes (valid)' : 'No (missing/invalid)');
-      console.log('Retrieved Apple idToken for signup-complete:', appleIdToken ? 'Yes (valid)' : 'No (missing/invalid)');
       console.log('Using idToken for signup-complete:', idToken ? 'Yes (valid)' : 'No (not found)');
       console.log('Provider detected:', provider || 'none');
-      if (tokenAgeSec !== undefined) {
-        console.log('idToken age (seconds):', tokenAgeSec);
-      }
 
-      // If Google token older than ~50 minutes, try to refresh it
-      try {
-        if (provider === 'google' && tokenAgeSec !== undefined && tokenAgeSec > 50 * 60) {
-          console.log('Google idToken appears old; attempting to refresh via GoogleSignin.getTokens');
-          // Dynamic import to avoid web issues
-          const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
-          const tokens = await GoogleSignin.getTokens();
-          if (tokens?.idToken) {
-            console.log('Refreshed Google idToken');
-            await AsyncStorage.setItem('googleIdToken', tokens.idToken);
-            await AsyncStorage.setItem('idTokenSavedAt', Date.now().toString());
-          } else {
-            console.warn('GoogleSignin.getTokens did not return idToken');
-          }
-        }
-      } catch (refreshErr) {
-        console.warn('Failed to refresh Google idToken:', refreshErr);
-      }
-
-      // Re-read selected idToken after possible refresh
-      const effectiveGoogleIdToken = provider === 'google' ? (await AsyncStorage.getItem('googleIdToken')) || googleIdToken : googleIdToken;
-      const effectiveAppleIdToken = provider === 'apple' ? (await AsyncStorage.getItem('appleIdToken')) || appleIdToken : appleIdToken;
-      const effectiveIdToken = provider === 'google' ? effectiveGoogleIdToken : provider === 'apple' ? effectiveAppleIdToken : undefined;
+      const effectiveIdToken = idToken;
       
       // Prepare request body
       const resolvedTimeZone = (Intl as any)?.DateTimeFormat?.().resolvedOptions?.().timeZone || (Intl as any)?.resolvedOptions?.().timeZone || 'UTC';
@@ -144,7 +186,8 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
       }
 
       // First API call: Mark signup as complete, including the idToken and provider if available
-      const response = await apiClient.post(BackendRoutes.SIGNUP_COMPLETE || '/profile/signup-complete', requestBody);
+      const doRequest = async () => apiClient.post(BackendRoutes.SIGNUP_COMPLETE || '/profile/signup-complete', requestBody);
+      let response = await doRequest();
       console.log('Signup marked as complete');
       console.log('Response structure:', JSON.stringify(response.data, null, 2));
       
@@ -182,14 +225,9 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         console.log('Stored access token after signIn:', storedToken ? 'Yes (found)' : 'No (not found)');
         
         // Clear the stored idTokens and metadata as they're no longer needed
-        if (googleIdToken) {
-          await AsyncStorage.removeItem('googleIdToken');
-          console.log('Cleared stored Google idToken after use');
-        }
-        if (appleIdToken) {
-          await AsyncStorage.removeItem('appleIdToken');
-          console.log('Cleared stored Apple idToken after use');
-        }
+        await AsyncStorage.removeItem('googleIdToken');
+        await AsyncStorage.removeItem('appleIdToken');
+        console.log('Cleared stored provider idTokens after use');
         await AsyncStorage.removeItem('lastAuthProvider');
         await AsyncStorage.removeItem('idTokenSavedAt');
         
@@ -233,7 +271,47 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
       }
     } catch (error: any) {
       console.error('Error during API calls:', error?.response?.data || error?.message || error);
-      // Continue with navigation even if API calls fail
+      const status = error?.response?.status;
+      const code = error?.response?.data?.code;
+      const shouldReacquire =
+        (status === 400 && (code === 'ID_TOKEN_MISSING' || code === 'UNSUPPORTED_PROVIDER')) ||
+        (status === 401 && (code === 'ID_TOKEN_EXPIRED' || code === 'ID_TOKEN_INVALID'));
+
+      if (shouldReacquire) {
+        // Reacquire idToken and retry once
+        const { idToken: freshIdToken, provider: freshProvider } = await ensureFreshIdToken();
+        if (isValidToken(freshIdToken) && (freshProvider === 'google' || freshProvider === 'apple')) {
+          const resolvedTimeZone = (Intl as any)?.DateTimeFormat?.().resolvedOptions?.().timeZone || (Intl as any)?.resolvedOptions?.().timeZone || 'UTC';
+          const retryBody: any = { signup_complete: true, timezone: resolvedTimeZone, idToken: freshIdToken, provider: freshProvider };
+          try {
+            const retryResponse = await apiClient.post(BackendRoutes.SIGNUP_COMPLETE || '/profile/signup-complete', retryBody);
+            // mimic success path
+            console.log('Signup marked as complete (after retry)');
+            console.log('Response structure:', JSON.stringify(retryResponse.data, null, 2));
+            if (retryResponse.data && retryResponse.data.session && retryResponse.data.user) {
+              const accessToken = retryResponse.data.session.access_token || retryResponse.data.session.accessToken;
+              const refreshToken = retryResponse.data.session.refresh_token || retryResponse.data.session.refreshToken;
+              await signIn({ accessToken, refreshToken, user: retryResponse.data.user });
+            }
+            onContinue();
+            setIsLoading(false);
+            return;
+          } catch (retryErr: any) {
+            console.error('Retry after reacquire failed:', retryErr?.response?.data || retryErr?.message || retryErr);
+            router.replace('/login');
+            return;
+          }
+        } else {
+          router.replace('/login');
+          return;
+        }
+      }
+
+      // Fallback behavior
+      if (status === 400 || status === 401) {
+        router.replace('/login');
+        return;
+      }
       onContinue();
     } finally {
       // Reset loading state (though navigation will likely have occurred by now)

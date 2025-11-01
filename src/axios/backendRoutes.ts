@@ -7,6 +7,8 @@ export const BackendRoutes = {
   REFRESH_TOKEN: "/auth/refresh",
   SIGNUP_ANALYSIS: "/signup/analysis",
   SIGNUP_COMPLETE: "/profile/signup-complete",
+  PAYWALL_REACHED: "/profile/paywall-reached",
+  PAYWALL_STATUS: "/profile/paywall-status",
   // Devices
   DEVICES_REGISTER: "/devices/register",
   GOALS: "/auth/goals",

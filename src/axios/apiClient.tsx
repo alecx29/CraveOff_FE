@@ -122,6 +122,15 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
     
+    // Special case: do NOT refresh Bearer tokens for signup-complete flow.
+    // The endpoint only cares about provider idToken; allow caller to handle.
+    try {
+      const url = originalRequest?.url as string | undefined;
+      if (url === '/profile/signup-complete') {
+        return Promise.reject(error);
+      } 
+    } catch {}
+
     originalRequest._retry = true;
     
     // If a refresh is already in progress, wait for it to complete

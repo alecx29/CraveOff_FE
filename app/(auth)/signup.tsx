@@ -37,6 +37,35 @@ export default function Signup() {
   const { signUp } = useContext(AuthContext);
   const styles = createStyles(theme);
   
+  // On first signup screen: ensure we have a valid idToken, otherwise redirect to login
+  // This prevents reaching signup without a provider token needed later for signup-complete
+  useState(() => {
+    (async () => {
+      try {
+        const [rawGoogleIdToken, rawAppleIdToken] = await Promise.all([
+          AsyncStorage.getItem('googleIdToken'),
+          AsyncStorage.getItem('appleIdToken'),
+        ]);
+        const isValidToken = (token?: string | null) => {
+          if (!token) return false;
+          const trimmed = token.trim();
+          if (!trimmed) return false;
+          const lowered = trimmed.toLowerCase();
+          if (lowered === 'null' || lowered === 'undefined') return false;
+          return true;
+        };
+        const hasValidIdToken = isValidToken(rawGoogleIdToken) || isValidToken(rawAppleIdToken);
+        if (!hasValidIdToken) {
+          console.warn('[Signup] No valid idToken found. Redirecting to login to obtain one.');
+          router.replace('/login');
+        }
+      } catch (e) {
+        console.warn('[Signup] Error checking idToken presence:', e);
+        router.replace('/login');
+      }
+    })();
+  });
+  
   // State for user data
   const [userData, setUserData] = useState<UserData>({
     gender: '',

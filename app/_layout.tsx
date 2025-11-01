@@ -1,11 +1,12 @@
 // app/_layout.tsx
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, View, StatusBar, AppState, Image } from 'react-native';
 import { router, Stack, SplashScreen, usePathname } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
-import { apiClient } from '@/src/axios/apiClient';
+import { apiClient, isTokenExpired } from '@/src/axios/apiClient';
+import { BackendRoutes } from '@/src/axios/backendRoutes';
 import { AuthContext, AuthProvider } from '@/src/context/AuthContext';
 import { registerDeviceWithBackend } from '@/src/services/pushService';
 import { NotificationsProvider } from '@/src/context/NotificationsContext';
@@ -78,6 +79,25 @@ export default function RootLayout() {
 const AuthNavigation: React.FC = () => {
   const { isAuthenticated, signIn, setAccessToken, setIsAuthenticated, loading, user } = useContext(AuthContext);
   const pathname = usePathname();
+  const paywallCheckedRef = useRef(false);
+  const checkPaywallOnce = useCallback(async () => {
+    if (paywallCheckedRef.current) return;
+    if (!isAuthenticated) return;
+    if (loading) return;
+    if (user && user.signup_complete === true) return;
+    const sc = (user as any)?.signup_complete;
+    if (typeof sc !== 'boolean') return;
+    const expired = await isTokenExpired();
+    if (expired) return;
+    try {
+      const res = await apiClient.get(BackendRoutes.PAYWALL_STATUS);
+      const reached = !!(res?.data && (res.data.reached_paywall === true || res.data?.status === 'reached' || res.data?.reached === true));
+      if (reached) {
+        paywallCheckedRef.current = true;
+        if (pathname !== '/(auth)/subscription') router.replace('/(auth)/subscription');
+      }
+    } catch {}
+  }, [isAuthenticated, pathname, user, loading]);
 
   // Funcție pentru verificarea și reînnoirea token-urilor
   const checkAndRefreshTokens = async () => {
@@ -147,10 +167,12 @@ const AuthNavigation: React.FC = () => {
         try {
           registerDeviceWithBackend({ silent: true });
         } catch {}
+        // Check paywall status once at startup for users not fully signed up
+        await checkPaywallOnce();
       }
     };
     bootstrap();
-  }, []);
+  }, [checkPaywallOnce]);
 
   // Verificare la revenirea aplicației în prim-plan
   useEffect(() => {
@@ -158,6 +180,8 @@ const AuthNavigation: React.FC = () => {
       if (nextAppState === 'active' && isAuthenticated) {
         console.log('App has come to the foreground, checking tokens...');
         checkAndRefreshTokens();
+        // Also check paywall status once per session
+        checkPaywallOnce();
       }
     });
 

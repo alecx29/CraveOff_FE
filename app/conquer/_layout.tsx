@@ -1,23 +1,13 @@
+import React from 'react';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import { View, StyleSheet, Platform } from 'react-native';
 
 export default function ConquerLayout() {
+  const screenOptions = Platform.OS === 'ios'
+    ? { headerShown: false, animationDuration: 200, animation: 'slide_from_right' as const, contentStyle: { backgroundColor: '#0B0A10' } }
+    : { headerShown: false, animation: 'slide_from_right' as const, animationDuration: 160, contentStyle: { backgroundColor: '#0B0A10' } };
+
   return (
-    <View style={styles.container}>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          animation: Platform.OS === 'ios' ? 'fade' : 'none',
-          contentStyle: { backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#0B0A10' }
-        }}
-      />
-    </View>
+    <Stack screenOptions={screenOptions} />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0B0A10',
-  },
-}); 

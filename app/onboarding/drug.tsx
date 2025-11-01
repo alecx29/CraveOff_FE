@@ -1,6 +1,6 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, Text, SafeAreaView, TouchableOpacity, Image, ScrollView, Dimensions } from 'react-native';
+import { View, StyleSheet, Text, SafeAreaView, TouchableOpacity, Image, ScrollView, Dimensions, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme } from '@/src/context/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,9 +11,13 @@ const { width, height } = Dimensions.get('window');
 
 export default function DrugOnboarding() {
   const { theme } = useTheme();
+  const lastNavAtRef = React.useRef(0);
   
   // Handler to navigate to goals page - using replace to avoid transition issues
   const handleNext = () => {
+    const now = Date.now();
+    if (now - lastNavAtRef.current < 600) return;
+    lastNavAtRef.current = now;
     router.push('/onboarding/relationships');
   };
   
@@ -81,7 +85,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    paddingTop: height * 0.03,
+    paddingTop: Platform.OS === 'android' ? height * 0.06 + 6 : height * 0.03,
     paddingBottom: height * 0.01,
   },
   logo: {
@@ -107,8 +111,8 @@ const styles = StyleSheet.create({
     minHeight: height * 0.6,
   },
   imageContainer: {
-    width: Math.min(width * 0.5, 200),
-    height: Math.min(width * 0.5, 200),
+    width: Math.min(width * 0.6, 240),
+    height: Math.min(width * 0.6, 240),
     overflow: 'hidden',
     marginBottom: height * 0.03,
     alignItems: 'center',

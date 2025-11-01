@@ -3,7 +3,7 @@ module.exports = {
   expo: {
     name: "CraveOff",
     slug: "craveoff-app",
-    version: "1.2.13",
+    version: "1.2.14",
     
     // Note: These properties will not be synced when android/ios folders are present
     orientation: "portrait",
@@ -11,14 +11,15 @@ module.exports = {
     scheme: "craveoffapp",
     userInterfaceStyle: "automatic",
 
-    updates: {
-      url: "https://u.expo.dev/ab8a7457-9c09-4b84-946e-2dee70f210b1",
-      enabled: true,
-      checkAutomatically: "ALWAYS"
-    },
-    runtimeVersion: {
-      policy: "appVersion"
-    },
+    // updates: {
+    //   url: "https://u.expo.dev/ab8a7457-9c09-4b84-946e-2dee70f210b1",
+    //   enabled: true,
+    //   checkAutomatically: "ALWAYS"
+    // },
+    // runtimeVersion: {
+    //   ios: "1.2.13",
+    //   android: "1.2.13",
+    // },
     
     newArchEnabled: true,
     
@@ -33,7 +34,6 @@ module.exports = {
         usesAppleSignIn: true
       }
     },
-    
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/images/play_store_512.png",
@@ -41,8 +41,9 @@ module.exports = {
       },
       edgeToEdgeEnabled: true,
       softwareKeyboardLayoutMode: "resize",
+    
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 35,
+      versionCode: 38,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"

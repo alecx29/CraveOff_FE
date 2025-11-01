@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -252,7 +252,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   headerContainer: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: Platform.OS === 'android' ? 36 : 16,
     paddingBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
