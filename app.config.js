@@ -3,7 +3,7 @@ module.exports = {
   expo: {
     name: "CraveOff",
     slug: "craveoff-app",
-    version: "1.2.14",
+    version: "1.2.15",
     
     // Note: These properties will not be synced when android/ios folders are present
     orientation: "portrait",
@@ -43,7 +43,7 @@ module.exports = {
       softwareKeyboardLayoutMode: "resize",
     
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 38,
+      versionCode: 39,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"

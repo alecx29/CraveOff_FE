@@ -23,6 +23,13 @@ export const BackendRoutes = {
   DAILY_QUOTE: "/quote",
   ACHIEVEMENTS: "/achievements/",
 
+  // Community / Chat
+  CHAT_ROOMS: "/chat/rooms",
+  CHAT_ROOM_MESSAGES: (slug: string) => `/chat/rooms/${slug}/messages`,
+
+  // Users
+  USER_BY_ID: (userId: string) => `/users/by-id/${userId}`,
+
   // Account management
   DELETE_ACCOUNT_CONFIRM: (token: string) =>
     `/user/delete-account-confirm/${token}`,
