@@ -21,6 +21,7 @@ import HomeOnlyCheckInController from '@/src/components/HomeOnlyCheckInControlle
 import NotificationInitializer from '@/src/components/NotificationInitializer';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { setCurrentPath } from '@/src/navigation/routeTracker';
+import * as Updates from 'expo-updates';
 
 // Keep native splash visible for a controlled duration on app start
 void SplashScreen.preventAutoHideAsync();
@@ -35,6 +36,22 @@ export default function RootLayout() {
       setShowInitialSplash(false);
     }, 3500);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Auto-apply OTA updates (EAS Update) silently on app start
+  useEffect(() => {
+    (async () => {
+      try {
+        if (__DEV__) return; // skip in dev
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch (e) {
+        console.log('[Updates] No OTA applied:', (e as any)?.message || e);
+      }
+    })();
   }, []);
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
