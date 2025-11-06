@@ -11,6 +11,7 @@ type BackendUser = {
   id: string;
   name?: string;
   gender?: string;
+  member_since?: string; // ISO string from backend DTO
   created_at?: string;
 };
 
@@ -46,26 +47,29 @@ export default function CommunityUserProfile() {
   const avatar = gender === 'female'
     ? require('@/assets/images/girl2.png')
     : require('@/assets/images/boy2.png');
+  const memberSince = user?.member_since || user?.created_at;
 
   return (
     <GradientBackground>
-      <Stack.Screen options={{ title: 'Profile' }} />
+      <Stack.Screen options={{ title: 'Profile', headerBackTitle: 'Back', headerBackTitleVisible: true }} />
       <View style={styles.container}>
         <View style={styles.header}>
           <Image source={avatar} style={styles.avatar} />
           <View style={styles.headerText}>
             <Text style={styles.nameText}>{user?.name || 'User'}</Text>
+            {!!memberSince && (
+              <Text style={styles.metaText}>Member since {formatDate(memberSince)}</Text>
+            )}
+            {!!user?.gender && (
+              <View style={styles.pillRow}>
+                <View style={styles.pill}><Text style={styles.pillText}>{user.gender}</Text></View>
+              </View>
+            )}
           </View>
         </View>
 
         {loading ? (
           <Text style={styles.loadingText}>Loading profile...</Text>
-        ) : user ? (
-          <View style={styles.details}>
-            <Text style={styles.detailRow}>Name: <Text style={styles.detailValue}>{user.name || '-'}</Text></Text>
-            <Text style={styles.detailRow}>Gender: <Text style={styles.detailValue}>{user.gender || '-'}</Text></Text>
-            <Text style={styles.detailRow}>Joined: <Text style={styles.detailValue}>{formatDate(user.created_at)}</Text></Text>
-          </View>
         ) : error ? (
           <Text style={styles.loadingText}>Could not load profile.</Text>
         ) : null}
@@ -96,9 +100,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 16,
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     marginRight: 12,
   },
   headerText: {
@@ -114,20 +118,29 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textMuted,
   },
+  pillRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  pill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)'
+  },
+  pillText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
   loadingText: {
     color: theme.colors.textSecondary,
   },
-  details: {
-    marginTop: 8,
-    gap: 6,
-  },
-  detailRow: {
-    color: theme.colors.textSecondary,
-  },
-  detailValue: {
-    color: theme.colors.textPrimary,
-    fontWeight: '600',
-  },
+  // removed card/table styles
 });
 
 

@@ -6,7 +6,8 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "development"
     },
     "preview": {
       "distribution": "store",
@@ -14,14 +15,16 @@
     },
     "production": {
       "distribution": "store",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "channel": "production"
     },
     "release": {
       "distribution": "store",
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
-      }
+      },
+      "channel": "release"
     },
     "appleSignIn": {
       "distribution": "internal",
@@ -35,7 +38,8 @@
       "distribution": "internal",
       "ios": {
         "simulator": true
-      }
+      },
+      "channel": "simulator"
     }
   },
   "submit": {

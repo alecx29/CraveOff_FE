@@ -156,11 +156,14 @@ export default function ChatRoomScreen() {
 
   const renderItem = ({ item }: { item: ChatMessage }) => {
     const isMine = currentUserId != null && String(item.sender_user_id) === String(currentUserId);
+    const senderIdValue = (item.sender_user_id != null && String(item.sender_user_id).toLowerCase() !== 'null')
+      ? String(item.sender_user_id)
+      : null;
     const displayName = item.sender_name
       || (item as any)?.sender_display_name
       || (item?.metadata_json?.sender_display_name)
       || (item?.metadata_json?.sender_name)
-      || `User ${item.sender_user_id}`;
+      || (senderIdValue ? `User ${senderIdValue}` : 'User Unknown');
 
     if (isMine) {
       return (
@@ -209,9 +212,12 @@ export default function ChatRoomScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
+          title: (typeof title === 'string' && title.length > 0) ? String(title) : String(slug),
           headerStyle: { backgroundColor: theme.colors.background },
           headerTintColor: theme.colors.textPrimary,
           headerShadowVisible: true,
+          headerBackTitle: 'Comunity',
+          headerBackTitleVisible: true,
           headerTitle: () => (
             <View style={styles.headerTitleContainer}>
               {imageUrl ? (

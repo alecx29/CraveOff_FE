@@ -14,6 +14,7 @@ export const BackendRoutes = {
   DEVICES_REGISTER: "/devices/register",
   GOALS: "/auth/goals",
   LOGS: "/logs/",
+  MOOD_STATS: "/logs/mood-stats",
   LAST_RELAPSE: "/profile/get-last-relapse",
   UPDATE_LAST_RELAPSE: "/profile/last-relapse",
   RELAPSE: "/profile/record-relapse",

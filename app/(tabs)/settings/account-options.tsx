@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { useTheme } from '@/src/context/ThemeProvider';
@@ -23,6 +24,13 @@ export default function AccountOptionsScreen() {
         </TouchableOpacity>
 
         <DeleteAccountButton onSuccess={signOut} />
+
+        <View style={styles.versionContainer}>
+          <Text style={styles.versionText}>
+            Version {Constants.expoConfig?.version}
+            {Platform.OS === 'android' && Constants.expoConfig?.android?.versionCode ? ` (${Constants.expoConfig.android.versionCode})` : ''}
+          </Text>
+        </View>
       </View>
     </GradientBackground>
   );
@@ -54,6 +62,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.textPrimary,
     fontWeight: '700',
     fontSize: 16,
+  },
+  versionContainer: {
+    marginTop: 'auto',
+    alignItems: 'center',
+  },
+  versionText: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
   },
 });
 

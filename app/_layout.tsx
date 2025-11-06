@@ -29,12 +29,12 @@ void SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [showInitialSplash, setShowInitialSplash] = useState(true);
 
-  // Hide native splash immediately, then show custom SkyStar overlay for 3 seconds
+  // Hide native splash immediately, then show custom SkyStar overlay for 4 seconds
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => {});
     const timer = setTimeout(() => {
       setShowInitialSplash(false);
-    }, 3500);
+    }, 4000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -46,7 +46,7 @@ export default function RootLayout() {
         const update = await Updates.checkForUpdateAsync();
         if (update.isAvailable) {
           await Updates.fetchUpdateAsync();
-          await Updates.reloadAsync();
+          // Do NOT reload now; the update will apply on next app launch
         }
       } catch (e) {
         console.log('[Updates] No OTA applied:', (e as any)?.message || e);

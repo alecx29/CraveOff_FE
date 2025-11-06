@@ -9,6 +9,7 @@ export interface LogEntry {
   date: string;
   duration?: number; // Make duration optional - it's used for timer-based logs but not for daily check-ins
   is_clean: boolean; // whether the day was clean or not
+  mood?: 'good' | 'meh' | 'bad';
   // Add other fields as needed based on your API response
 }
 

@@ -55,11 +55,13 @@ const DailyCheckInController: React.FC = () => {
   
   // Determine whether to show popup based on logs and loading state
   useEffect(() => {
-    // Only make a decision after loading is complete and logs have been checked
+    // Only decide to open when closed; do not auto-close while visible
     if (!isLoading && logsChecked) {
-      setShowPopup(!hasLoggedToday());
+      if (!showPopup) {
+        setShowPopup(!hasLoggedToday());
+      }
     }
-  }, [isLoading, logs, logsChecked]);
+  }, [isLoading, logs, logsChecked, showPopup]);
   
   // If popup should not be shown, don't render anything
   if (!showPopup) {
