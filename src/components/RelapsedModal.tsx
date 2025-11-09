@@ -13,7 +13,7 @@ import Animated, {
   FadeIn, 
   FadeOut
 } from 'react-native-reanimated';
-import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { useTheme } from '@/src/context/ThemeProvider';
@@ -106,11 +106,7 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
               <View style={styles.optionItem}>
                 <View style={styles.optionContent}>
                   <View style={styles.optionIconContainer}>
-                    <Feather 
-                      name="eye" 
-                      size={16} 
-                      color={theme.colors.primary} 
-                    />
+                    <Text style={styles.optionEmoji}>👀</Text>
                   </View>
                   <View style={styles.optionTextContainer}>
                     <Text style={styles.optionText} selectable={false}>
@@ -127,11 +123,7 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
               <View style={styles.optionItem}>
                 <View style={styles.optionContent}>
                   <View style={styles.optionIconContainer}>
-                    <MaterialCommunityIcons 
-                      name="brain" 
-                      size={16} 
-                      color={theme.colors.primary} 
-                    />
+                    <Text style={styles.optionEmoji}>🧠</Text>
                   </View>
                   <View style={styles.optionTextContainer}>
                     <Text style={styles.optionText} selectable={false}>
@@ -148,11 +140,7 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
               <View style={styles.optionItem}>
                 <View style={styles.optionContent}>
                   <View style={styles.optionIconContainer}>
-                    <Ionicons 
-                      name="repeat" 
-                      size={16} 
-                      color={theme.colors.primary} 
-                    />
+                    <Text style={styles.optionEmoji}>🔁</Text>
                   </View>
                   <View style={styles.optionTextContainer}>
                     <Text style={styles.optionText} selectable={false}>
@@ -338,6 +326,9 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     color: '#fff',
     fontWeight: '600',
     marginBottom: 2,
+  },
+  optionEmoji: {
+    fontSize: 18,
   },
   optionSubtext: {
     fontSize: 11,

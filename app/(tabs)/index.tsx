@@ -23,7 +23,6 @@ import { OriaChat, OriaChatWithMessages, SendMessageResponse } from '@/src/types
 import { usePledge } from '@/src/context/PledgeContext';
 import PetComingSoonModal from '@/src/components/PetComingSoonModal';
 import LeaderboardComingSoon from '@/src/components/LeaderboardComingSoon';
-import DeepBreathingComingSoonModal from '@/src/components/DeepBreathingComingSoonModal';
 import { useAchievements } from '@/src/context/AchievementsContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import HomeTopBar from '@/src/components/header/HomeTopBar';
@@ -165,9 +164,6 @@ export default function HomeScreen() {
   
   // State for showing the Oria chat modal
   const [showOriaModal, setShowOriaModal] = useState(false);
-  
-  // State for showing the coming soon modal for Deep Breathing
-  const [showDeepBreathingModal, setShowDeepBreathingModal] = useState(false);
   
   // State pentru showing the coming soon modal for Pet
   const [showPetModal, setShowPetModal] = useState(false);
@@ -1409,7 +1405,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionButtonWrapper}
-            onPress={() => setShowDeepBreathingModal(true)}
+            onPress={() => router.push('/deep-breathing')}
           >
             <View style={styles.actionButton}>
               <LinearGradient
@@ -1828,12 +1824,6 @@ export default function HomeScreen() {
           </GradientBackground>
         </Modal>
       )}
-      
-      {/* Deep Breathing Coming Soon Modal */}
-      <DeepBreathingComingSoonModal
-        visible={showDeepBreathingModal}
-        onClose={() => setShowDeepBreathingModal(false)}
-      />
       
       {/* Pet Coming Soon Modal */}
       <PetComingSoonModal

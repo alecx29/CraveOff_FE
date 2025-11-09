@@ -4,12 +4,11 @@ import {
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  Dimensions, 
   StatusBar,
   Animated as RNAnimated,
   ScrollView
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { 
@@ -26,9 +25,6 @@ interface PledgeModalProps {
   onPledge: () => void;
 }
 
-const { height, width } = Dimensions.get('window');
-const IS_SMALL_SCREEN = height < 700;
-
 const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -39,7 +35,6 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
   
   // Adjust for safe areas
   const bottomPadding = Math.max(insets.bottom, 20);
-  const topPadding = Math.max(insets.top, 20);
   
   useEffect(() => {
     if (visible) {
@@ -53,7 +48,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
         useNativeDriver: true,
       }).start();
     }
-  }, [visible]);
+  }, [visible, opacityAnim]);
   
   const handleClose = () => {
     // Animate out
@@ -79,7 +74,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
   
   if (!visible) return null;
   
-  const styles = createStyles(theme, bottomPadding, topPadding);
+  const styles = createStyles(theme, bottomPadding);
   
   return (
     <Animated.View 
@@ -112,14 +107,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.iconContainer}>
-                <LinearGradient
-                  colors={['rgb(74, 15, 175)', 'rgb(108, 111, 148)']}
-                  style={styles.iconBackground}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Ionicons name="hand-right" size={40} color="#fff" />
-                </LinearGradient>
+                <Ionicons name="hand-right" size={94} color="#fff" />
               </View>
             
             <Text style={styles.title}>Pledge Sobriety Today</Text>
@@ -132,11 +120,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
                   <View style={styles.optionItem}>
                     <View style={styles.optionContent}>
                       <View style={styles.optionIconContainer}>
-                        <MaterialCommunityIcons 
-                          name="target" 
-                        size={16} 
-                          color={theme.colors.primary} 
-                        />
+                        <Text style={styles.optionEmoji}>🎯</Text>
                       </View>
                       <View style={styles.optionTextContainer}>
                         <Text style={styles.optionText}>
@@ -150,11 +134,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
                   <View style={styles.optionItem}>
                     <View style={styles.optionContent}>
                       <View style={styles.optionIconContainer}>
-                        <Feather 
-                          name="coffee" 
-                        size={16} 
-                          color={theme.colors.primary} 
-                        />
+                        <Text style={styles.optionEmoji}>☕</Text>
                       </View>
                       <View style={styles.optionTextContainer}>
                         <Text style={styles.optionText}>
@@ -168,11 +148,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
                   <View style={styles.optionItem}>
                     <View style={styles.optionContent}>
                       <View style={styles.optionIconContainer}>
-                        <Ionicons 
-                          name="trophy-outline" 
-                        size={16} 
-                          color={theme.colors.primary} 
-                        />
+                        <Text style={styles.optionEmoji}>🏆</Text>
                       </View>
                       <View style={styles.optionTextContainer}>
                         <Text style={styles.optionText}>
@@ -214,7 +190,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
   );
 };
 
-const createStyles = (theme: any, bottomPadding: number, topPadding: number) => StyleSheet.create({
+const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
@@ -249,18 +225,6 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
   iconContainer: {
     alignItems: 'center',
     marginBottom: 16,
-  },
-  iconBackground: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: 'rgb(175, 15, 81)',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
   pledgeText: {
     fontSize: 14,
@@ -309,6 +273,9 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     color: '#fff',
     fontWeight: '600',
     marginBottom: 2,
+  },
+  optionEmoji: {
+    fontSize: 18,
   },
   optionSubtext: {
     fontSize: 12,

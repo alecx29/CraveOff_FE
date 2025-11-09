@@ -3,7 +3,7 @@ module.exports = {
   expo: {
     name: "CraveOff",
     slug: "craveoff-app",
-    version: "1.2.16",
+    version: "1.2.17",
     
     // Note: These properties will not be synced when android/ios folders are present
     orientation: "portrait",
@@ -43,7 +43,7 @@ module.exports = {
       softwareKeyboardLayoutMode: "resize",
     
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 40,
+      versionCode: 41,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"
@@ -111,7 +111,13 @@ module.exports = {
       googleIosClientId: "391159890839-bh8c7d8toeqfjbg4cj1k2438ao5pajon.apps.googleusercontent.com",
       appleServiceId: "com.usualsuspect29.craveoffapp",
       // Set this when you have the App Store id to deep-link to rating
-      iosAppStoreId: "6748585691"
+      iosAppStoreId: "6748585691",
+      // Used at runtime to build Play Store links
+      androidPackage: "com.usualsuspect29.craveoffapp",
+      // Optional: point to a remote JSON with { ios: { minBuild, latest }, android: { minBuild, latest } }
+      updateConfigUrl: "https://craveoff-production.up.railway.app/api/config/update",
+      // Enable UpdateGate for dev builds so you can test locally
+      enableUpdateGateInDev: true
     },
     
     // Disable the development status bar

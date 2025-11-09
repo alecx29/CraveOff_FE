@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, ImageBackground, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, ImageBackground, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,8 +14,10 @@ interface DailyCheckInPopupProps {
 }
 
 const { height } = Dimensions.get('window');
-// Reduce height percentage for smaller screens to ensure it fits
-const POPUP_HEIGHT = Math.min(560, height * 0.70); // Increase height to give more space for mood step
+// Reduce height percentage and slightly shorten on iOS for better fit
+const POPUP_HEIGHT = Platform.OS === 'ios'
+  ? Math.min(520, height * 0.66)
+  : Math.min(560, height * 0.70); // Increase height to give more space for mood step
 
 // Define a variable for smaller screens
 const IS_SMALL_SCREEN = height < 700; // Nexus 5 is around 640px height
@@ -229,7 +231,7 @@ const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onDismiss }) => {
                     contentContainerStyle={styles.summaryTopContent}
                     showsVerticalScrollIndicator={false}
                   >
-                    <Text style={[styles.title, styles.summaryTitle]}>We believe in you</Text>
+                    <Text style={[styles.title, styles.summaryTitle]}>CRAVEOFF believes in you</Text>
                     {(() => {
                       const baseCounts = moodStats?.counts || { good: 0, meh: 0, bad: 0 };
                       const computed = { ...baseCounts } as { good: number; meh: number; bad: number };
@@ -309,7 +311,7 @@ const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
     flex: 1,
     padding: IS_SMALL_SCREEN ? 16 : 20, // Smaller padding on small screens
     paddingBottom: bottomPadding, // Dynamic bottom padding based on safe area
-    backgroundColor: 'rgba(0, 0, 0, 0.65)', // Semi-transparent overlay to ensure text is readable
+    backgroundColor: 'rgba(0, 0, 0, 0.45)', // Semi-transparent overlay to ensure text is readable
   },
   contentContainerSummary: {
     paddingBottom: Math.max(bottomPadding - 12, 0),
@@ -340,6 +342,7 @@ const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
+    paddingBottom: 3,
   },
   question: {
     fontSize: IS_SMALL_SCREEN ? 14 : 16, // Smaller on small screens
@@ -461,12 +464,13 @@ const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
     gap: 10,
   },
   summaryEmoji: {
-    fontSize: IS_SMALL_SCREEN ? 30 : 34,
+    fontSize: IS_SMALL_SCREEN ? 30 : 30,
   },
   summaryText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: IS_SMALL_SCREEN ? 18 : 20,
+    fontSize: (IS_SMALL_SCREEN ? 18 : 20) + (Platform.OS === 'ios' ? 1 : 0),
+    ...(Platform.OS === 'ios' ? { lineHeight: ((IS_SMALL_SCREEN ? 18 : 20) + 1 + 4) } : {}),
   },
   summarySubText: {
     color: 'rgba(255,255,255,0.85)',

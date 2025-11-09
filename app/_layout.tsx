@@ -18,6 +18,7 @@ import { AchievementsProvider } from '@/src/context/AchievementsContext';
 import { PledgeProvider } from '@/src/context/PledgeContext';
 import { getTokens, clearTokens } from '@/src/Storage/tokenStorage';
 import HomeOnlyCheckInController from '@/src/components/HomeOnlyCheckInController';
+import UpdateGate from '@/src/components/UpdateGate';
 import NotificationInitializer from '@/src/components/NotificationInitializer';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { setCurrentPath } from '@/src/navigation/routeTracker';
@@ -27,13 +28,14 @@ import * as Updates from 'expo-updates';
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [showInitialSplash, setShowInitialSplash] = useState(true);
+  const [splashTimerElapsed, setSplashTimerElapsed] = useState(false);
+  const [updateGateBlocking, setUpdateGateBlocking] = useState(false);
 
-  // Hide native splash immediately, then show custom SkyStar overlay for 4 seconds
+  // Hide native splash immediately, then show custom overlay for 4 seconds (extend if UpdateGate blocks)
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => {});
     const timer = setTimeout(() => {
-      setShowInitialSplash(false);
+      setSplashTimerElapsed(true);
     }, 4000);
     return () => clearTimeout(timer);
   }, []);
@@ -76,7 +78,12 @@ export default function RootLayout() {
         </ThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>
-    {showInitialSplash && (
+    <UpdateGate
+      isSplashVisible={!splashTimerElapsed || updateGateBlocking}
+      onPromptShown={() => setUpdateGateBlocking(true)}
+      onDecision={() => setUpdateGateBlocking(false)}
+    />
+    {!splashTimerElapsed || updateGateBlocking ? (
       <View style={styles.initialSplash}>
         <GradientBackground ignoreFocus>
           <View style={styles.initialSplashInner}>
@@ -88,7 +95,7 @@ export default function RootLayout() {
           </View>
         </GradientBackground>
       </View>
-    )}
+    ) : null}
     </GestureHandlerRootView>
   );
 }
@@ -116,7 +123,7 @@ const AuthNavigation: React.FC = () => {
     } catch {}
   }, [isAuthenticated, pathname, user, loading]);
 
-  // Funcție pentru verificarea și reînnoirea token-urilor
+  // Function to check and refresh tokens
   const checkAndRefreshTokens = async () => {
     try {
       // Get tokens and expiration time
@@ -148,17 +155,17 @@ const AuthNavigation: React.FC = () => {
             return true;
           } catch (error) {
             console.error('Error refreshing token:', error);
-            // Curățăm token-urile expirate și setăm starea ca neautentificat
+            // Clear expired tokens and set unauthenticated state
             await clearTokens();
             setIsAuthenticated(false);
             return false;
           }
         } else {
           console.log('Token still valid, skipping refresh');
-          // Asigurăm-ne că starea este setată corect chiar dacă token-ul este valid
+          // Ensure state is correctly set even if token is valid
           setAccessToken(storedAccessToken);
           setIsAuthenticated(true);
-          // Setăm headerele pentru API client
+          // Set headers for API client
           apiClient.defaults.headers.common['Authorization'] = `Bearer ${storedAccessToken}`;
           return true;
         }
@@ -174,7 +181,7 @@ const AuthNavigation: React.FC = () => {
     }
   };
 
-  // Verificare inițială la pornirea aplicației
+  // Initial check on app launch
   useEffect(() => {
     const bootstrap = async () => {
       const authResult = await checkAndRefreshTokens();
@@ -191,7 +198,7 @@ const AuthNavigation: React.FC = () => {
     bootstrap();
   }, [checkPaywallOnce]);
 
-  // Verificare la revenirea aplicației în prim-plan
+  // Check when app returns to foreground
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'active' && isAuthenticated) {
@@ -253,6 +260,8 @@ const AuthNavigation: React.FC = () => {
       ) : (
         <>
           <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
+          <Stack.Screen name="deep-breathing" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'slide_from_right' }} />
+          <Stack.Screen name="deep-breathing/session" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }} />
           <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
 
           <Stack.Screen

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/context/ThemeProvider';
-import { LinearGradient } from 'expo-linear-gradient';
 
 // Helper function to safely access theme colors
 const getColor = (theme: any, colorName: string, fallbackColor: string): string => {
@@ -395,7 +394,7 @@ const WeekBar = ({
 const createStyles = (theme: any) => StyleSheet.create({
   weekCard: {
     backgroundColor: 'transparent',
-    borderRadius: theme.borderRadius.medium,
+    // borderRadius: theme.borderRadius.medium,
     marginBottom: 16,
     overflow: 'hidden',
     ...Platform.select({
