@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, useContext } from 'react';
-import { View, Text, StyleSheet, FlatList, KeyboardAvoidingView, Platform, RefreshControl, Image, TouchableOpacity, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Image, TouchableOpacity, Keyboard } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -12,6 +12,7 @@ import { apiClient } from '@/src/axios/apiClient';
 import { AuthContext } from '@/src/context/AuthContext';
 import ChatComposer from '@/src/components/chat/ChatComposer';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getSupabase } from '@/src/services/supabaseClient';
 
 type ChatMessage = {
   id: string;
@@ -34,11 +35,12 @@ export default function ChatRoomScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
 
-  const { slug, title, imageUrl, isPublic: isPublicParam, genderPolicy, currentUserId: currentUserIdParam } = useLocalSearchParams<{ slug: string; title?: string; imageUrl?: string; isPublic?: string; genderPolicy?: string; currentUserId?: string }>();
+  const { slug, title, imageUrl, isPublic: isPublicParam, genderPolicy, currentUserId: currentUserIdParam, roomId: roomIdParam } = useLocalSearchParams<{ slug: string; title?: string; imageUrl?: string; isPublic?: string; genderPolicy?: string; currentUserId?: string; roomId?: string }>();
   const isPublic = isPublicParam === 'true' || isPublicParam === '1';
 
   const [messages, setMessages] = useState<ChatMessage[]>([]); // kept in DESC order (newest first)
-  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const initialRoomIdFromParams = roomIdParam ? (isNaN(Number(roomIdParam)) ? roomIdParam : Number(roomIdParam)) : null;
+  const [roomId, setRoomId] = useState<string | number | null>(initialRoomIdFromParams);
   const [sending, setSending] = useState<boolean>(false);
   const [input, setInput] = useState<string>('');
   const [composerH, setComposerH] = useState<number>(0);
@@ -49,16 +51,20 @@ export default function ChatRoomScreen() {
 
   const fetchInitial = useCallback(async () => {
     try {
-      setRefreshing(true);
       const res = await apiClient.get(BackendRoutes.CHAT_ROOM_MESSAGES(slug), {
         params: { limit: 50, order: 'desc' },
       });
       const data = Array.isArray(res.data?.messages) ? res.data.messages : [];
       setMessages(data);
+      // Derive room id from the first message (if available)
+      if (Array.isArray(data) && data.length > 0) {
+        const rid = (data[0] as any)?.room_id ?? null;
+        if (rid != null) setRoomId(rid);
+      }
     } catch {
       // noop for now
     } finally {
-      setRefreshing(false);
+      // no-op
     }
   }, [slug]);
 
@@ -92,30 +98,55 @@ export default function ChatRoomScreen() {
       const older = Array.isArray(res.data?.messages) ? res.data.messages : [];
       if (older.length > 0) {
         setMessages(prev => [...prev, ...older]);
-      }
-    } catch {}
-  }, [messages, slug]);
-
-  const loadNewer = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const newest = messages[0]?.created_at;
-      const res = await apiClient.get(BackendRoutes.CHAT_ROOM_MESSAGES(slug), {
-        params: newest ? { limit: 50, order: 'asc', after: newest } : { limit: 50, order: 'desc' },
-      });
-      let incoming: ChatMessage[] = Array.isArray(res.data?.messages) ? res.data.messages : [];
-      if (newest) {
-        // We keep local messages in DESC; server returned ASC for new ones → reverse then prepend
-        incoming = incoming.reverse();
-        if (incoming.length > 0) {
-          setMessages(prev => [...incoming, ...prev]);
+        // Backfill room id if still unknown
+        if (roomId == null) {
+          const rid = (older[0] as any)?.room_id ?? null;
+          if (rid != null) setRoomId(rid);
         }
-      } else {
-        setMessages(incoming);
       }
     } catch {}
-    setRefreshing(false);
-  }, [messages, slug]);
+  }, [messages, slug, roomId]);
+
+  // Realtime: subscribe to new messages while in room
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    if (roomId == null) return;
+    const channel = supabase
+      .channel(`room-${roomId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `room_id=eq.${roomId}`,
+      }, (payload: any) => {
+        const row = payload?.new;
+        if (!row) return;
+        // Normalize to ChatMessage shape and prepend (DESC list)
+        const newMsg: ChatMessage = {
+          id: String(row.id),
+          room_id: row.room_id,
+          sender_user_id: row.sender_user_id,
+          sender_name: row.sender_name,
+          content: row.content,
+          content_type: row.content_type,
+          reply_to_message_id: row.reply_to_message_id,
+          created_at: String(row.created_at),
+          deleted_at: row.deleted_at,
+          metadata_json: row.metadata_json,
+        };
+        // Deduplicate if already present (e.g., after sending)
+        setMessages(prev => {
+          if (prev.length > 0 && prev[0]?.id === newMsg.id) return prev;
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          return [newMsg, ...prev];
+        });
+      })
+      .subscribe();
+    return () => {
+      try { supabase.removeChannel(channel); } catch {}
+    };
+  }, [roomId]);
 
   const sendMessage = useCallback(async () => {
     const trimmed = input.trim();
@@ -216,8 +247,7 @@ export default function ChatRoomScreen() {
           headerStyle: { backgroundColor: theme.colors.background },
           headerTintColor: theme.colors.textPrimary,
           headerShadowVisible: true,
-          headerBackTitle: 'Comunity',
-          headerBackTitleVisible: true,
+          // Back title options removed to satisfy type checks
           headerTitle: () => (
             <View style={styles.headerTitleContainer}>
               {imageUrl ? (
@@ -253,9 +283,6 @@ export default function ChatRoomScreen() {
             onEndReached={loadOlder}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={loadNewer} tintColor={theme.colors.primary} />
-            }
           />
 
           <View

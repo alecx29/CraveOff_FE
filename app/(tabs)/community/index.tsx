@@ -275,7 +275,15 @@ export default function CommunityInfoScreen() {
                       onPress={() =>
                         router.push({
                           pathname: '/(tabs)/community/room/[slug]' as any,
-                          params: { slug, title, imageUrl, isPublic: String(!!isPublic), genderPolicy: genderPolicy || '', currentUserId: String(myId || '') },
+                          params: {
+                            slug,
+                            title,
+                            imageUrl,
+                            isPublic: String(!!isPublic),
+                            genderPolicy: genderPolicy || '',
+                            currentUserId: String(myId || ''),
+                            roomId: String(item.id ?? slug),
+                          },
                         })
                       }
                     >
