@@ -303,7 +303,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
       ) : (
         <KeyboardAvoidingView
           style={styles.keyboardAvoidingView}
-          behavior={'position'}
+          behavior={'padding'}
           keyboardVerticalOffset={Math.max(insets.top, 8)}
         >
           <ScrollView 
@@ -312,8 +312,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             onScrollBeginDrag={() => Keyboard.dismiss()}
-            contentInsetAdjustmentBehavior="never"
-            automaticallyAdjustContentInsets={false}
+            contentInsetAdjustmentBehavior="automatic"
           >
             {/* Title Input */}
             <View style={styles.inputContainer}>
