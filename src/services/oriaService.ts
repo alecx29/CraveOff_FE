@@ -9,6 +9,7 @@ import {
   UpdateChatTitleRequest,
   UpdateChatTitleResponse,
 } from "@/src/types/oria";
+import { rtLog, rtError } from "@/src/config/realtimeDebug";
 
 // Define a custom streaming interface that mimics EventSource for compatibility
 export interface StreamEventSource {
@@ -19,11 +20,9 @@ export interface StreamEventSource {
 }
 
 // Debug the backend routes to ensure they're defined correctly
-console.log(
-  "DEBUG - BackendRoutes.ORIA_MESSAGES_STREAM:",
+rtLog(
+  "BackendRoutes.ORIA_MESSAGES_STREAM available:",
   typeof BackendRoutes.ORIA_MESSAGES_STREAM === "function"
-    ? "defined correctly"
-    : "not a function"
 );
 
 // Normalize different backend payload shapes into SendMessageResponse
@@ -124,7 +123,7 @@ const getStreamingMode = () => {
     ) {
       const fromEnv = String(process.env.STREAMING_MODE).toLowerCase();
       const envVal = fromEnv === "true" || fromEnv === "1";
-      console.log("Using STREAMING_MODE from process.env:", envVal);
+      rtLog("Using STREAMING_MODE from process.env:", envVal);
       return envVal;
     }
 
@@ -136,16 +135,14 @@ const getStreamingMode = () => {
       const extraVal = Constants?.expoConfig?.extra?.STREAMING_MODE;
       const extraBool =
         String(extraVal).toLowerCase() === "true" || String(extraVal) === "1";
-      console.log("Using STREAMING_MODE from app.config extra:", extraBool);
+      rtLog("Using STREAMING_MODE from app.config extra:", extraBool);
       return extraBool;
     } catch (e) {
-      console.log(
-        "expo-constants not available for STREAMING_MODE; defaulting to false"
-      );
+      rtLog("expo-constants not available for STREAMING_MODE; defaulting to false");
       return false;
     }
   } catch (error) {
-    console.error("Error accessing STREAMING_MODE:", error);
+      rtError("Error accessing STREAMING_MODE:", error);
     return false;
   }
 };
@@ -211,13 +208,10 @@ export const oriaService = {
 
       // Determine if streaming is enabled
       const isStreamingMode = getStreamingMode();
-      console.log("Streaming mode:", isStreamingMode);
+      rtLog("Streaming mode:", isStreamingMode);
 
       // Debug the specific route we're about to use
-      console.log(
-        "DEBUG - Stream route for this chat:",
-        BackendRoutes.ORIA_MESSAGES_STREAM(chatId)
-      );
+      rtLog("Stream route for this chat:", BackendRoutes.ORIA_MESSAGES_STREAM(chatId));
 
       if (isStreamingMode) {
         // In streaming mode, return a custom streaming interface
@@ -237,12 +231,12 @@ export const oriaService = {
 
         // Step 1: Send the message with POST
         const messageUrl = BackendRoutes.ORIA_MESSAGES(chatId);
-        console.log("Sending message with POST to:", messageUrl);
-        console.log("Message payload:", requestBody);
+        rtLog("Sending message with POST to:", messageUrl);
+        rtLog("Message payload:", requestBody);
 
         const postResponse = await apiClient.post(messageUrl, requestBody);
-        console.log("POST response status:", postResponse.status);
-        console.log("POST response data:", postResponse.data);
+        rtLog("POST response status:", postResponse.status);
+        rtLog("POST response data keys:", Object.keys(postResponse?.data || {}));
 
         // Step 2: Now connect to the streaming endpoint to receive the response
         const streamUrl = `/oria/chats/${chatId}/message/stream`;
@@ -252,12 +246,13 @@ export const oriaService = {
           apiClient.defaults.baseURL
         }${streamUrl}?token=${encodeURIComponent(accessToken)}`;
 
-        console.log("STREAM MODE DEBUGGING:");
-        console.log(
-          "  - Now connecting to stream URL (with auth token):",
-          streamingUrl
+        rtLog("STREAM MODE DEBUGGING:");
+        const safeUrl = streamingUrl.replace(
+          encodeURIComponent(accessToken),
+          "***"
         );
-        console.log("  - API base URL:", apiClient.defaults.baseURL);
+        rtLog("  - Connecting to stream URL:", safeUrl);
+        rtLog("  - API base URL:", apiClient.defaults.baseURL);
 
         // Create our custom streaming interface that mimics EventSource
         let messageBuffer: { data: string }[] = []; // Buffer for messages that arrive before handler is set
@@ -268,7 +263,7 @@ export const oriaService = {
           onopen: undefined,
           close: () => {
             // Will be defined below
-            console.log("Closing stream connection");
+            rtLog("Closing stream connection");
           },
         };
 
@@ -278,11 +273,7 @@ export const oriaService = {
             return this._onmessage;
           },
           set(handler) {
-            console.log(
-              "🎯 onmessage handler being set, processing",
-              messageBuffer.length,
-              "buffered messages"
-            );
+            rtLog("🎯 onmessage handler set. Buffered messages:", messageBuffer.length);
             this._onmessage = handler;
 
             // Process any buffered messages with throttling
@@ -290,12 +281,7 @@ export const oriaService = {
               // Process buffered messages with a small delay to prevent overwhelming the UI
               messageBuffer.forEach((msg, index) => {
                 setTimeout(() => {
-                  console.log(
-                    "📦 Processing buffered message",
-                    index + 1,
-                    "of",
-                    messageBuffer.length
-                  );
+                  rtLog("📦 Processing buffered message", index + 1, "of", messageBuffer.length);
                   handler(msg);
                 }, index * 10); // 10ms delay between messages
               });
@@ -312,9 +298,7 @@ export const oriaService = {
               customEventSource.onopen();
             }
 
-            console.log(
-              "Using XMLHttpRequest for streaming (better React Native compatibility)"
-            );
+            rtLog("Using XMLHttpRequest for streaming (React Native compatible)");
 
             // Use XMLHttpRequest which has better compatibility with React Native
             const xhr = new XMLHttpRequest();
@@ -323,7 +307,7 @@ export const oriaService = {
 
             // Define the close method to abort the request
             customEventSource.close = () => {
-              console.log("Closing XHR connection");
+              rtLog("Closing XHR connection");
               isActive = false;
               xhr.abort();
             };
@@ -337,12 +321,7 @@ export const oriaService = {
             xhr.onreadystatechange = () => {
               if (!isActive) return;
 
-              console.log(
-                "XHR readyState:",
-                xhr.readyState,
-                "status:",
-                xhr.status
-              );
+              rtLog("XHR state:", xhr.readyState, "status:", xhr.status);
 
               // Check if we have a response and it's successful
               if (xhr.readyState >= 3 && xhr.status === 200) {
@@ -350,11 +329,7 @@ export const oriaService = {
                 // Get any new data
                 const newData = xhr.responseText.substring(buffer.length);
                 if (newData) {
-                  console.log(
-                    "Received new data chunk:",
-                    newData.length,
-                    "characters"
-                  );
+                  rtLog("Received new data chunk length:", newData.length);
                   buffer += newData;
 
                   // Process complete SSE messages
@@ -364,16 +339,14 @@ export const oriaService = {
                   for (const line of lines) {
                     if (line.trim() && line.startsWith("data:")) {
                       const data = line.substring(5).trim();
-                      console.log("Processing SSE data:", data);
+                      rtLog("Processing SSE data:", data);
 
                       // Call onmessage handler if defined or buffer the message
                       if (customEventSource.onmessage && isActive) {
-                        console.log("🚀 CALLING onmessage handler");
+                        rtLog("🚀 CALLING onmessage handler");
                         customEventSource.onmessage({ data });
                       } else if (isActive) {
-                        console.log(
-                          "📥 BUFFERING message - handler not set yet"
-                        );
+                        rtLog("📥 BUFFERING message - handler not set yet");
                         messageBuffer.push({ data });
                       }
                     }
@@ -385,20 +358,15 @@ export const oriaService = {
             // Handle completion
             xhr.onload = () => {
               if (isActive) {
-                console.log("Stream complete - onload fired");
+                rtLog("Stream complete - onload fired");
                 isActive = false;
               }
             };
 
             // Handle errors
             xhr.onerror = (error) => {
-              console.error("XHR Stream error:", error);
-              console.error(
-                "XHR status:",
-                xhr.status,
-                "readyState:",
-                xhr.readyState
-              );
+              rtError("XHR Stream error:", error);
+              rtError("XHR status:", xhr.status, "readyState:", xhr.readyState);
               if (customEventSource.onerror && isActive) {
                 customEventSource.onerror(error);
               }
@@ -407,7 +375,7 @@ export const oriaService = {
 
             // Handle timeout
             xhr.ontimeout = () => {
-              console.error("XHR Stream timeout");
+              rtError("XHR Stream timeout");
               if (customEventSource.onerror && isActive) {
                 customEventSource.onerror(new Error("Stream timeout"));
               }
@@ -418,10 +386,10 @@ export const oriaService = {
             xhr.timeout = 30000;
 
             // Start the request
-            console.log("Starting XHR request to:", streamingUrl);
+            rtLog("Starting XHR request to stream (masked):", safeUrl);
             xhr.send();
           } catch (error) {
-            console.error("Stream setup error:", error);
+            rtError("Stream setup error:", error);
 
             // Call onerror handler if defined
             if (customEventSource.onerror) {
@@ -430,12 +398,12 @@ export const oriaService = {
           }
         })();
 
-        console.log("Custom streaming interface created successfully");
+        rtLog("Custom streaming interface created successfully");
         return customEventSource;
       } else {
         // In regular mode, use axios and return normalized message payload
         const regularUrl = BackendRoutes.ORIA_MESSAGES(chatId);
-        console.log("Using regular endpoint (non-streaming):", regularUrl);
+        rtLog("Using regular endpoint (non-streaming):", regularUrl);
         const response = await apiClient.post(regularUrl, requestBody);
         try {
           const raw = response?.data;
@@ -444,29 +412,25 @@ export const oriaService = {
             typeof raw?.content === "string"
               ? raw.content.slice(0, 120)
               : undefined;
-          console.log("Non-streaming raw response keys:", keys);
-          console.log(
+          rtLog("Non-streaming raw response keys:", keys);
+          rtLog(
             "Non-streaming raw content length:",
             typeof raw?.content === "string" ? raw.content.length : -1
           );
-          if (preview !== undefined)
-            console.log("Non-streaming raw content preview:", preview);
+          if (preview !== undefined) rtLog("Non-streaming raw content preview:", preview);
           if (raw && raw.assistant_message) {
             const am = raw.assistant_message;
             const amKeys = am && typeof am === "object" ? Object.keys(am) : [];
             const amLen =
               typeof am?.content === "string" ? am.content.length : -1;
-            console.log("Non-streaming assistant_message keys:", amKeys);
-            console.log(
+            rtLog("Non-streaming assistant_message keys:", amKeys);
+            rtLog(
               "Non-streaming assistant_message.content length:",
               amLen
             );
             if (typeof am?.content === "string") {
               const amPreview = am.content.slice(0, 120);
-              console.log(
-                "Non-streaming assistant_message.content preview:",
-                amPreview
-              );
+              rtLog("Non-streaming assistant_message.content preview:", amPreview);
             }
           }
         } catch {}
@@ -483,7 +447,7 @@ export const oriaService = {
             content,
             created_at: new Date().toISOString(),
           };
-          console.log("Mapped from assistant_message (string):", {
+          rtLog("Mapped from assistant_message (string):", {
             id: mapped.id,
             len: mapped.content.length,
             time: mapped.created_at,
@@ -503,11 +467,11 @@ export const oriaService = {
             content: am.content,
             created_at: am.created_at ?? new Date().toISOString(),
           };
-          console.log("Mapped from assistant_message:", mapped);
+          rtLog("Mapped from assistant_message:", mapped);
           return mapped;
         }
         const normalized = normalizeSendMessageResponse(response.data);
-        console.log("Normalized non-streaming response:", normalized);
+        rtLog("Normalized non-streaming response:", normalized);
         return normalized;
       }
     } catch (error) {

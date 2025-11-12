@@ -1,4 +1,4 @@
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +26,7 @@ import LeaderboardComingSoon from '@/src/components/LeaderboardComingSoon';
 import { useAchievements } from '@/src/context/AchievementsContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import HomeTopBar from '@/src/components/header/HomeTopBar';
+import ContentBlockerComingSoonModal from '@/src/components/ContentBlockerComingSoonModal';
 
 // Helper function to format time with more precision
 const formatTimeCounter = (seconds: number) => {
@@ -167,6 +168,8 @@ export default function HomeScreen() {
   
   // State pentru showing the coming soon modal for Pet
   const [showPetModal, setShowPetModal] = useState(false);
+  // State for showing Content Blocker Coming Soon
+  const [showContentBlockerModal, setShowContentBlockerModal] = useState(false);
   
   // State for selected conversation
   const [selectedChat, setSelectedChat] = useState<OriaChatWithMessages | null>(null);
@@ -1493,6 +1496,31 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
         
+        {/* Content Blocker Banner */}
+        <TouchableOpacity 
+          style={styles.contentBlockerCard}
+          activeOpacity={0.8}
+          onPress={() => setShowContentBlockerModal(true)}
+        >
+          <LinearGradient
+            colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
+            style={styles.contentBlockerGradient}
+          >
+            <View style={styles.contentBlockerRow}>
+              <View style={styles.contentBlockerLeft}>
+                <View style={styles.contentBlockerIconCircle}>
+                  <MaterialIcons name="block" size={20} color={theme.colors.textPrimary} />
+                </View>
+                <View style={styles.contentBlockerTexts}>
+                  <Text style={styles.contentBlockerTitle}>Content Blocker</Text>
+                  <Text style={styles.contentBlockerDescription}>Block distracting websites and app</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textPrimary} />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+        
         {/* Speak to Oria Section */}
         <View style={styles.oriaCard}>
           <LinearGradient
@@ -1829,6 +1857,12 @@ export default function HomeScreen() {
       <PetComingSoonModal
         visible={showPetModal}
         onClose={() => setShowPetModal(false)}
+      />
+
+      {/* Content Blocker Coming Soon Modal */}
+      <ContentBlockerComingSoonModal
+        visible={showContentBlockerModal}
+        onClose={() => setShowContentBlockerModal(false)}
       />
     </GradientBackground>
   );
@@ -2672,5 +2706,52 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  contentBlockerCard: {
+    backgroundColor: 'transparent',
+    borderRadius: theme.borderRadius.medium,
+    marginBottom: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
+  },
+  contentBlockerGradient: {
+    padding: 16,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
+  },
+  contentBlockerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  contentBlockerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  contentBlockerIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  contentBlockerTexts: {
+    flex: 1,
+  },
+  contentBlockerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  contentBlockerDescription: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
 });
