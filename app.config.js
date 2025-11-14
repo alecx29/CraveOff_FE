@@ -93,6 +93,12 @@ module.exports = {
           "serviceId": "com.usualsuspect29.craveoffapp",
           "teamId": "S5YUB44YKU" // Înlocuiți cu Team ID-ul dvs. din Apple Developer Portal
         }
+      ],
+      [
+        "./plugins/with-craveoff-protection",
+        {
+          dohEndpoint: "https://cloudflare-dns.com/dns-query"
+        }
       ]
     ],
     
