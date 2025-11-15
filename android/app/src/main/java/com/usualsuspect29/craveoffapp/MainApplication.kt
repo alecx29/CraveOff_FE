@@ -3,6 +3,8 @@ package com.usualsuspect29.craveoffapp
 import android.app.Application
 import android.content.res.Configuration
 
+import com.usualsuspect29.craveoffapp.craveoff.CraveOffProtectionPackage
+
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactNativeHost
@@ -23,6 +25,7 @@ class MainApplication : Application(), ReactApplication {
         object : DefaultReactNativeHost(this) {
           override fun getPackages(): List<ReactPackage> {
             val packages = PackageList(this).packages
+            packages.add(CraveOffProtectionPackage())
             // Packages that cannot be autolinked yet can be added manually here, for example:
             // packages.add(MyReactNativePackage())
             return packages

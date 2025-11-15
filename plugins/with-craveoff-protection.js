@@ -60,26 +60,37 @@ const withManifestEntries = (config, _props) => {
 const withAddPackageToMainApplication = (config) => {
   return withMainApplication(config, (config) => {
     const pkg = (config.android && config.android.package) || "com.craveoff.app";
-    const contents = config.modResults.contents;
-    const importLine = `import ${pkg}.craveoff.CraveOffProtectionPackage;`;
+    let contents = config.modResults.contents;
+    const isKotlin = config.modResults.language === "kt" || contents.includes("class MainApplication");
+    const importLine = isKotlin
+      ? `import ${pkg}.craveoff.CraveOffProtectionPackage`
+      : `import ${pkg}.craveoff.CraveOffProtectionPackage;`;
+
     if (!contents.includes(importLine)) {
-      config.modResults.contents = contents.replace(
-        /(import .+;\s*)+(?!import)/,
+      contents = contents.replace(
+        /(import .+\n)+(?!import)/,
         (match) => `${match}\n${importLine}\n`
       );
     }
 
-    if (config.modResults.contents.includes("new PackageList(this).getPackages()")) {
-      config.modResults.contents = config.modResults.contents.replace(
-        /(List<ReactPackage>\s+packages\s*=\s*new PackageList\(this\)\.getPackages\(\);\s*)/,
-        `$1\n      packages.add(new CraveOffProtectionPackage());\n`
-      );
+    if (isKotlin) {
+      const anchor = /val\s+packages\s*=\s*PackageList\(this\)\.packages/;
+      if (anchor.test(contents) && !contents.includes("CraveOffProtectionPackage()")) {
+        contents = contents.replace(
+          anchor,
+          (m) => `${m}\n            packages.add(CraveOffProtectionPackage())`
+        );
+      }
     } else {
-      config.modResults.contents = config.modResults.contents.replace(
-        /(packages\s*=\s*new PackageList\(this\)\.getPackages\(\);[\s\S]*?;)/,
-        `$1\n      packages.add(new CraveOffProtectionPackage());`
-      );
+      const javaAnchor = /new\s+PackageList\(this\)\.getPackages\(\);/;
+      if (javaAnchor.test(contents) && !contents.includes("new CraveOffProtectionPackage()")) {
+        contents = contents.replace(
+          javaAnchor,
+          (m) => `${m}\n      packages.add(new CraveOffProtectionPackage());`
+        );
+      }
     }
+    config.modResults.contents = contents;
 
     return config;
   });
@@ -117,9 +128,16 @@ const withCopyKotlinSources = (config, props) => {
       const androidDir = path.join(projectRoot, "android");
       const appSrcMain = path.join(androidDir, "app", "src", "main");
       const javaDir = path.join(appSrcMain, "java");
+      const resDir = path.join(appSrcMain, "res");
       const appPackage = (config.android && config.android.package) || "com.craveoff.app";
       const packagePath = appPackage.replace(/\./g, path.sep);
       const targetDir = path.join(javaDir, packagePath, "craveoff");
+
+      // Workaround Windows prebuild timing: ensure mipmap directories exist before icon generation
+      const mipmaps = ["mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi"];
+      for (const m of mipmaps) {
+        fs.mkdirSync(path.join(resDir, m), { recursive: true });
+      }
 
       const pluginAndroidDir = path.join(projectRoot, "plugins", "craveoff-protection", "android");
       const files = [
@@ -127,6 +145,7 @@ const withCopyKotlinSources = (config, props) => {
         "CraveOffProtectionPackage.kt",
         "PornBlockVpnService.kt",
         "NotificationUtils.kt",
+        "ProtectionHealthWorker.kt",
       ];
 
       for (const file of files) {

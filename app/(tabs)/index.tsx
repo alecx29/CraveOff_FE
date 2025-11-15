@@ -1500,7 +1500,7 @@ export default function HomeScreen() {
         <TouchableOpacity 
           style={styles.contentBlockerCard}
           activeOpacity={0.8}
-          onPress={() => setShowContentBlockerModal(true)}
+          onPress={() => router.push('/content-blocker')}
         >
           <LinearGradient
             colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}

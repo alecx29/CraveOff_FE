@@ -22,6 +22,10 @@ const Theme = {
     cardInteractive: "#1f2937",
     borderLight: "#374151",
 
+    // Borders
+    border: "#374151",
+    borderSelected: "#6366f1",
+
     // Gradient colors
     gradientStart: "#030712",
     gradientEnd: "#111827",

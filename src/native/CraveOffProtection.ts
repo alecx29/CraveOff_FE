@@ -11,6 +11,8 @@ type NativeModuleShape = {
   disable(): Promise<boolean>;
   applyBlocklist(domains: string[]): Promise<boolean>;
   status(): Promise<Status>;
+  openPrivateDnsSettings?(): Promise<boolean>;
+  openSystemSettings?(): Promise<boolean>;
 };
 
 const LINKING_ERROR =
@@ -37,6 +39,14 @@ export const CraveOffProtection = {
   status: async (): Promise<Status> => {
     if (!Native) throw new Error(LINKING_ERROR);
     return Native.status();
+  },
+  openPrivateDnsSettings: async (): Promise<boolean> => {
+    if (!Native || !Native.openPrivateDnsSettings) return false;
+    return Native.openPrivateDnsSettings();
+  },
+  openSystemSettings: async (): Promise<boolean> => {
+    if (!Native || !Native.openSystemSettings) return false;
+    return Native.openSystemSettings();
   },
   addListener: (cb: (evt: { type: string }) => void): EmitterSubscription | undefined => {
     if (!emitter) return undefined;
