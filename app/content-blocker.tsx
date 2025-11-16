@@ -116,7 +116,8 @@ export default function ContentBlockerScreen() {
 					/>
 					<Text style={styles.heroTitle}>Content Blocker</Text>
 					<Text style={styles.heroSubtitle}>
-						CraveOff protects you by managing content restrictions and disabling private browsing
+					CraveOff uses a local on-device VPN to filter adult (18+) websites and enforce SafeSearch.
+					No traffic is sent to external VPN servers.
 					</Text>
 				</View>
 

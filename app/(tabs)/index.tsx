@@ -1532,7 +1532,7 @@ export default function HomeScreen() {
             <Text style={styles.oriaTitle}>Speak to Oria</Text>
           </View>
           <Text style={styles.oriaDescription}>
-            24/7 therapist specialized in porn addiction
+            24/7 AI support trained for helping with porn addiction
           </Text>
           <TouchableOpacity 
             style={styles.oriaButton}

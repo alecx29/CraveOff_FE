@@ -25,16 +25,16 @@ export default function ContentBlockerSettingsScreen() {
 		}
 	};
 
-	const openChrome = async () => {
-		try {
-			const ok = await Linking.openURL('googlechrome://navigate?url=https://www.google.com');
-			if (!ok) throw new Error('fallback');
-		} catch {
-			try {
-				await Linking.openURL('https://www.google.com');
-			} catch {}
-		}
-	};
+	// const openChrome = async () => {
+	// 	try {
+	// 		const ok = await Linking.openURL('googlechrome://navigate?url=https://www.google.com');
+	// 		if (!ok) throw new Error('fallback');
+	// 	} catch {
+	// 		try {
+	// 			await Linking.openURL('https://www.google.com');
+	// 		} catch {}
+	// 	}
+	// };
 
 	return (
 		<GradientBackground>
@@ -75,10 +75,10 @@ export default function ContentBlockerSettingsScreen() {
 									Chrome: <Text style={styles.helpEmoji}>⋮</Text> → Settings → Privacy and security → Use secure DNS → Off
 								</Text>
 							</View>
-							<TouchableOpacity onPress={openChrome} style={styles.helpCta}>
+							{/* <TouchableOpacity onPress={openChrome} style={styles.helpCta}>
 								<Ionicons name="arrow-forward-circle-outline" size={16} color={theme.colors.primary} />
 								<Text style={styles.helpCtaText}>Open Chrome</Text>
-							</TouchableOpacity>
+							</TouchableOpacity> */}
 						</View>
 					</View>
 				) : (
