@@ -19,7 +19,9 @@ const LINKING_ERROR =
   "CraveOffProtection native module not found. Ensure you've run `npx expo prebuild` with the plugin, and built a dev client via EAS.";
 
 const Native: NativeModuleShape | undefined =
-  Platform.OS === 'android' ? (NativeModules.CraveOffProtection as NativeModuleShape) : undefined;
+  (Platform.OS === 'android' || Platform.OS === 'ios')
+    ? (NativeModules.CraveOffProtection as NativeModuleShape)
+    : undefined;
 
 const emitter = Platform.OS === 'android' ? new NativeEventEmitter(NativeModules.CraveOffProtection) : undefined;
 

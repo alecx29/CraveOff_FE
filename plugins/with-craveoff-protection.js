@@ -4,6 +4,8 @@ const {
   withMainApplication,
   withAppBuildGradle,
   withDangerousMod,
+  withEntitlementsPlist,
+  withXcodeProject,
 } = require("@expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
@@ -165,6 +167,41 @@ const withCraveOffProtection = (config, props) => {
   config = withAddPackageToMainApplication(config);
   config = withOkHttpDependency(config);
   config = withCopyKotlinSources(config, props);
+  // iOS: entitlement + copy/link sources
+  config = withEntitlementsPlist(config, (config) => {
+    const ent = config.modResults;
+    ent["com.apple.developer.family-controls"] = true;
+    return config;
+  });
+  config = withDangerousMod(config, [
+    "ios",
+    async (config) => {
+      const projectRoot = config.modRequest.projectRoot;
+      const iosProjectRoot = config.modRequest.platformProjectRoot;
+      const projectName = config.modRequest.projectName || "App";
+      const pluginIOSDir = path.join(projectRoot, "plugins", "craveoff-protection", "ios");
+      const destDir = path.join(iosProjectRoot, projectName);
+      const files = ["CraveOffProtectionModule.swift", "CraveOffProtectionModule.m"];
+      for (const file of files) {
+        const src = path.join(pluginIOSDir, file);
+        if (fs.existsSync(src)) {
+          const dest = path.join(destDir, file);
+          fs.mkdirSync(path.dirname(dest), { recursive: true });
+          fs.copyFileSync(src, dest);
+        }
+      }
+      return config;
+    },
+  ]);
+  config = withXcodeProject(config, (config) => {
+    const proj = config.modResults;
+    const firstTarget = proj.getFirstTarget().uuid;
+    try { proj.addSourceFile("CraveOffProtectionModule.swift", { target: firstTarget }); } catch {}
+    try { proj.addSourceFile("CraveOffProtectionModule.m", { target: firstTarget }); } catch {}
+    proj.addBuildProperty("SWIFT_VERSION", "5.0");
+    proj.addBuildProperty("IPHONEOS_DEPLOYMENT_TARGET", "16.0");
+    return config;
+  });
   return config;
 };
 

@@ -38,10 +38,6 @@ export default function ContentBlockerScreen() {
 	}, []);
 
 	const onToggle = async (value: boolean) => {
-		if (Platform.OS !== 'android') {
-			Alert.alert('Not supported', 'Content restrictions are currently available on Android only.');
-			return;
-		}
 		if (busy) return;
 		setBusy(true);
 		try {

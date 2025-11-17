@@ -5,6 +5,8 @@ import {
   withMainApplication,
   withAppBuildGradle,
   withDangerousMod,
+  withEntitlementsPlist,
+  withXcodeProject,
 } from "@expo/config-plugins";
 import fs from "fs";
 import path from "path";
@@ -219,6 +221,57 @@ const withCraveOffProtection: ConfigPlugin<CraveOffProtectionProps> = (
   config = withAddPackageToMainApplication(config);
   config = withOkHttpDependency(config);
   config = withCopyKotlinSources(config, props);
+  // iOS: add Family Controls entitlement, copy/link Swift sources, and set minimal build settings
+  config = withEntitlementsPlist(config, (config) => {
+    const ent = config.modResults;
+    // FamilyControls entitlement (requires Apple approval)
+    (ent as any)["com.apple.developer.family-controls"] = true;
+    return config;
+  });
+  // Copy Swift/ObjC bridge sources into the iOS project directory
+  config = withDangerousMod(config, [
+    "ios",
+    async (config) => {
+      const projectRoot = config.modRequest.projectRoot;
+      const iosProjectRoot = config.modRequest.platformProjectRoot;
+      const projectName = config.modRequest.projectName ?? "App";
+      const pluginIOSDir = path.join(
+        projectRoot,
+        "plugins",
+        "craveoff-protection",
+        "ios"
+      );
+      const destDir = path.join(iosProjectRoot, projectName);
+      const files = ["CraveOffProtectionModule.swift", "CraveOffProtectionModule.m"];
+      for (const file of files) {
+        const src = path.join(pluginIOSDir, file);
+        if (fs.existsSync(src)) {
+          const dest = path.join(destDir, file);
+          fs.mkdirSync(path.dirname(dest), { recursive: true });
+          fs.copyFileSync(src, dest);
+        }
+      }
+      return config;
+    },
+  ]);
+  // Link the Swift/ObjC sources to the Xcode project and ensure build settings
+  config = withXcodeProject(config, (config) => {
+    const proj = config.modResults;
+    const swiftFile = "CraveOffProtectionModule.swift";
+    const mFile = "CraveOffProtectionModule.m";
+    const firstTarget = proj.getFirstTarget().uuid;
+    // Add source files (idempotent)
+    try {
+      proj.addSourceFile(swiftFile, { target: firstTarget });
+    } catch {}
+    try {
+      proj.addSourceFile(mFile, { target: firstTarget });
+    } catch {}
+    // Ensure Swift version and iOS deployment target (iOS 16 for FamilyControls/ManagedSettings)
+    proj.addBuildProperty("SWIFT_VERSION", "5.0");
+    proj.addBuildProperty("IPHONEOS_DEPLOYMENT_TARGET", "16.0");
+    return config;
+  });
   return config;
 };
 

@@ -62,10 +62,7 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
     { code: 'STREAK_30', title: '30 Days Clean', description: 'Stay clean for 30 consecutive days', threshold: 30, xp: 300 },
     { code: 'STREAK_60', title: '60 Days Clean', description: 'Stay clean for 60 consecutive days', threshold: 60, xp: 600 },                                                                   
     { code: 'STREAK_90', title: '90 Days Clean', description: 'Stay clean for 90 consecutive days', threshold: 90, xp: 1000 },
-    { code: 'STREAK_120', title: '120 Days Clean', description: 'Four months of consistency. You’ve come far — your energy and clarity show it.', threshold: 120, xp: 1400 },
-    { code: 'STREAK_150', title: '150 Days Clean', description: 'Five months strong. You’re no longer fighting — you’re mastering yourself.', threshold: 150, xp: 1800 },
-    { code: 'STREAK_200', title: '200 Days Clean', description: 'Over half a year clean. You’re living proof that focus and discipline win.', threshold: 200, xp: 2500 },
-    { code: 'STREAK_365', title: '365 Days Clean', description: 'One full year clean. A new life, built from courage and self-mastery.', threshold: 365, xp: 5000 },
+    { code: 'STREAK_365', title: '365 Days Clean', description: 'One full year clean. Few end up here but its a sign of self-mastery.', threshold: 365, xp: 5000 },
   ];
 
   // Normalize and merge server payload with our known definitions
