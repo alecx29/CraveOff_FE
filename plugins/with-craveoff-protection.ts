@@ -42,6 +42,8 @@ const withManifestEntries: ConfigPlugin<CraveOffProtectionProps> = (
     ensureUsesPermission(manifest, "android.permission.INTERNET");
     ensureUsesPermission(manifest, "android.permission.ACCESS_NETWORK_STATE");
     ensureUsesPermission(manifest, "android.permission.FOREGROUND_SERVICE");
+    // Android 14+ typed FGS permission for dataSync
+    ensureUsesPermission(manifest, "android.permission.FOREGROUND_SERVICE_DATA_SYNC");
     // Android 13+ notifications permission for foreground notification
     ensureUsesPermission(manifest, "android.permission.POST_NOTIFICATIONS");
 

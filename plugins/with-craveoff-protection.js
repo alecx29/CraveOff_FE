@@ -29,6 +29,8 @@ const withManifestEntries = (config, _props) => {
     ensureUsesPermission(manifest, "android.permission.INTERNET");
     ensureUsesPermission(manifest, "android.permission.ACCESS_NETWORK_STATE");
     ensureUsesPermission(manifest, "android.permission.FOREGROUND_SERVICE");
+    // Android 14+ typed FGS permission for dataSync
+    ensureUsesPermission(manifest, "android.permission.FOREGROUND_SERVICE_DATA_SYNC");
     ensureUsesPermission(manifest, "android.permission.POST_NOTIFICATIONS");
 
     const app = AndroidConfig.Manifest.getMainApplication(manifest);
