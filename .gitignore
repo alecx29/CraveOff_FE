@@ -18,7 +18,7 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
-# Native source files
+# Native source files (except plugin templates)
 *.h
 *.cpp
 *.mm
@@ -31,6 +31,11 @@ expo-env.d.ts
 *.a
 *.so
 *.dylib
+
+# Exception: Allow native plugin source files to be tracked
+!plugins/craveoff-protection/**/*.kt
+!plugins/craveoff-protection/**/*.swift
+!plugins/craveoff-protection/**/*.m
 
 # Metro
 .metro-health-check*
