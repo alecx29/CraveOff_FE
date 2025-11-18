@@ -45,7 +45,7 @@ const withManifestEntries = (config, _props) => {
       app.service.push({
         $: {
           "android:name": serviceName,
-          "android:exported": "false",
+          "android:exported": "true",
           "android:permission": "android.permission.BIND_VPN_SERVICE",
           "android:foregroundServiceType": "dataSync",
         },
@@ -55,6 +55,12 @@ const withManifestEntries = (config, _props) => {
           },
         ],
       });
+    } else {
+      // Ensure attributes exist even if service was previously added
+      already.$["android:exported"] = already.$["android:exported"] || "true";
+      already.$["android:permission"] =
+        already.$["android:permission"] || "android.permission.BIND_VPN_SERVICE";
+      already.$["android:foregroundServiceType"] = "dataSync";
     }
 
     return config;

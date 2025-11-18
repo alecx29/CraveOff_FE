@@ -43,7 +43,10 @@ const withManifestEntries: ConfigPlugin<CraveOffProtectionProps> = (
     ensureUsesPermission(manifest, "android.permission.ACCESS_NETWORK_STATE");
     ensureUsesPermission(manifest, "android.permission.FOREGROUND_SERVICE");
     // Android 14+ typed FGS permission for dataSync
-    ensureUsesPermission(manifest, "android.permission.FOREGROUND_SERVICE_DATA_SYNC");
+    ensureUsesPermission(
+      manifest,
+      "android.permission.FOREGROUND_SERVICE_DATA_SYNC"
+    );
     // Android 13+ notifications permission for foreground notification
     ensureUsesPermission(manifest, "android.permission.POST_NOTIFICATIONS");
 
@@ -62,9 +65,8 @@ const withManifestEntries: ConfigPlugin<CraveOffProtectionProps> = (
       app.service.push({
         $: {
           "android:name": serviceName,
-          "android:exported": "false",
+          "android:exported": "true",
           "android:permission": "android.permission.BIND_VPN_SERVICE",
-          // Keep type conservative for API 34 requirements
           "android:foregroundServiceType": "dataSync",
         },
         "intent-filter": [
@@ -77,6 +79,14 @@ const withManifestEntries: ConfigPlugin<CraveOffProtectionProps> = (
           },
         ],
       } as any);
+    } else {
+      // Ensure required attributes are present if service was already defined
+      already.$["android:exported"] = already.$["android:exported"] ?? "true";
+      already.$["android:permission"] =
+        already.$["android:permission"] ??
+        "android.permission.BIND_VPN_SERVICE";
+      // Android 14+/targetSdk>=34 requires a typed FGS; declare dataSync type
+      already.$["android:foregroundServiceType"] = "dataSync";
     }
 
     return config;
@@ -244,7 +254,10 @@ const withCraveOffProtection: ConfigPlugin<CraveOffProtectionProps> = (
         "ios"
       );
       const destDir = path.join(iosProjectRoot, projectName);
-      const files = ["CraveOffProtectionModule.swift", "CraveOffProtectionModule.m"];
+      const files = [
+        "CraveOffProtectionModule.swift",
+        "CraveOffProtectionModule.m",
+      ];
       for (const file of files) {
         const src = path.join(pluginIOSDir, file);
         if (fs.existsSync(src)) {
