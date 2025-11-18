@@ -15,6 +15,9 @@ RCT_EXTERN_METHOD(applyBlocklist:(NSArray<NSString *> *)domains
 RCT_EXTERN_METHOD(status:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(authorizationStatus:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end
 
 

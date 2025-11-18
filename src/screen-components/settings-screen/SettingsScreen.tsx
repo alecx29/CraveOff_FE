@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Linking } from 'react-native';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Linking, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import LottieUniversal from '@/src/components/LottieUniversal';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -10,8 +9,9 @@ import { useTheme } from '@/src/context/ThemeProvider';
 import { useNotifications } from '@/src/context/NotificationsContext';
 import { AuthContext } from '@/src/context/AuthContext';
 import { useLogs } from '@/src/context/LogsContext';
-import { useJournal } from '@/src/context/JournalContext';
 import { useAchievements } from '@/src/context/AchievementsContext';
+import { getAchievementImage } from '@/src/utils/achievementImages';
+import AchievementsPlanetsRow from '@/src/components/AchievementsPlanetsRow';
 
 import SettingCard from './SettingsCard';
 
@@ -20,8 +20,7 @@ const SettingsScreen = () => {
   const { isNotificationsEnabled } = useNotifications();
   const { user: authUser } = useContext(AuthContext);
   const { lastRelapseData } = useLogs();
-  const { entries } = useJournal();
-  const { summary } = useAchievements();
+  const { achievements: achievementsList, summary } = useAchievements();
   const styles = createStyles(theme);
   
   // State pentru clean days
@@ -111,6 +110,32 @@ const SettingsScreen = () => {
     router.push('/settings/account-options');
   };
 
+  // Current (most recently unlocked) achievement to show as avatar
+  const currentAchievementImage = useMemo(() => {
+    try {
+      const unlocked = (achievementsList || []).filter(a => !!a.unlocked);
+      if (unlocked.length === 0) return null;
+      const withDate = unlocked
+        .map(a => ({
+          item: a,
+          date: a.unlockedAt ? new Date(a.unlockedAt) : null,
+          threshold: typeof a.threshold === 'number' ? a.threshold : -1,
+        }));
+      // Prefer latest by date if available, otherwise by highest threshold
+      withDate.sort((a, b) => {
+        if (a.date && b.date) return b.date.getTime() - a.date.getTime();
+        if (a.date && !b.date) return -1;
+        if (!a.date && b.date) return 1;
+        return b.threshold - a.threshold;
+      });
+      const winner = withDate[0]?.item;
+      if (!winner) return null;
+      return getAchievementImage(winner.code);
+    } catch {
+      return null;
+    }
+  }, [achievementsList]);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false}>
       {/* Header */}
@@ -121,38 +146,40 @@ const SettingsScreen = () => {
 
       {/* Profile Card */}
       <View style={styles.profileCard}>
-        {/* <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
-          style={styles.profileGradient}
-        > */}
-          <LinearGradient
-            colors={['rgba(255, 255, 255, 0.28)', 'rgba(255, 255, 255, 0.08)']}
-            style={styles.avatarRing}
-          >
+
             <View style={styles.avatarContainer}>
-              <LottieUniversal
-                source={require('@/assets/images/circle.json')}
-                autoPlay
-                loop
+              <Image
+                source={currentAchievementImage || require('@/assets/images/output1.webp')}
+                style={styles.avatarImage}
                 resizeMode="cover"
-                pointerEvents="none"
-                style={styles.avatarLottie}
               />
             </View>
-          </LinearGradient>
+
+
           <Text style={styles.username}>{authUser?.name || 'Your Name'}</Text>
           <Text style={styles.memberSince}>Member since 2025</Text>
         {/* </LinearGradient> */}
       </View>
       
 
-      {/* Stats Row */}
-      <View style={styles.statsRow}>
-        {/* Clean Days */}
-        <View style={styles.statCard}>
+      {/* Achievements Planets Banner */}
+      <AchievementsPlanetsRow
+        achievements={(achievementsList || []).map(a => ({ code: a.code, unlocked: !!a.unlocked }))}
+        summary={summary}
+        onPress={navigateToAchievements}
+        maxItems={9}
+        size={34}
+        spacing={2}
+        showHeader={false}
+        bottomSpacing={20}
+      />
+
+      {/* Compact Stats Row: Days Clean and Achievements */}
+      <View style={styles.statsCompactRow}>
+        <View style={styles.statCardCompact}>
           <LinearGradient
             colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
-            style={styles.statGradient}
+            style={styles.statGradientCompact}
           >
             <View style={styles.statInlineRow}>
               <Text style={styles.statNumber}>{cleanDays}</Text>
@@ -161,41 +188,19 @@ const SettingsScreen = () => {
             <Text style={styles.statLabel}>Days Clean</Text>
           </LinearGradient>
         </View>
-        
-        {/* Journal Entries */}
-        <View style={styles.statCard}>
+        <View style={styles.statCardCompact}>
           <LinearGradient
             colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
-            style={styles.statGradient}
-          >
-            <Text style={styles.statNumber}>{entries?.length || 0}</Text>
-            <Text style={styles.statLabel}>Journal Entries</Text>
-          </LinearGradient>
-        </View>
-        
-        {/* Achievements */}
-        <View style={styles.statCard}>
-          <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
-            style={styles.statGradient}
+            style={styles.statGradientCompact}
           >
             <Text style={styles.statNumber}>
-              {summary ? `${summary.unlocked}/${summary.total}` : '—'}
+              {cleanDays >= 90 ? '0' : Math.max(0, 90 - cleanDays)}
             </Text>
-            <Text style={styles.statLabel}>Achievements</Text>
+            <Text style={styles.statLabel}>Days Left</Text>
           </LinearGradient>
         </View>
       </View>
 
-      {/* Settings Options */}
-      <SettingCard
-        icon="trophy-outline"
-        title="Achievements"
-        value={summary ? `${summary.unlocked} of ${summary.total} Unlocked` : 'Loading...'}
-        onPress={navigateToAchievements}
-        iconComponent={Ionicons}
-        variant="primary"
-      />
       <SettingCard
         icon="notifications-outline"
         title="Notifications"
@@ -275,10 +280,10 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   avatarRing: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    padding: 2,
+    width: 168,
+    height: 168,
+    borderRadius: 84,
+    padding: 4,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -289,9 +294,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     elevation: 3,
   },
   avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
@@ -300,6 +305,11 @@ const createStyles = (theme: any) => StyleSheet.create({
   avatarLottie: {
     width: 80,
     height: 80,
+  },
+  avatarImage: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
   },
   username: {
     fontSize: 20,
@@ -352,6 +362,27 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textMuted,
     textAlign: 'center',
+  },
+  // Compact two-stat row under planets
+  statsCompactRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  statCardCompact: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderRadius: theme.borderRadius.medium,
+    marginHorizontal: 4,
+    overflow: 'hidden',
+  },
+  statGradientCompact: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: theme.borderRadius.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   // Removed logout button styles (moved to Account Options)
 });

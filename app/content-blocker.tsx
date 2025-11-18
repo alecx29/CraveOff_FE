@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Switch, Alert, Platform, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Switch, Alert, Platform, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -42,11 +42,34 @@ export default function ContentBlockerScreen() {
 		setBusy(true);
 		try {
 			if (value) {
-				// Ensure we have at least a default blocklist applied
-				try { await CraveOffProtection.applyBlocklist(DEFAULT_BLOCKLIST); } catch {}
-				// Optimistic UI: show enabled while the service spins up
-				setEnabled(true);
-				await CraveOffProtection.enable();
+				if (Platform.OS === 'ios') {
+					// iOS: Ask for FamilyControls authorization first
+					try {
+						await CraveOffProtection.enable();
+					} catch (e: any) {
+						setEnabled(false);
+						setMode(undefined);
+						Alert.alert(
+							'Permission required',
+							'CraveOff needs Family Controls authorization to filter web content on iOS. You can grant it in Settings.',
+							[
+								{ text: 'Cancel', style: 'cancel' },
+								{ text: 'Open Settings', onPress: () => Linking.openSettings?.() },
+							]
+						);
+						return;
+					}
+					// Apply blocklist after authorization succeeds
+					try { await CraveOffProtection.applyBlocklist(DEFAULT_BLOCKLIST); } catch {}
+					// Optimistic UI after successful authorization
+					setEnabled(true);
+				} else {
+					// Android: keep original order (apply list then enable)
+					try { await CraveOffProtection.applyBlocklist(DEFAULT_BLOCKLIST); } catch {}
+					// Optimistic UI: show enabled while the service spins up
+					setEnabled(true);
+					await CraveOffProtection.enable();
+				}
 				// Poll status briefly to avoid instant flip-back
 				let s = await CraveOffProtection.status();
 				let attempts = 0;

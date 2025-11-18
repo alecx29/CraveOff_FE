@@ -27,17 +27,51 @@ class CraveOffProtection: NSObject {
   @objc func enable(_ resolve: @escaping RCTPromiseResolveBlock,
                     rejecter reject: @escaping RCTPromiseRejectBlock) {
     if #available(iOS 16.0, *) {
-      Task {
+      Task { @MainActor in
         do {
           try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
-          // Web content filter application will be handled in applyBlocklist/disable phases.
           resolve(true)
         } catch {
-          reject("AUTH_ERROR", error.localizedDescription, error)
+          let nsError = error as NSError
+          var message = nsError.localizedDescription
+          // Provide a clearer hint based on current authorization status when available
+          let status = AuthorizationCenter.shared.authorizationStatus
+          switch status {
+          case .approved:
+            message = "Authorization already approved but request failed. Please try again."
+          case .denied:
+            message = "Family Controls authorization denied."
+          case .notDetermined:
+            message = "Family Controls authorization not determined."
+          @unknown default:
+            break
+          }
+          // Append low-level diagnostics for troubleshooting (domain/code)
+          let diagnostic = " (domain=\(nsError.domain), code=\(nsError.code))"
+          reject("AUTH_ERROR", message + diagnostic, error)
         }
       }
     } else {
       resolve(false)
+    }
+  }
+
+  @objc func authorizationStatus(_ resolve: RCTPromiseResolveBlock,
+                                 rejecter reject: RCTPromiseRejectBlock) {
+    if #available(iOS 16.0, *) {
+      let status = AuthorizationCenter.shared.authorizationStatus
+      switch status {
+      case .approved:
+        resolve("approved")
+      case .denied:
+        resolve("denied")
+      case .notDetermined:
+        resolve("notDetermined")
+      @unknown default:
+        resolve("unknown")
+      }
+    } else {
+      resolve("unavailable")
     }
   }
 

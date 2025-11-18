@@ -13,6 +13,7 @@ type NativeModuleShape = {
   status(): Promise<Status>;
   openPrivateDnsSettings?(): Promise<boolean>;
   openSystemSettings?(): Promise<boolean>;
+  authorizationStatus?(): Promise<'approved'|'denied'|'notDetermined'|'unknown'|'unavailable'>;
 };
 
 const LINKING_ERROR =
@@ -29,6 +30,10 @@ export const CraveOffProtection = {
   enable: async (): Promise<boolean> => {
     if (!Native) throw new Error(LINKING_ERROR);
     return Native.enable();
+  },
+  authorizationStatus: async (): Promise<'approved'|'denied'|'notDetermined'|'unknown'|'unavailable'> => {
+    if (!Native || !Native.authorizationStatus) return 'unavailable';
+    return Native.authorizationStatus();
   },
   disable: async (): Promise<boolean> => {
     if (!Native) throw new Error(LINKING_ERROR);

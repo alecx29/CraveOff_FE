@@ -287,6 +287,27 @@ const withCraveOffProtection: ConfigPlugin<CraveOffProtectionProps> = (
     proj.addBuildProperty("IPHONEOS_DEPLOYMENT_TARGET", "16.0");
     return config;
   });
+  // Ensure Podfile uses the Git specs repo as a fallback to avoid CDN 500s
+  config = withDangerousMod(config, [
+    "ios",
+    async (config) => {
+      const iosRoot = config.modRequest.platformProjectRoot;
+      const podfilePath = path.join(iosRoot, "Podfile");
+      try {
+        let contents = fs.readFileSync(podfilePath, "utf8");
+        const githubSource = `source 'https://github.com/CocoaPods/Specs.git'`;
+        const cdnSource = `source 'https://cdn.cocoapods.org/'`;
+        if (!contents.includes(githubSource)) {
+          // Prepend sources at the top; CocoaPods will consult the git repo when CDN is flaky
+          contents = `${githubSource}\n${cdnSource}\n` + contents;
+          fs.writeFileSync(podfilePath, contents);
+        }
+      } catch {
+        // Ignore if Podfile is not present yet; Expo may generate it later in the pipeline
+      }
+      return config;
+    },
+  ]);
   return config;
 };
 

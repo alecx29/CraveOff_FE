@@ -55,13 +55,20 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
     threshold: number;
     xp: number;
   }[] = [
-    { code: 'WELCOME', title: 'Welcome to CraveOff', description: 'You took the first step towards a healthier life', threshold: 0, xp: 100 },
-    { code: 'STREAK_1', title: '1 Day Clean', description: 'Stay clean for 1 day', threshold: 1, xp: 80 },
-    { code: 'STREAK_3', title: '3 Days Clean', description: 'Stay clean for 3 consecutive days', threshold: 3, xp: 120 },
-    { code: 'STREAK_7', title: '7 Days Clean', description: 'Stay clean for 7 consecutive days', threshold: 7, xp: 150 },
-    { code: 'STREAK_30', title: '30 Days Clean', description: 'Stay clean for 30 consecutive days', threshold: 30, xp: 300 },
-    { code: 'STREAK_60', title: '60 Days Clean', description: 'Stay clean for 60 consecutive days', threshold: 60, xp: 600 },                                                                   
-    { code: 'STREAK_90', title: '90 Days Clean', description: 'Stay clean for 90 consecutive days', threshold: 90, xp: 1000 },
+    { code: 'WELCOME', title: 'Welcome to CraveOff', description: 'You took the first step towards a healthier life', threshold: 1000, xp: 100 },
+    { code: 'STREAK_0', title: '0 Days Clean', description: 'First day of control — your journey has begun.', threshold: 0, xp: 80 },
+    { code: 'STREAK_3', title: '3 Days Clean', description: 'You’re breaking the cycle. Keep your focus strong.', threshold: 3, xp: 120 },
+    { code: 'STREAK_7', title: '7 Days Clean', description: 'A full week clean. You’re proving you can take charge.', threshold: 7, xp: 150 },
+    { 
+      code: 'STREAK_14', 
+      title: '14 Days Clean', 
+      description: 'Two weeks clean. Your discipline is growing — the new you is taking shape.', 
+      threshold: 14, 
+      xp: 200 
+    },
+    { code: 'STREAK_30', title: '30 Days Clean', description: 'One month free. Your mind is getting sharper and stronger.', threshold: 30, xp: 300 },
+    { code: 'STREAK_60', title: '60 Days Clean', description: 'Sixty days of discipline. You’re building real power.', threshold: 60, xp: 600 },
+    { code: 'STREAK_90', title: '90 Days Clean', description: 'Three months clean. This is where transformation begins.', threshold: 90, xp: 1000 },
     { code: 'STREAK_365', title: '365 Days Clean', description: 'One full year clean. Few end up here but its a sign of self-mastery.', threshold: 365, xp: 5000 },
   ];
 

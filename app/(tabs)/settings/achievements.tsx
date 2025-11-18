@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,6 +9,7 @@ import { useTheme } from '@/src/context/ThemeProvider';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { useAchievements } from '@/src/context/AchievementsContext';
 import LottieUniversal from '@/src/components/LottieUniversal';
+import { getAchievementImage } from '@/src/utils/achievementImages';
 
 const AchievementsScreen = () => {
   const { theme } = useTheme();
@@ -30,22 +31,11 @@ const AchievementsScreen = () => {
     }
   };
 
-  // Map context achievements to UI items with icons
-  const codeToIcon: Record<string, any> = {
-    WELCOME: 'ribbon-outline',
-    STREAK_1: 'calendar-outline',
-    STREAK_3: 'star-outline',
-    STREAK_7: 'medal-outline',
-    STREAK_30: 'trophy-outline',
-    STREAK_60: 'trophy-outline',
-    STREAK_90: 'trophy-outline',
-  };
-
   const achievements = (ctxAchievements || []).map(it => ({
     id: it.code,
     title: it.title,
     description: it.description || '',
-    icon: codeToIcon[it.code] || 'trophy-outline',
+    imageSource: getAchievementImage(it.code),
     unlocked: !!it.unlocked,
     date: it.unlocked ? formatUnlockedAt(it.unlockedAt) : undefined,
     xp: typeof it.xp === 'number' ? it.xp : 0,
@@ -128,29 +118,18 @@ const AchievementsScreen = () => {
                 style={styles.achievementGradient}
               >
                 <View style={styles.achievementIconContainer}>
-                  {achievement.unlocked ? (
-                    <View style={styles.achievementIconBg}>
-                      <Ionicons 
-                        name={achievement.icon as any} 
-                        size={24} 
-                        color={theme.colors.textPrimary} 
-                      />
-                      <View style={styles.checkmarkBadge}>
-                        <Ionicons name="checkmark-circle" size={16} color={theme.colors.success || '#22c55e'} />
-                      </View>
-                    </View>
-                  ) : (
-                    <View style={styles.achievementIconBgLocked}>
-                      <Ionicons 
-                        name={achievement.icon as any} 
-                        size={24} 
-                        color={theme.colors.textMuted} 
-                      />
+                  <View style={achievement.unlocked ? styles.achievementIconBg : styles.achievementIconBgLocked}>
+                    <Image
+                      source={achievement.imageSource}
+                      style={[styles.achievementImage, !achievement.unlocked && styles.achievementImageLocked]}
+                      resizeMode="cover"
+                    />
+                    {!achievement.unlocked && (
                       <View style={styles.lockBadge}>
                         <Ionicons name="lock-closed" size={12} color={theme.colors.textMuted} />
                       </View>
-                    </View>
-                  )}
+                    )}
+                  </View>
                 </View>
                 
                 <View style={styles.achievementContent}>
@@ -328,7 +307,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -342,13 +321,13 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-  checkmarkBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    backgroundColor: theme.colors.textPrimary,
-    borderRadius: 10,
-    padding: 2,
+  achievementImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
+  },
+  achievementImageLocked: {
+    opacity: 0.6,
   },
   lockBadge: {
     position: 'absolute',
