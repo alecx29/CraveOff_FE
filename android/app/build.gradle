@@ -92,8 +92,8 @@ android {
         applicationId 'com.usualsuspect29.craveoffapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 43
-        versionName "1.2.18"
+        versionCode 44
+        versionName "1.2.19"
     }
     signingConfigs {
         debug {
