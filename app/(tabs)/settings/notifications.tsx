@@ -186,7 +186,7 @@ const NotificationsScreen = () => {
         {/* Main toggle */}
         <View style={styles.section}>
           <View style={styles.header}>
-            <Ionicons name="notifications" size={24} color={theme.colors.primary} />
+            <Text style={{ fontSize: 20, marginRight: 8 }}>🔔</Text>
             <Text style={styles.sectionTitle}>Notification settings</Text>
           </View>
           
@@ -233,7 +233,7 @@ const NotificationsScreen = () => {
         {isNotificationsEnabled && (
           <View style={styles.section}>
             <View style={styles.header}>
-              <Ionicons name="calendar-outline" size={24} color={theme.colors.primary} />
+              <Text style={{ fontSize: 20, marginRight: 8 }}>📅</Text>
               <Text style={styles.sectionTitle}>Daily Check-in</Text>
             </View>
             

@@ -11,6 +11,16 @@ class CraveOffProtection: NSObject {
     return false
   }
 
+  @available(iOS 16.0, *)
+  private func statusString(_ status: AuthorizationStatus) -> String {
+    switch status {
+    case .approved: return "approved"
+    case .denied: return "denied"
+    case .notDetermined: return "notDetermined"
+    @unknown default: return "unknown"
+    }
+  }
+
   private func normalizeDomains(_ domains: [String]) -> Set<String> {
     var out = Set<String>()
     for d in domains {
@@ -29,7 +39,20 @@ class CraveOffProtection: NSObject {
     if #available(iOS 16.0, *) {
       Task { @MainActor in
         do {
+          // Log current authorization status before requesting
+          let before = AuthorizationCenter.shared.authorizationStatus
+          let beforeS = statusString(before)
+          RCTLogInfo("CraveOff[iOS]: FamilyControls authorizationStatus BEFORE request: \(beforeS)")
+          NSLog("CraveOff[iOS]: FamilyControls authorizationStatus BEFORE request: \(beforeS)")
+
           try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+
+          // Log status after request (may still be the same if user cancelled)
+          let after = AuthorizationCenter.shared.authorizationStatus
+          let afterS = statusString(after)
+          RCTLogInfo("CraveOff[iOS]: FamilyControls authorizationStatus AFTER request: \(afterS)")
+          NSLog("CraveOff[iOS]: FamilyControls authorizationStatus AFTER request: \(afterS)")
+
           resolve(true)
         } catch {
           let nsError = error as NSError
@@ -47,7 +70,10 @@ class CraveOffProtection: NSObject {
             break
           }
           // Append low-level diagnostics for troubleshooting (domain/code)
-          let diagnostic = " (domain=\(nsError.domain), code=\(nsError.code))"
+          let statusS = statusString(status)
+          let diagnostic = " (domain=\(nsError.domain), code=\(nsError.code), status=\(statusS))"
+          RCTLogError("CraveOff[iOS]: requestAuthorization failed: \(message)\(diagnostic) full=\(String(describing: error))")
+          NSLog("CraveOff[iOS]: requestAuthorization failed: \(message)\(diagnostic) full=\(String(describing: error))")
           reject("AUTH_ERROR", message + diagnostic, error)
         }
       }

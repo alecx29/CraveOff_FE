@@ -597,6 +597,8 @@ export default function HomeScreen() {
         fetchLogs();
         // Refresh pledge history to update pledge status after reset
         fetchPledgeHistory();
+        // Also refresh achievements after reset
+        refreshFromApi();
       })
       .catch(error => {
         console.error('Error recording relapse log:', error);

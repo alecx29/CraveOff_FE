@@ -55,7 +55,7 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
     threshold: number;
     xp: number;
   }[] = [
-    { code: 'WELCOME', title: 'Welcome to CraveOff', description: 'You took the first step towards a healthier life', threshold: 1000, xp: 100 },
+    // { code: 'WELCOME', title: 'Welcome to CraveOff', description: 'You took the first step towards a healthier life', threshold: 1000, xp: 100 },
     { code: 'STREAK_0', title: '0 Days Clean', description: 'First day of control — your journey has begun.', threshold: 0, xp: 80 },
     { code: 'STREAK_3', title: '3 Days Clean', description: 'You’re breaking the cycle. Keep your focus strong.', threshold: 3, xp: 120 },
     { code: 'STREAK_7', title: '7 Days Clean', description: 'A full week clean. You’re proving you can take charge.', threshold: 7, xp: 150 },

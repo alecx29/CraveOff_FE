@@ -16,7 +16,6 @@ export default function SettingsLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="personal-details" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="achievements" />
       <Stack.Screen name="account-options" options={{ title: 'Account Options' }} />

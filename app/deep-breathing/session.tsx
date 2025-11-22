@@ -160,7 +160,7 @@ export default function DeepBreathingSessionScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={[styles.stage, styles.stageShiftFurther]}>
+        <View style={[styles.stage, styles.stageShiftFurther, styles.shiftUpSlightly]}>
           <View style={styles.outerCircle}>
             <View style={styles.innerCircle} />
             {!paused && (
@@ -174,7 +174,7 @@ export default function DeepBreathingSessionScreen() {
           </View>
         </View>
 
-        <View style={styles.controlsBarWrap}>
+        <View style={[styles.controlsBarWrap, styles.shiftUpSlightly]}>
           <TouchableOpacity
             onPress={() => setHapticsOn(v => !v)}
             style={[styles.controlCircle, styles.hapticsLeft, hapticsOn && styles.controlCircleActive]}
@@ -258,7 +258,7 @@ export default function DeepBreathingSessionScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.timerBubbleWrap}>
+        <View style={[styles.timerBubbleWrap, styles.shiftUpSlightly]}>
           <View style={styles.timerBubble}>
             <Text style={styles.mainTimer}>{formatMMSS(remaining)}</Text>
           </View>
@@ -289,6 +289,9 @@ const createStyles = (theme: any) => {
       justifyContent: 'center',
       alignItems: 'flex-end',
       paddingHorizontal: 16,
+      position: 'relative',
+      zIndex: 10,
+      elevation: 10,
     },
     closeBtn: {
       width: 40,
@@ -302,6 +305,7 @@ const createStyles = (theme: any) => {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
+      zIndex: 0,
     },
     stageShiftFurther: {
       // move circles slightly higher on screen
@@ -396,6 +400,9 @@ const createStyles = (theme: any) => {
     hapticsLeft: {
       position: 'absolute',
       left: 16,
+    },
+    shiftUpSlightly: {
+      transform: [{ translateY: -20 }],
     },
   });
 };

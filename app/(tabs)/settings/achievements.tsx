@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Pressable, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +10,7 @@ import GradientBackground from '@/src/screen-components/gradient-background/Grad
 import { useAchievements } from '@/src/context/AchievementsContext';
 import LottieUniversal from '@/src/components/LottieUniversal';
 import { getAchievementImage } from '@/src/utils/achievementImages';
+import { BlurView } from 'expo-blur';
 
 const AchievementsScreen = () => {
   const { theme } = useTheme();
@@ -41,11 +42,19 @@ const AchievementsScreen = () => {
     xp: typeof it.xp === 'number' ? it.xp : 0,
   }));
 
-  // Calculăm progresul total
+  // Showcase overlay state
+  const [showcase, setShowcase] = useState<null | (typeof achievements)[number]>(null);
+
+  // Calculăm progresul total (XP-based, excluzând STREAK_365 din target)
   const totalAchievements = achievements.length;
   const unlockedAchievements = achievements.filter(a => a.unlocked).length;
-  const progressPercentage = (unlockedAchievements / totalAchievements) * 100;
+  const eligibleForXp = achievements.filter(a => a.id !== 'STREAK_365');
+  const totalXpTarget = eligibleForXp.reduce((sum, a) => sum + a.xp, 0);
+  const earnedXp = eligibleForXp.filter(a => a.unlocked).reduce((sum, a) => sum + a.xp, 0);
+  const progressPercentage = totalXpTarget > 0 ? (earnedXp / totalXpTarget) * 100 : 0;
   const totalXP = achievements.filter(a => a.unlocked).reduce((sum, a) => sum + a.xp, 0);
+
+  const openShowcase = (a: (typeof achievements)[number]) => setShowcase(a);
 
   return (
     <GradientBackground>
@@ -58,7 +67,7 @@ const AchievementsScreen = () => {
         },
         headerShadowVisible: true,
       }} />
-      
+      <View style={{ flex: 1 }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {/* Progress Header */}
         <Animated.View 
@@ -89,7 +98,7 @@ const AchievementsScreen = () => {
             
             <View style={styles.progressInfo}>
               <View style={styles.xpContainer}>
-                <Ionicons name="flash" size={16} color={theme.colors.primary} />
+                <Text style={styles.xpEmoji}>⚡</Text>
                 <Text style={styles.xpText}>{totalXP} XP</Text>
               </View>
               <Text style={styles.progressPercentText}>{Math.round(progressPercentage)}% Complete</Text>
@@ -100,7 +109,7 @@ const AchievementsScreen = () => {
         {/* Achievements List */}
         <View style={styles.achievementsContainer}>
           <View style={styles.header}>
-            <Ionicons name="trophy" size={24} color={theme.colors.primary} />
+            <Text style={styles.headerEmoji}>🏆</Text>
             <Text style={styles.sectionTitle}>Your Achievements</Text>
           </View>
           
@@ -113,23 +122,38 @@ const AchievementsScreen = () => {
                 achievement.unlocked ? styles.achievementUnlocked : styles.achievementLocked
               ]}
             >
-              <LinearGradient
-                colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
-                style={styles.achievementGradient}
-              >
+              <View style={styles.achievementRow}>
                 <View style={styles.achievementIconContainer}>
-                  <View style={achievement.unlocked ? styles.achievementIconBg : styles.achievementIconBgLocked}>
-                    <Image
-                      source={achievement.imageSource}
-                      style={[styles.achievementImage, !achievement.unlocked && styles.achievementImageLocked]}
-                      resizeMode="cover"
-                    />
-                    {!achievement.unlocked && (
-                      <View style={styles.lockBadge}>
-                        <Ionicons name="lock-closed" size={12} color={theme.colors.textMuted} />
-                      </View>
-                    )}
-                  </View>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => openShowcase(achievement)}
+                  >
+                    <View style={
+                      achievement.id === 'WELCOME'
+                        ? (achievement.unlocked ? styles.achievementIconBg : styles.achievementIconBgLocked)
+                        : (achievement.unlocked ? styles.achievementIconBgLarge : styles.achievementIconBgLockedLarge)
+                    }>
+                      {achievement.id === 'WELCOME' ? (
+                        <LottieUniversal
+                          source={require('@/assets/images/Animation - winner.json')}
+                          autoPlay
+                          loop
+                          style={styles.achievementLottie}
+                        />
+                      ) : (
+                        <Image
+                          source={achievement.imageSource}
+                          style={[styles.achievementImage, !achievement.unlocked && styles.achievementImageLocked]}
+                          resizeMode="cover"
+                        />
+                      )}
+                      {!achievement.unlocked && (
+                        <View style={styles.lockBadge}>
+                          <Ionicons name="lock-closed" size={12} color={theme.colors.textMuted} />
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
                 </View>
                 
                 <View style={styles.achievementContent}>
@@ -162,23 +186,48 @@ const AchievementsScreen = () => {
                     {achievement.xp} XP
                   </Text>
                 </View>
-              </LinearGradient>
+              </View>
             </Animated.View>
           ))}
-          
-          {/* Animation for first achievement */}
-          {unlockedAchievements > 0 && (
-            <View style={styles.celebrationContainer}>
-              <LottieUniversal
-                source={require('@/assets/images/Animation - winner.json')}
-                autoPlay
-                loop={false}
-                style={styles.celebrationAnimation}
-              />
-            </View>
-          )}
         </View>
       </ScrollView>
+      
+      {/* Showcase Overlay - viewport-level */}
+      {showcase && (
+        <View pointerEvents="box-none" style={styles.overlayRoot}>
+          {Platform.OS === 'android' ? (
+            <View style={[styles.overlayCover, { backgroundColor: 'rgba(0,0,0,0.88)' }]} />
+          ) : (
+            <>
+              <BlurView intensity={80} tint="dark" style={styles.overlayCover} />
+              <View style={[styles.overlayCover, { backgroundColor: 'rgba(0,0,0,0.35)' }]} />
+            </>
+          )}
+          <Pressable
+            style={styles.overlayBackdrop}
+            onPress={() => {
+              setShowcase(null);
+            }}
+          />
+          <View style={styles.overlayCenter}>
+            <View style={styles.previewCircle}>
+              {showcase.id === 'WELCOME' ? (
+                <LottieUniversal
+                  source={require('@/assets/images/Animation - winner.json')}
+                  autoPlay
+                  loop
+                  style={styles.previewLottie}
+                />
+              ) : (
+                <Image source={showcase.imageSource} style={styles.previewImage} resizeMode="cover" />
+              )}
+            </View>
+            <Text style={styles.previewTitle}>{showcase.title}</Text>
+            {!!showcase.description && <Text style={styles.previewDesc}>{showcase.description}</Text>}
+          </View>
+        </View>
+      )}
+      </View>
     </GradientBackground>
   );
 };
@@ -195,6 +244,10 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  headerEmoji: {
+    fontSize: 20,
+    marginRight: 8,
   },
   progressCard: {
     backgroundColor: 'transparent',
@@ -257,6 +310,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  xpEmoji: {
+    fontSize: 16,
+  },
   xpText: {
     fontSize: 14,
     fontWeight: '600',
@@ -283,8 +339,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: theme.borderRadius.medium || 12,
     marginBottom: 12,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)'
+    borderWidth: 0,
+    borderColor: 'transparent'
   },
   achievementGradient: {
     flex: 1,
@@ -292,6 +348,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: theme.borderRadius.medium || 12,
+  },
+  achievementRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: theme.borderRadius.medium || 12,
+    backgroundColor: 'transparent',
   },
   achievementUnlocked: {
     borderLeftWidth: 4,
@@ -311,17 +375,44 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    overflow: 'hidden',
+  },
+  achievementIconBgLarge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
   },
   achievementIconBgLocked: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: theme.colors.backgroundDeep,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    // overflow: 'hidden',
+  },
+  achievementIconBgLockedLarge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    // overflow: 'hidden',
   },
   achievementImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
+  },
+  achievementLottie: {
     width: '100%',
     height: '100%',
     borderRadius: 24,
@@ -393,6 +484,63 @@ const createStyles = (theme: any) => StyleSheet.create({
   celebrationAnimation: {
     width: '100%',
     height: '100%',
+  },
+  // Overlay
+  overlayRoot: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayCover: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  overlayBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+  },
+  overlayCenter: {
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  previewCircle: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewLottie: {
+    width: '100%',
+    height: '100%',
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  previewDesc: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
 });
 

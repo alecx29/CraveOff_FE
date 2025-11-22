@@ -268,11 +268,18 @@ export default function CommunityInfoScreen() {
                   const isPublic = (item as any).is_public;
                   const genderPolicy = (item as any).gender_policy;
                   const myId = (authUser as any)?.id ?? (authUser as any)?._id ?? (authUser as any)?.user_id ?? (authUser as any)?.uid ?? (authUser as any)?.uuid ?? '';
+                  // Determine if this room should be disabled for the current user based on gender policy/title
+                  const userGender = String((authUser as any)?.gender || '').toLowerCase();
+                  const isFemaleOnlyPolicy = typeof genderPolicy === 'string' && genderPolicy.toLowerCase() === 'female_only';
+                  const isGirliesOnlyTitle = !genderPolicy && String(title || '').trim().toLowerCase() === 'girlies only';
+                  const isDisabledForUser = (isFemaleOnlyPolicy || isGirliesOnlyTitle) && userGender !== 'female';
                   return (
                     <TouchableOpacity
                       activeOpacity={0.85}
-                      style={styles.roomCard}
-                      onPress={() =>
+                      disabled={isDisabledForUser}
+                      style={[styles.roomCard, isDisabledForUser ? { opacity: 0.5 } : null]}
+                      onPress={() => {
+                        if (isDisabledForUser) return;
                         router.push({
                           pathname: '/(tabs)/community/room/[slug]' as any,
                           params: {
@@ -284,8 +291,8 @@ export default function CommunityInfoScreen() {
                             currentUserId: String(myId || ''),
                             roomId: String(item.id ?? slug),
                           },
-                        })
-                      }
+                        });
+                      }}
                     >
                       <LinearGradient
                         colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}

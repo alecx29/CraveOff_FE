@@ -204,8 +204,12 @@ const withCraveOffProtection = (config, props) => {
   config = withXcodeProject(config, (config) => {
     const proj = config.modResults;
     const firstTarget = proj.getFirstTarget().uuid;
-    try { proj.addSourceFile("CraveOffProtectionModule.swift", { target: firstTarget }); } catch {}
-    try { proj.addSourceFile("CraveOffProtectionModule.m", { target: firstTarget }); } catch {}
+    // Ensure we reference files with the project group prefix so Xcode links them into the main target
+    const projectName = config.modRequest.projectName || "App";
+    const swiftPath = `${projectName}/CraveOffProtectionModule.swift`;
+    const mPath = `${projectName}/CraveOffProtectionModule.m`;
+    try { proj.addSourceFile(swiftPath, { target: firstTarget, group: projectName }); } catch {}
+    try { proj.addSourceFile(mPath, { target: firstTarget, group: projectName }); } catch {}
     proj.addBuildProperty("SWIFT_VERSION", "5.0");
     proj.addBuildProperty("IPHONEOS_DEPLOYMENT_TARGET", "16.0");
     return config;

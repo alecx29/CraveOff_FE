@@ -10,6 +10,8 @@ import { useNotifications } from '@/src/context/NotificationsContext';
 import { AuthContext } from '@/src/context/AuthContext';
 import { useLogs } from '@/src/context/LogsContext';
 import { useAchievements } from '@/src/context/AchievementsContext';
+import { apiClient } from '@/src/axios/apiClient';
+import { BackendRoutes } from '@/src/axios/backendRoutes';
 import { getAchievementImage } from '@/src/utils/achievementImages';
 import AchievementsPlanetsRow from '@/src/components/AchievementsPlanetsRow';
 
@@ -25,6 +27,8 @@ const SettingsScreen = () => {
   
   // State pentru clean days
   const [cleanDays, setCleanDays] = useState(0);
+  // Longest streak (din backend – la fel ca în Analytics)
+  const [longestStreak, setLongestStreak] = useState(0);
   
   // Calculăm zilele clean pe baza ultimei recidive
   useEffect(() => {
@@ -62,6 +66,25 @@ const SettingsScreen = () => {
       setCleanDays(0);
     }
   }, [lastRelapseData]);
+
+  // Fetch longest streak from backend (same endpoint as Analytics)
+  useEffect(() => {
+    const fetchBackendStreaks = async () => {
+      try {
+        const response = await apiClient.get(BackendRoutes.STREAKS);
+        const data = response.data || {};
+        const longest = data.longesStreak ?? data.longestStreak ?? data.longest ?? 0;
+        if (Number.isFinite(Number(longest))) {
+          setLongestStreak(Number(longest));
+        } else {
+          setLongestStreak(0);
+        }
+      } catch {
+        setLongestStreak(0);
+      }
+    };
+    fetchBackendStreaks();
+  }, []);
 
   // Helper function to get the flame color safely
   const getFlameColor = (): string => {
@@ -164,7 +187,7 @@ const SettingsScreen = () => {
 
       {/* Achievements Planets Banner */}
       <AchievementsPlanetsRow
-        achievements={(achievementsList || []).map(a => ({ code: a.code, unlocked: !!a.unlocked }))}
+        achievements={(achievementsList || []).filter(a => a.code !== 'WELCOME').map(a => ({ code: a.code, unlocked: !!a.unlocked }))}
         summary={summary}
         onPress={navigateToAchievements}
         maxItems={9}
@@ -174,31 +197,31 @@ const SettingsScreen = () => {
         bottomSpacing={20}
       />
 
-      {/* Compact Stats Row: Days Clean and Achievements */}
-      <View style={styles.statsCompactRow}>
-        <View style={styles.statCardCompact}>
-          <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
-            style={styles.statGradientCompact}
-          >
+      {/* Compact Stats Banner: Current Streak + Untill Sober in one container */}
+      <View style={styles.statCardCompact}>
+        <LinearGradient
+          colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
+          style={styles.statGradientCompact}
+        >
+          <View style={styles.statCombinedRow}>
             <View style={styles.statInlineRow}>
-              <Text style={styles.statNumber}>{cleanDays}</Text>
-              <Ionicons name="flame" size={16} color={getFlameColor()} style={styles.statIcon} />
+              <Ionicons name="flame" size={38} color={getFlameColor()} style={styles.statIconLeft} />
+              <View style={styles.statCol}>
+                <Text style={styles.statNumber}>{longestStreak}d</Text>
+                <Text style={styles.statLabel}>Longest Streak</Text>
+              </View>
             </View>
-            <Text style={styles.statLabel}>Days Clean</Text>
-          </LinearGradient>
-        </View>
-        <View style={styles.statCardCompact}>
-          <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
-            style={styles.statGradientCompact}
-          >
-            <Text style={styles.statNumber}>
-              {cleanDays >= 90 ? '0' : Math.max(0, 90 - cleanDays)}
-            </Text>
-            <Text style={styles.statLabel}>Days Left</Text>
-          </LinearGradient>
-        </View>
+            <View style={styles.statInlineRow}>
+              <Text style={[styles.statEmoji, styles.statIconLeft]}>⏳</Text>
+              <View style={styles.statCol}>
+                <Text style={styles.statNumber}>
+                  {cleanDays >= 90 ? '0' : Math.max(0, 90 - cleanDays)}
+                </Text>
+                <Text style={styles.statLabel}>Untill Sober</Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
       </View>
 
       <SettingCard
@@ -206,7 +229,7 @@ const SettingsScreen = () => {
         title="Notifications"
         value={isNotificationsEnabled ? "Enabled" : "Disabled"}
         onPress={navigateToNotifications}
-        iconComponent={Ionicons}
+        emoji="🔔"
         variant="primary"
       />
       <SettingCard
@@ -214,7 +237,7 @@ const SettingsScreen = () => {
         title="Privacy & Security"
         value="Privacy Policy & Terms"
         onPress={openPrivacyPolicy}
-        iconComponent={Ionicons}
+        emoji="🔒"
         variant="primary"
       />
       <SettingCard
@@ -222,14 +245,14 @@ const SettingsScreen = () => {
         title="Support"
         value="Get Help"
         onPress={openSupport}
-        iconComponent={Ionicons}
+        emoji="💬"
         variant="primary"
       />
       <SettingCard
         icon="document-text-outline"
         title="Terms of Service"
         onPress={openTermsOfService}
-        iconComponent={Ionicons}
+        emoji="📜"
         variant="primary"
       />
       <SettingCard
@@ -237,7 +260,7 @@ const SettingsScreen = () => {
         title="Account Options"
         value="Manage account actions"
         onPress={openAccountOptions}
-        iconComponent={Ionicons}
+        emoji="👤"
         variant="primary"
       />
 
@@ -348,15 +371,26 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginHorizontal: 12,
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: 30,
     fontWeight: 'bold',
-    color: theme.colors.primary,
+    color: theme.colors.textPrimary,
     marginBottom: 4,
   },
   statIcon: {
     marginLeft: 6,
+  },
+  statIconLeft: {
+    marginRight: 6,
+  },
+  statCol: {
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  statEmoji: {
+    fontSize: 30,
   },
   statLabel: {
     fontSize: 12,
@@ -373,13 +407,20 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
-    marginHorizontal: 4,
+    marginHorizontal: 0,
+    marginBottom: 16,
     overflow: 'hidden',
   },
   statGradientCompact: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 12,
     borderRadius: theme.borderRadius.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  statCombinedRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',

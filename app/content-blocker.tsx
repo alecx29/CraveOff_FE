@@ -43,15 +43,43 @@ export default function ContentBlockerScreen() {
 		try {
 			if (value) {
 				if (Platform.OS === 'ios') {
-					// iOS: Ask for FamilyControls authorization first
+					// iOS: Check FamilyControls authorization, request only if needed
+					let authStatus: 'approved' | 'denied' | 'notDetermined' | 'unknown' | 'unavailable' = 'unknown';
 					try {
-						await CraveOffProtection.enable();
-					} catch (e: any) {
+						// @ts-ignore - available on iOS via our native bridge
+						authStatus = await CraveOffProtection.authorizationStatus?.();
+					} catch {}
+					if (__DEV__) {
+						console.log('CraveOffProtection iOS authorizationStatus BEFORE request:', authStatus);
+					}
+					if (authStatus === 'denied') {
 						setEnabled(false);
 						setMode(undefined);
 						Alert.alert(
 							'Permission required',
-							'CraveOff needs Family Controls authorization to filter web content on iOS. You can grant it in Settings.',
+							"Family Controls are denied. To enable: Settings > Screen Time must be ON. Then try the toggle again.",
+							[{ text: 'OK' }]
+						);
+						return;
+					}
+					// Ask for authorization when notDetermined/unknown
+					try {
+						await CraveOffProtection.enable();
+						// Log status after enabling
+						try {
+							// @ts-ignore - available on iOS via our native bridge
+							const after = await CraveOffProtection.authorizationStatus?.();
+							if (__DEV__) {
+								console.log('CraveOffProtection iOS authorizationStatus AFTER request:', after);
+							}
+						} catch {}
+					} catch (e: any) {
+						console.error('CraveOffProtection.enable() failed:', e);
+						setEnabled(false);
+						setMode(undefined);
+						Alert.alert(
+							'Permission required',
+							e?.message || 'CraveOff needs Family Controls authorization to filter web content on iOS. Ensure Settings > Screen Time is ON, then try again.',
 							[
 								{ text: 'Cancel', style: 'cancel' },
 								{ text: 'Open Settings', onPress: () => Linking.openSettings?.() },

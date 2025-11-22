@@ -46,9 +46,7 @@ export default function AnalyticsScreen() {
   const [averageStreak, setAverageStreak] = useState(0);
 
   // Monthly progress stats
-  const [monthlyCleanDays, setMonthlyCleanDays] = useState(0);
-  const [daysInMonth, setDaysInMonth] = useState(0);
-  const [monthlyProgressPercentage, setMonthlyProgressPercentage] = useState(0);
+  // removed Monthly Progress feature
 
   // Pledge states
   const [canMakePledge, setCanMakePledge] = useState(true);
@@ -76,8 +74,8 @@ export default function AnalyticsScreen() {
   const progressGlow = useSharedValue(1);
 
   // Circle parameters
-  const size = 200;
-  const strokeWidth = 15;
+  const size = 280;
+  const strokeWidth = 20;
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
 
@@ -523,52 +521,25 @@ export default function AnalyticsScreen() {
   // Calculate days remaining to reach 90 days
   const daysRemaining = 90 - cleanDays > 0 ? 90 - cleanDays : 0;
 
-  // Calculate monthly progress
-  useEffect(() => {
-    if (logs && logs.length > 0) {
-      calculateMonthlyProgress(logs);
-    }
-  }, [logs]);
-
-  // Function to calculate monthly progress
-  const calculateMonthlyProgress = (logEntries: LogEntry[]) => {
-    if (!logEntries || logEntries.length === 0) {
-      setMonthlyCleanDays(0);
-      setMonthlyProgressPercentage(0);
-      return;
-    }
-
-    // Get current month and year
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    // Calculate days in current month
-    const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    setDaysInMonth(daysInCurrentMonth);
-
-    // Filter logs for current month
-    const currentMonthLogs = logEntries.filter(log => {
-      const logDate = new Date(log.date);
-      return logDate.getMonth() === currentMonth && logDate.getFullYear() === currentYear;
-    });
-
-    // Count clean days in current month
-    const cleanDaysInMonth = currentMonthLogs.filter(log => log.is_clean).length;
-    setMonthlyCleanDays(cleanDaysInMonth);
-
-    // Calculate percentage
-    const percentage = Math.round((cleanDaysInMonth / daysInCurrentMonth) * 100);
-    setMonthlyProgressPercentage(percentage);
-
-    console.log('Monthly progress calculated:', {
-      month: currentMonth + 1,
-      year: currentYear,
-      daysInMonth: daysInCurrentMonth,
-      cleanDays: cleanDaysInMonth,
-      percentage
-    });
+  // Helper: format date as "Feb 17 2026"
+  const formatDateShort = (date: Date): string => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const m = months[date.getMonth()];
+    const d = date.getDate();
+    const y = date.getFullYear();
+    return `${m} ${d} ${y}`;
   };
+
+  // Quit by date: last relapse + 90 days (fallback to today if unknown)
+  const relapseIso = (lastRelapseData as any)?.last_relapse_date
+    ?? (lastRelapseData as any)?.lastRelapseDate
+    ?? (lastRelapseData as any)?.date
+    ?? null;
+  const relapseBase = relapseIso ? new Date(relapseIso) : new Date();
+  const quitByDate = new Date(relapseBase.getTime() + (90 * 24 * 60 * 60 * 1000));
+  const quitByText = formatDateShort(quitByDate);
+
+  // removed Monthly Progress calculations
 
   // Chart configuration
   const chartConfig = {
@@ -669,13 +640,9 @@ export default function AnalyticsScreen() {
         <Text style={styles.screenTitle}>Analytics</Text>
         <Text style={styles.screenSubtitle}>Track your progress and insights</Text>
 
-        {/* Main progress circle */}
+        {/* Main progress circle - no section background and without title */}
         <View style={styles.circleProgressCard}>
-          <LinearGradient
-            colors={['rgba(0, 0, 0, 0.35)', 'rgba(76, 62, 98, 0.28)']}
-            style={styles.circleProgressGradient}
-          >
-            <Text style={styles.circleTitle}>Days Until Clean</Text>
+          <View style={styles.circleProgressPlain}>
             <View style={styles.circleContainer}>
               <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
                 {/* Background Circle */}
@@ -683,7 +650,7 @@ export default function AnalyticsScreen() {
                   cx={size / 2}
                   cy={size / 2}
                   r={radius}
-                  stroke={'rgba(255, 255, 255, 0.16)'}
+                  stroke={'rgba(76, 62, 98, 0.25)'}
                   strokeWidth={strokeWidth}
                   fill="transparent"
                 />
@@ -710,67 +677,49 @@ export default function AnalyticsScreen() {
               </Animated.View>
             </View>
             <Text style={styles.goalText}>Goal: 90 days porn-free</Text>
-          </LinearGradient>
+          </View>
         </View>
 
-        {/* Streak Stats */}
-        <View style={styles.card}>
+        {/* Quit by (last relapse + 90d) */}
+        <View style={[styles.card]}>
           <LinearGradient
             colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
             style={styles.cardGradient}
           >
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Streak Statistics</Text>
-              <Ionicons name="stats-chart" size={22} color={theme.colors.primary} />
+            <View style={styles.singleStatCenter}>
+              <Text style={styles.statLabel}>Quit by</Text>
+              <Text style={styles.statValue}>{quitByText}</Text>
             </View>
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{longestStreak}</Text>
-                <Text style={styles.statLabel}>Longest Streak</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{cleanDays}</Text>
+          </LinearGradient>
+        </View>
+
+        {/* General stats as two separate bubbles */}
+        <View style={styles.twoBubbleRow}>
+          <View style={styles.bubbleWrap}>
+            <LinearGradient
+              colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.singleStatCenter}>
                 <Text style={styles.statLabel}>Current Streak</Text>
+                <Text style={styles.statValue}>{cleanDays}d</Text>
               </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{averageStreak}</Text>
+            </LinearGradient>
+          </View>
+          <View style={styles.bubbleWrap}>
+            <LinearGradient
+              colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.singleStatCenter}>
                 <Text style={styles.statLabel}>Avg. Streak</Text>
+                <Text style={styles.statValue}>{averageStreak}d</Text>
               </View>
-            </View>
-          </LinearGradient>
+            </LinearGradient>
+          </View>
         </View>
 
-        {/* Monthly Progress */}
-        <View style={styles.card}>
-          <LinearGradient
-            colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
-            style={styles.cardGradient}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Monthly Progress</Text>
-              <Ionicons name="calendar" size={22} color={theme.colors.primary} />
-            </View>
-            <View style={styles.progressContainer}>
-              <Text style={styles.progressText}>Clean days this month 🔥: {monthlyCleanDays}/{daysInMonth}</Text>
-              <View style={[styles.progressBar, { backgroundColor: 'rgba(255, 255, 255, 0.16)' }]}>
-                <View style={[styles.progressFillContainer, { width: `${monthlyProgressPercentage}%` }]}>
-                  <LinearGradient
-                    colors={["#fde047", "#fb923c", "#ef4444"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.progressFillGradient}
-                  />
-                  <LinearGradient
-                    colors={["#00000000", "#00000022", "#00000000"]}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={styles.progressEdgeGlow}
-                  />
-                </View>
-              </View>
-            </View>
-          </LinearGradient>
-        </View>
+        {/* Monthly Progress removed */}
 
         {/* Progress Over Time */}
         <View style={styles.card}>
@@ -779,9 +728,7 @@ export default function AnalyticsScreen() {
             style={styles.cardGradient}
           >
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>
-                <Ionicons name="trending-up" size={18} color={theme.colors.primary} /> Progress Over Time
-              </Text>
+              <Text style={styles.cardTitle}>📈 Progress Over Time</Text>
               {progressTrend.value > 0 && (
                 <View style={styles.trendContainer}>
                   <Ionicons
@@ -819,7 +766,7 @@ export default function AnalyticsScreen() {
                     withHorizontalLabels={true}
                     withVerticalLabels={false} // Dezactivăm etichetele verticale originale
                     withDots={true}
-                    formatYLabel={(value) => `${value}%`}
+                    formatYLabel={(value) => `${value}`}
                     yAxisInterval={25}
                     yAxisSuffix="%"
                     segments={4}
@@ -879,7 +826,7 @@ export default function AnalyticsScreen() {
                     </View>
                     <Text style={styles.milestoneText}>30 days 🔥</Text>
                   </View>
-
+                  
                   <View style={styles.milestone}>
                     <View style={[styles.milestoneMarker, cleanDays >= 60 ? styles.milestoneCompleted : {}]}>
                       {cleanDays >= 60 && <Ionicons name="checkmark" size={12} color="#fff" />}
@@ -952,6 +899,11 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
   circleProgressGradient: {
     padding: 16,
     borderRadius: theme.borderRadius.medium,
+    width: '100%',
+    alignItems: 'center',
+  },
+  circleProgressPlain: {
+    padding: 16,
     width: '100%',
     alignItems: 'center',
   },
@@ -1035,19 +987,31 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  twoBubbleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  bubbleWrap: {
+    width: '48%',
+  },
   statItem: {
     flex: 1,
+    alignItems: 'center',
+  },
+  singleStatCenter: {
     alignItems: 'center',
   },
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: theme.colors.primary,
+    color: theme.colors.textPrimary,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
     color: theme.colors.textSecondary,
+    paddingBottom: 8,
   },
   progressContainer: {
     marginBottom: 8,
@@ -1057,32 +1021,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     color: theme.colors.textPrimary,
     marginBottom: 8,
   },
-  progressBar: {
-    height: 8,
-    backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginTop: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: theme.colors.primary,
-    borderRadius: 4,
-  },
-  progressFillGradient: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  progressEdgeGlow: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  progressFillContainer: {
-    height: '100%',
-  },
+  // removed monthly progress bar styles
   chartContainer: {
     alignItems: 'center',
     marginTop: 0,
@@ -1093,9 +1032,8 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
   },
   chart: {
     borderRadius: theme.borderRadius.medium,
-    paddingRight: 12,
-    paddingLeft: 0,
-    marginLeft: 0,
+    paddingHorizontal: 12,
+    alignSelf: 'center',
     marginBottom: -10,
   },
   chartDescription: {
@@ -1205,7 +1143,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     overflow: 'hidden',
   },
   challengeBannerGradient: {
-    padding: 16,
+    padding: 24,
     borderRadius: theme.borderRadius.medium,
   },
   challengeHeader: {

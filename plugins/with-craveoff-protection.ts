@@ -254,6 +254,13 @@ const withCraveOffProtection: ConfigPlugin<CraveOffProtectionProps> = (
         "ios"
       );
       const destDir = path.join(iosProjectRoot, projectName);
+      try {
+        // Debug logs to confirm paths during EAS build
+        // eslint-disable-next-line no-console
+        console.log(
+          `[with-craveoff-protection] iOS copy from ${pluginIOSDir} -> ${destDir}`
+        );
+      } catch {}
       const files = [
         "CraveOffProtectionModule.swift",
         "CraveOffProtectionModule.m",
@@ -264,6 +271,10 @@ const withCraveOffProtection: ConfigPlugin<CraveOffProtectionProps> = (
           const dest = path.join(destDir, file);
           fs.mkdirSync(path.dirname(dest), { recursive: true });
           fs.copyFileSync(src, dest);
+          try {
+            // eslint-disable-next-line no-console
+            console.log(`[with-craveoff-protection] Copied iOS file: ${dest}`);
+          } catch {}
         }
       }
       return config;
@@ -275,12 +286,22 @@ const withCraveOffProtection: ConfigPlugin<CraveOffProtectionProps> = (
     const swiftFile = "CraveOffProtectionModule.swift";
     const mFile = "CraveOffProtectionModule.m";
     const firstTarget = proj.getFirstTarget().uuid;
+    const projectName = config.modRequest.projectName ?? "App";
+    const swiftPath = `${projectName}/${swiftFile}`;
+    const mPath = `${projectName}/${mFile}`;
     // Add source files (idempotent)
     try {
-      proj.addSourceFile(swiftFile, { target: firstTarget });
+      proj.addSourceFile(swiftPath, {
+        target: firstTarget,
+        group: projectName,
+      });
+      // eslint-disable-next-line no-console
+      console.log(`[with-craveoff-protection] Linked Swift: ${swiftPath}`);
     } catch {}
     try {
-      proj.addSourceFile(mFile, { target: firstTarget });
+      proj.addSourceFile(mPath, { target: firstTarget, group: projectName });
+      // eslint-disable-next-line no-console
+      console.log(`[with-craveoff-protection] Linked ObjC: ${mPath}`);
     } catch {}
     // Ensure Swift version and iOS deployment target (iOS 16 for FamilyControls/ManagedSettings)
     proj.addBuildProperty("SWIFT_VERSION", "5.0");

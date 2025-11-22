@@ -13,12 +13,14 @@ import { AuthContext } from '@/src/context/AuthContext';
 import ChatComposer from '@/src/components/chat/ChatComposer';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getSupabase } from '@/src/services/supabaseClient';
+import { getAchievementImage } from '@/src/utils/achievementImages';
 
 type ChatMessage = {
   id: string;
   room_id: string;
   sender_user_id: string | number;
   sender_name?: string;
+  sender_last_achievement_code?: string;
   content: string;
   content_type?: string;
   reply_to_message_id?: string | null;
@@ -190,6 +192,8 @@ export default function ChatRoomScreen() {
     const senderIdValue = (item.sender_user_id != null && String(item.sender_user_id).toLowerCase() !== 'null')
       ? String(item.sender_user_id)
       : null;
+    const achievementCode = (item as any)?.sender_last_achievement_code as string | undefined;
+    const achievementAvatarSource = achievementCode ? getAchievementImage(String(achievementCode)) : null;
     const displayName = item.sender_name
       || (item as any)?.sender_display_name
       || (item?.metadata_json?.sender_display_name)
@@ -204,8 +208,10 @@ export default function ChatRoomScreen() {
               {item.content}
             </Text>
           </LinearGradient>
-          <TouchableOpacity onPress={() => router.push({ pathname: '/(tabs)/community/user/[userId]' as any, params: { userId: String(item.sender_user_id) } })}>
-            {imageUrl ? (
+          <TouchableOpacity onPress={() => router.push({ pathname: '/(tabs)/community/user/[userId]' as any, params: { userId: String(item.sender_user_id), achievementCode } })}>
+            {achievementAvatarSource ? (
+              <Image source={achievementAvatarSource} style={styles.avatarSmallRight} />
+            ) : imageUrl ? (
               <Image source={{ uri: String(imageUrl) }} style={styles.avatarSmallRight} />
             ) : (
               <View style={styles.avatarSmallRightPlaceholder} />
@@ -217,8 +223,10 @@ export default function ChatRoomScreen() {
 
     return (
       <View style={[styles.messageRow, styles.rowTheirs]}>
-        <TouchableOpacity onPress={() => router.push({ pathname: '/(tabs)/community/user/[userId]' as any, params: { userId: String(item.sender_user_id) } })}>
-          {imageUrl ? (
+        <TouchableOpacity onPress={() => router.push({ pathname: '/(tabs)/community/user/[userId]' as any, params: { userId: String(item.sender_user_id), achievementCode } })}>
+          {achievementAvatarSource ? (
+            <Image source={achievementAvatarSource} style={styles.avatarSmall} />
+          ) : imageUrl ? (
             <Image source={{ uri: String(imageUrl) }} style={styles.avatarSmall} />
           ) : (
             <View style={styles.avatarSmallPlaceholder} />

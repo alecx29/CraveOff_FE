@@ -16,6 +16,7 @@ interface SettingCardProps {
   type?: 'ant-design' | 'ion-icons';
   variant?: 'primary' | 'emergency' | 'default';
   iconComponent?: any;
+  emoji?: string;
 }
 
 const SettingCard: React.FC<SettingCardProps> = ({
@@ -28,7 +29,8 @@ const SettingCard: React.FC<SettingCardProps> = ({
   onToggle,
   type = 'ion-icons',
   variant = 'default',
-  iconComponent
+  iconComponent,
+  emoji
 }) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -70,7 +72,11 @@ const SettingCard: React.FC<SettingCardProps> = ({
     >
     <View style={styles.cardContent}>
         <View style={[styles.cardIcon, { backgroundColor: variant === 'default' ? getCardInteractiveColor() : `${getIconColor()}20` }]}>
-          <IconComponent name={icon} size={22} color={getIconColor()} />
+          {emoji ? (
+            <Text style={styles.emojiIcon}>{emoji}</Text>
+          ) : (
+            <IconComponent name={icon} size={22} color={getIconColor()} />
+          )}
       </View>
       <View style={styles.cardTextContainer}>
         <Text style={styles.cardTitle}>{title}</Text>
@@ -119,6 +125,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.sm,
+  },
+  emojiIcon: {
+    fontSize: 18,
   },
   cardTextContainer: {
     flex: 1,

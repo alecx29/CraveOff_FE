@@ -8,6 +8,7 @@ import { useTheme } from '@/src/context/ThemeProvider';
 import { useLogs, LogEntry } from '@/src/context/LogsContext';
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
+import { useAchievements } from '@/src/context/AchievementsContext';
 
 interface DailyCheckInPopupProps {
   onDismiss: () => void;
@@ -25,6 +26,7 @@ const IS_SMALL_SCREEN = height < 700; // Nexus 5 is around 640px height
 const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onDismiss }) => {
   const { theme } = useTheme();
   const { addLog, isLoading } = useLogs();
+  const { refreshFromApi: refreshAchievements } = useAchievements();
   const [buttonDisabled, setButtonDisabled] = useState(false);
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -110,9 +112,14 @@ const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onDismiss }) => {
       mood,
     } as Omit<LogEntry, 'id'>;
     // Fire-and-forget; we keep the modal open on summary until user closes it
-    addLog(logEntry).catch((error) => {
-      console.error('Error adding log entry with mood:', error);
-    });
+    addLog(logEntry)
+      .then(() => {
+        // Refresh achievements after a successful daily check-in
+        return refreshAchievements();
+      })
+      .catch((error) => {
+        console.error('Error adding log entry with mood:', error);
+      });
   };
 
   const handleReflect = () => {
