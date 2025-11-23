@@ -8,7 +8,8 @@ import {
   Image,
   Platform,
   StatusBar,
-  Animated as RNAnimated
+  Animated as RNAnimated,
+  Modal
 } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -202,68 +203,74 @@ const PanicModal = ({ visible, onClose }: PanicModalProps) => {
     );
   };
   
-  if (!visible) return null;
-  
   const styles = createStyles(theme, bottomPadding, topPadding);
   
   return (
-    <Animated.View 
-      style={styles.container}
-      entering={FadeIn.duration(300)}
-      exiting={FadeOut.duration(200)}
+    <Modal
+      transparent
+      visible={visible}
+      onRequestClose={onClose}
+      animationType="none"
+      statusBarTranslucent
     >
-      <StatusBar barStyle="light-content" />
-      
       <Animated.View 
-        style={styles.modalContainer}
-        entering={SlideInUp.duration(400).springify()}
-        exiting={SlideOutDown.duration(300).springify()}
+        style={styles.container}
+        entering={FadeIn.duration(300)}
+        exiting={FadeOut.duration(200)}
       >
-        <View style={styles.headerContainer}>
-          <TouchableOpacity 
-            style={styles.closeButton} 
-            onPress={onClose}
-            activeOpacity={0.7}
-          >
-            <AntDesign name="close" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <StatusBar barStyle="light-content" />
         
-        <View style={styles.logoContainer}>
-          <Image 
-            source={require('@/assets/images/logo.png')} 
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.panicText}>Panic Button</Text>
-        </View>
-        
-        <View style={styles.contentContainer}>
-          <View style={styles.placeholderContainer}>
-            <View style={styles.textContainer}>
-              {displayedSentences.map((sentence, index) => (
-                <Animated.View 
-                  key={`sentence-${index}`} 
-                  style={styles.sentenceContainer}
-                  entering={FadeIn.duration(200)}
-                >
-                  <HighlightedSentence sentence={sentence} />
-                </Animated.View>
-              ))}
-              
-              {typingText !== "" && (
-                <View style={styles.sentenceContainer}>
-                  <Text style={styles.sentenceText}>
-                    {typingText}
-                    <RNAnimated.Text style={[styles.cursor, { opacity: cursorOpacity }]}>|</RNAnimated.Text>
-                  </Text>
-                </View>
-              )}
+        <Animated.View 
+          style={styles.modalContainer}
+          entering={SlideInUp.duration(400).springify()}
+          exiting={SlideOutDown.duration(300).springify()}
+        >
+          <View style={styles.headerContainer}>
+            <TouchableOpacity 
+              style={styles.closeButton} 
+              onPress={onClose}
+              activeOpacity={0.7}
+            >
+              <AntDesign name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('@/assets/images/logo.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.panicText}>Panic Button</Text>
+          </View>
+          
+          <View style={styles.contentContainer}>
+            <View style={styles.placeholderContainer}>
+              <View style={styles.textContainer}>
+                {displayedSentences.map((sentence, index) => (
+                  <Animated.View 
+                    key={`sentence-${index}-${sentence}`} 
+                    style={styles.sentenceContainer}
+                    entering={Platform.OS === 'ios' ? FadeIn.duration(200) : undefined as any}
+                  >
+                    <HighlightedSentence sentence={sentence} />
+                  </Animated.View>
+                ))}
+                
+                {typingText !== "" && (
+                  <View style={styles.sentenceContainer}>
+                    <Text style={styles.sentenceText}>
+                      {typingText}
+                      <RNAnimated.Text style={[styles.cursor, { opacity: cursorOpacity }]}>|</RNAnimated.Text>
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
-        </View>
+        </Animated.View>
       </Animated.View>
-    </Animated.View>
+    </Modal>
   );
 };
 

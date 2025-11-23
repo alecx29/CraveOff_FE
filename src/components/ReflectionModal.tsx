@@ -7,7 +7,8 @@ import {
   Dimensions, 
   StatusBar,
   Animated as RNAnimated,
-  ScrollView
+  ScrollView,
+  Modal
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -191,108 +192,114 @@ const ReflectionModal = ({ visible, onClose }: ReflectionModalProps) => {
     startCountdownAndCountup();
   }, [startCountdownAndCountup]);
   
-  if (!visible) return null;
-  
   const styles = createStyles(theme, bottomPadding, topPadding);
   
   return (
-    <Animated.View 
-      style={styles.container}
-      entering={FadeIn.duration(300)}
-      exiting={FadeOut.duration(200)}
+    <Modal
+      transparent
+      visible={visible}
+      onRequestClose={onClose}
+      animationType="none"
+      statusBarTranslucent
     >
-      <StatusBar barStyle="light-content" />
-      {/* Header with Close button (hidden in outro when Finish appears) */}
-      {phase !== 'outro' && (
-        <View style={styles.headerContainer}>
-          <TouchableOpacity 
-            style={styles.closeButton} 
-            onPress={onClose}
-            activeOpacity={0.7}
-          >
-            <AntDesign name="close" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      )}
-      <View style={styles.backgroundContainer}>
-        <LottieUniversal
-          source={require('@/assets/images/Animation_SkyStar.json')}
-          autoPlay
-          loop
-          style={styles.backgroundAnimation}
-          resizeMode="cover"
-        />
-      </View>
-
-      <ScrollView 
-        contentContainerStyle={styles.scrollViewContent}
-        bounces={false}
-        showsVerticalScrollIndicator={false}
+      <Animated.View 
+        style={styles.container}
+        entering={FadeIn.duration(300)}
+        exiting={FadeOut.duration(200)}
       >
-        <View style={styles.contentContainer}>
-          {/* Title */}
-          <RNAnimated.Text style={[styles.title, { opacity: titleOpacity, transform: [{ scale: titleScale }] }]}>
-            REFLECT AND BREATHE
-          </RNAnimated.Text>
-          
-          {/* Reflection content */}
-          <RNAnimated.View style={[styles.textContainer, { opacity: contentOpacity }]}>
-            {phase === 'intro' && (
-              <Text style={styles.reflectionText}>
-                You&apos;re feeling the urge to relapse again, and that&apos;s okay.
-              </Text>
-            )}
-            {phase === 'instruction' && (
-              <Text style={styles.reflectionText}>
-                Close your eyes and count until 7.
-              </Text>
-            )}
-            {phase === 'countdown' && (
-              <Text style={styles.timerText}>
-                {countdownValue}
-              </Text>
-            )}
-            {phase === 'countup' && (
-              <Text style={styles.timerText}>
-                {countupValue}
-              </Text>
-            )}
-            {phase === 'outro' && finalTextVisible && (
-              <>
-                <Text style={styles.reflectionText}>
-                  It&apos;s love you&apos;re looking for.
-                </Text>
-                <Text style={styles.reflectionText}>
-                  Porn pushes you away from that.
-                </Text>
-              </>
-            )}
-          </RNAnimated.View>
-        </View>
-      </ScrollView>
-      
-      {/* Button - Now positioned outside ScrollView with fixed position */}
-      {phase === 'outro' && (
-        <RNAnimated.View style={[styles.fixedButtonContainer, { opacity: buttonOpacity }]}>
-          <View style={styles.buttonRow}>
+        <StatusBar barStyle="light-content" />
+        {/* Header with Close button (hidden in outro when Finish appears) */}
+        {phase !== 'outro' && (
+          <View style={styles.headerContainer}>
             <TouchableOpacity 
-              style={[styles.secondaryButton, { marginBottom: 12 }]}
-              onPress={handleReflectAgain}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.secondaryButtonText}>Reflect Again</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.finishButton}
+              style={styles.closeButton} 
               onPress={onClose}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
             >
-              <Text style={styles.buttonText}>Finish Reflecting</Text>
+              <AntDesign name="close" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
-        </RNAnimated.View>
-      )}
-    </Animated.View>
+        )}
+        <View style={styles.backgroundContainer}>
+          <LottieUniversal
+            source={require('@/assets/images/Animation_SkyStar.json')}
+            autoPlay
+            loop
+            style={styles.backgroundAnimation}
+            resizeMode="cover"
+          />
+        </View>
+    
+        <ScrollView 
+          contentContainerStyle={styles.scrollViewContent}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.contentContainer}>
+            {/* Title */}
+            <RNAnimated.Text style={[styles.title, { opacity: titleOpacity, transform: [{ scale: titleScale }] }]}>
+              REFLECT AND BREATHE
+            </RNAnimated.Text>
+            
+            {/* Reflection content */}
+            <RNAnimated.View style={[styles.textContainer, { opacity: contentOpacity }]}>
+              {phase === 'intro' && (
+                <Text style={styles.reflectionText}>
+                  You&apos;re feeling the urge to relapse again, and that&apos;s okay.
+                </Text>
+              )}
+              {phase === 'instruction' && (
+                <Text style={styles.reflectionText}>
+                  Close your eyes and count until 7.
+                </Text>
+              )}
+              {phase === 'countdown' && (
+                <Text style={styles.timerText}>
+                  {countdownValue}
+                </Text>
+              )}
+              {phase === 'countup' && (
+                <Text style={styles.timerText}>
+                  {countupValue}
+                </Text>
+              )}
+              {phase === 'outro' && finalTextVisible && (
+                <>
+                  <Text style={styles.reflectionText}>
+                    It&apos;s love you&apos;re looking for.
+                  </Text>
+                  <Text style={styles.reflectionText}>
+                    Porn pushes you away from that.
+                  </Text>
+                </>
+              )}
+            </RNAnimated.View>
+          </View>
+        </ScrollView>
+        
+        {/* Button - Now positioned outside ScrollView with fixed position */}
+        {phase === 'outro' && (
+          <RNAnimated.View style={[styles.fixedButtonContainer, { opacity: buttonOpacity }]}>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity 
+                style={[styles.secondaryButton, { marginBottom: 12 }]}
+                onPress={handleReflectAgain}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.secondaryButtonText}>Reflect Again</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.finishButton}
+                onPress={onClose}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>Finish Reflecting</Text>
+              </TouchableOpacity>
+            </View>
+          </RNAnimated.View>
+        )}
+      </Animated.View>
+    </Modal>
   );
 };
 

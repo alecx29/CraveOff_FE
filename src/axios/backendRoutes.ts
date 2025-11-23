@@ -28,6 +28,10 @@ export const BackendRoutes = {
   CHAT_ROOMS: "/chat/rooms",
   CHAT_ROOM_MESSAGES: (slug: string) => `/chat/rooms/${slug}/messages`,
 
+  // Community Forum
+  COMMUNITY_POSTS: "/community/posts",
+  COMMUNITY_POST_COMMENTS: (postId: string | number) => `/community/posts/${postId}/comments`,
+
   // Users
   USER_BY_ID: (userId: string) => `/users/by-id/${userId}`,
 

@@ -13,6 +13,7 @@ import GradientBackground from '@/src/screen-components/gradient-background/Grad
 import { useUser } from '@/src/context/UserContext';
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const screenWidth = Dimensions.get('window').width;
@@ -631,12 +632,13 @@ export default function AnalyticsScreen() {
 
   return (
     <GradientBackground>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        contentInsetAdjustmentBehavior="never"
-        automaticallyAdjustContentInsets={false}
-        showsVerticalScrollIndicator={false}>
+      <SafeAreaView style={{ flex: 1, paddingTop: 12 }} edges={['top','left','right']}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.contentContainer}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+          showsVerticalScrollIndicator={false}>
         <Text style={styles.screenTitle}>Analytics</Text>
         <Text style={styles.screenSubtitle}>Track your progress and insights</Text>
 
@@ -865,7 +867,8 @@ export default function AnalyticsScreen() {
           </LinearGradient>
         </View>
 
-      </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
     </GradientBackground>
   );
 }
@@ -874,7 +877,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingTop: 0,
     backgroundColor: 'transparent',
   },
   screenTitle: {
@@ -1105,10 +1108,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     fontWeight: '600',
     color: '#fff',
   },
-  contentContainer: {
-    paddingBottom: 60,
-    paddingTop: 8,
-  },
+  
   noDataContainer: {
     height: 280,
     justifyContent: 'center',
@@ -1120,6 +1120,9 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     fontSize: 14,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  contentContainer: {
+    paddingBottom: 60,
   },
   chartLabelContainer: {
     flexDirection: 'row',

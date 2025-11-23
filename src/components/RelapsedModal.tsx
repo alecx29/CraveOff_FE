@@ -57,185 +57,190 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
     onClose();
   };
   
-  if (!visible) return null;
-  
   const styles = createStyles(theme, bottomPadding, topPadding);
   
   return (
-    <Animated.View 
-      style={styles.container}
-      entering={FadeIn.duration(300)}
-      exiting={FadeOut.duration(200)}
+    <Modal
+      transparent
+      visible={visible}
+      onRequestClose={onClose}
+      animationType="none"
     >
-      <StatusBar barStyle="light-content" />
-      
-      {/* Using the reusable Header component */}
-      <Header 
-        title="Relapsed" 
-        titleColor="#e74c3c"
-        onClose={onClose}
-        backgroundColor={theme.colors.background || '#121212'}
-      />
-      
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <Animated.View 
+        style={styles.container}
+        entering={FadeIn.duration(300)}
+        exiting={FadeOut.duration(200)}
       >
-        <View style={styles.contentContainer}>
-          {/* Header Section */}
-          <View style={styles.headerSection}>
-            {/* Subtitle */}
-            <Text style={styles.subtitle}>
-              Don&apos;t be hard on yourself
-            </Text>
-            
-            {/* Description */}
-            <Text style={styles.description}>
-              Every setback is a learning opportunity. Focus on progress, not perfection.
-            </Text>
-          </View>
-          
-          {/* Objections Container */}
-          <View style={styles.optionsOuterContainer}>
-            <Text style={styles.cycleText}>
-              Our goal is to avoid the following cycle
-            </Text>
-            <View style={styles.optionsContainer}>
-              {/* Option 1 */}
-              <View style={styles.optionItem}>
-                <View style={styles.optionContent}>
-                  <View style={styles.optionIconContainer}>
-                    <Text style={styles.optionEmoji}>👀</Text>
-                  </View>
-                  <View style={styles.optionTextContainer}>
-                    <Text style={styles.optionText} selectable={false}>
-                      Watching porn
-                    </Text>
-                    <Text style={styles.optionSubtext} selectable={false}>
-                      In the moment you feel incredible
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              
-              {/* Option 2 */}
-              <View style={styles.optionItem}>
-                <View style={styles.optionContent}>
-                  <View style={styles.optionIconContainer}>
-                    <Text style={styles.optionEmoji}>🧠</Text>
-                  </View>
-                  <View style={styles.optionTextContainer}>
-                    <Text style={styles.optionText} selectable={false}>
-                      Post-Nut Clarity
-                    </Text>
-                    <Text style={styles.optionSubtext} selectable={false}>
-                      Shortly after, the euphoria fades, and you get feelings of guilt or sadness
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              
-              {/* Option 3 */}
-              <View style={styles.optionItem}>
-                <View style={styles.optionContent}>
-                  <View style={styles.optionIconContainer}>
-                    <Text style={styles.optionEmoji}>🔁</Text>
-                  </View>
-                  <View style={styles.optionTextContainer}>
-                    <Text style={styles.optionText} selectable={false}>
-                      Compensation cycle
-                    </Text>
-                    <Text style={styles.optionSubtext} selectable={false}>
-                      You repeat
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-          
-          {/* Journal Button */}
-          <TouchableOpacity 
-            style={styles.journalButton}
-            onPress={goToJournal}
-            activeOpacity={0.8}
-          >
-            <View style={styles.journalButtonContent}>
-              <Ionicons name="journal-outline" size={20} color="#fff" style={styles.journalIcon} />
-              <Text style={styles.journalButtonText}>Journal Feelings</Text>
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
-            </View>
-          </TouchableOpacity>
-        </View>
+        <StatusBar barStyle="light-content" />
         
-        {/* Button Container - Fixed at bottom */}
-        <View style={styles.bottomButtonContainer}>
-          {!canMakePledge && (
-            <View style={styles.pledgeWarning}>
-              <Ionicons name="shield-checkmark" size={18} color="#fff" style={styles.pledgeIcon} />
-              <Text style={styles.pledgeWarningText}>
-                You have an active pledge ({activePledgeTimeRemaining} remaining)
+        {/* Using the reusable Header component */}
+        <Header 
+          title="Relapsed" 
+          titleColor="#e74c3c"
+          onClose={onClose}
+          backgroundColor={theme.colors.background || '#121212'}
+        />
+        
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.contentContainer}>
+            {/* Header Section */}
+            <View style={styles.headerSection}>
+              {/* Subtitle */}
+              <Text style={styles.subtitle}>
+                Don&apos;t be hard on yourself
+              </Text>
+              
+              {/* Description */}
+              <Text style={styles.description}>
+                Every setback is a learning opportunity. Focus on progress, not perfection.
               </Text>
             </View>
-          )}
-          <TouchableOpacity 
-            style={styles.resetButton}
-            onPress={handleResetPress}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="refresh-outline" size={22} color="#fff" style={styles.resetIcon} />
-            <Text style={styles.buttonText}>Reset Counter</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      {/* Confirmation Modal */}
-      <Modal
-        transparent={true}
-        visible={showConfirmation}
-        animationType="fade"
-        onRequestClose={() => setShowConfirmation(false)}
-      >
-        <View style={styles.confirmationOverlay}>
-          <View style={styles.confirmationContainer}>
-            <View style={styles.confirmationHeader}>
-              <Ionicons name="warning" size={28} color="#FF9500" />
-              <Text style={styles.confirmationTitle}>Reset Counter</Text>
+            
+            {/* Objections Container */}
+            <View style={styles.optionsOuterContainer}>
+              <Text style={styles.cycleText}>
+                Our goal is to avoid the following cycle
+              </Text>
+              <View style={styles.optionsContainer}>
+                {/* Option 1 */}
+                <View style={styles.optionItem}>
+                  <View style={styles.optionContent}>
+                    <View style={styles.optionIconContainer}>
+                      <Text style={styles.optionEmoji}>👀</Text>
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <Text style={styles.optionText} selectable={false}>
+                        Watching porn
+                      </Text>
+                      <Text style={styles.optionSubtext} selectable={false}>
+                        In the moment you feel incredible
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                
+                {/* Option 2 */}
+                <View style={styles.optionItem}>
+                  <View style={styles.optionContent}>
+                    <View style={styles.optionIconContainer}>
+                      <Text style={styles.optionEmoji}>🧠</Text>
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <Text style={styles.optionText} selectable={false}>
+                        Post-Nut Clarity
+                      </Text>
+                      <Text style={styles.optionSubtext} selectable={false}>
+                        Shortly after, the euphoria fades, and you get feelings of guilt or sadness
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                
+                {/* Option 3 */}
+                <View style={styles.optionItem}>
+                  <View style={styles.optionContent}>
+                    <View style={styles.optionIconContainer}>
+                      <Text style={styles.optionEmoji}>🔁</Text>
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <Text style={styles.optionText} selectable={false}>
+                        Compensation cycle
+                      </Text>
+                      <Text style={styles.optionSubtext} selectable={false}>
+                        You repeat
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
             </View>
-            {!canMakePledge ? (
-              <Text style={styles.confirmationMessage}>
-                You have an active pledge with {activePledgeTimeRemaining} remaining. 
-                Are you sure you want to reset your counter?
-              </Text>
-            ) : (
-              <Text style={styles.confirmationMessage}>
-                Are you sure you want to reset your counter?
-              </Text>
-            )}
+            
+            {/* Journal Button */}
+            <TouchableOpacity 
+              style={styles.journalButton}
+              onPress={goToJournal}
+              activeOpacity={0.8}
+            >
+              <View style={styles.journalButtonContent}>
+                <Ionicons name="journal-outline" size={20} color="#fff" style={styles.journalIcon} />
+                <Text style={styles.journalButtonText}>Journal Feelings</Text>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Button Container - Fixed at bottom */}
+          <View style={styles.bottomButtonContainer}>
             {!canMakePledge && (
-              <Text style={styles.confirmationEncouragement}>
-                Remember, you committed to this pledge.
-              </Text>
+              <View style={styles.pledgeWarning}>
+                <Ionicons name="shield-checkmark" size={18} color="#fff" style={styles.pledgeIcon} />
+                <Text style={styles.pledgeWarningText}>
+                  You have an active pledge ({activePledgeTimeRemaining} remaining)
+                </Text>
+              </View>
             )}
-            <View style={styles.confirmationButtons}>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={() => setShowConfirmation(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.confirmButton}
-                onPress={confirmReset}
-              >
-                <Text style={styles.confirmButtonText}>Reset</Text>
-              </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.resetButton}
+              onPress={handleResetPress}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="refresh-outline" size={22} color="#fff" style={styles.resetIcon} />
+              <Text style={styles.buttonText}>Reset Counter</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+    
+        {/* Confirmation Modal */}
+        <Modal
+          transparent={true}
+          visible={showConfirmation}
+          animationType="fade"
+          onRequestClose={() => setShowConfirmation(false)}
+        >
+          <View style={styles.confirmationOverlay}>
+            <View style={styles.confirmationContainer}>
+              <View style={styles.confirmationHeader}>
+                <Ionicons name="warning" size={28} color="#FF9500" />
+                <Text style={styles.confirmationTitle}>Reset Counter</Text>
+              </View>
+              {!canMakePledge ? (
+                <Text style={styles.confirmationMessage}>
+                  You have an active pledge with {activePledgeTimeRemaining} remaining. 
+                  Are you sure you want to reset your counter?
+                </Text>
+              ) : (
+                <Text style={styles.confirmationMessage}>
+                  Are you sure you want to reset your counter?
+                </Text>
+              )}
+              {!canMakePledge && (
+                <Text style={styles.confirmationEncouragement}>
+                  Remember, you committed to this pledge.
+                </Text>
+              )}
+              <View style={styles.confirmationButtons}>
+                <TouchableOpacity 
+                  style={styles.cancelButton}
+                  onPress={() => setShowConfirmation(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.confirmButton}
+                  onPress={confirmReset}
+                >
+                  <Text style={styles.confirmButtonText}>Reset</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
-    </Animated.View>
+        </Modal>
+      </Animated.View>
+    </Modal>
   );
 };
 

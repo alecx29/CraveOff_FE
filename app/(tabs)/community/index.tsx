@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Linking, FlatList, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Linking, FlatList, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import { Ionicons, FontAwesome, AntDesign } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { useTheme } from '@/src/context/ThemeProvider';
@@ -9,6 +9,36 @@ import GradientBackground from '@/src/screen-components/gradient-background/Grad
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
 import { AuthContext } from '@/src/context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getAchievementImage } from '@/src/utils/achievementImages';
+
+function formatTimeAgo(input?: string | number | Date): string {
+  try {
+    if (!input) return '';
+    const date = new Date(input);
+    if (isNaN(date.getTime())) return '';
+    const now = new Date();
+    let diff = Math.floor((now.getTime() - date.getTime()) / 1000); // seconds
+    if (diff < 0) diff = 0;
+    if (diff < 5) return 'now';
+    if (diff < 60) return `${diff}s ago`;
+    const mins = Math.floor(diff / 60);
+    if (mins < 60) return mins === 1 ? '1 min ago' : `${mins} mins ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    const weeks = Math.floor(days / 7);
+    if (weeks < 5) return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return months <= 1 ? '1 month ago' : `${months} months ago`;
+    const years = Math.floor(days / 365);
+    return years <= 1 ? '1 year ago' : `${years} years ago`;
+  } catch {
+    return '';
+  }
+}
 
 type ChatRoom = {
   id: string | number;
@@ -20,15 +50,44 @@ type ChatRoom = {
   imageUrl?: string;
 };
 
+type PostResponse = {
+  id: string | number;
+  title?: string;
+  content?: string;
+  body?: string;
+  user_name?: string;
+  author?: { id?: string | number; username?: string; name?: string; avatar_url?: string } | string;
+  created_at?: string;
+  createdAt?: string;
+  image_url?: string;
+  comments_count?: number;
+  likes_count?: number;
+  user_last_achievement_code?: string;
+};
+
 export default function CommunityInfoScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const insets = useSafeAreaInsets();
   const { user: authUser } = useContext(AuthContext);
-  const [activeTab, setActiveTab] = useState<'info' | 'clans'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'forum' | 'clans'>('info');
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  const [posts, setPosts] = useState<PostResponse[]>([]);
+  const [postsLoading, setPostsLoading] = useState<boolean>(false);
+  const [postsError, setPostsError] = useState<string | null>(null);
+  const [postsRefreshing, setPostsRefreshing] = useState<boolean>(false);
+  const [hasFetchedPosts, setHasFetchedPosts] = useState<boolean>(false);
+
+  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [newPostTitle, setNewPostTitle] = useState<string>('');
+  const [newPostContent, setNewPostContent] = useState<string>('');
+  const [creatingPost, setCreatingPost] = useState<boolean>(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState<number>(0);
 
   const openReddit = () => {
     Linking.openURL('https://www.reddit.com/r/CraveOff/');
@@ -53,11 +112,82 @@ export default function CommunityInfoScreen() {
     }
   }, []);
 
+  const fetchPosts = useCallback(async () => {
+    try {
+      setPostsError(null);
+      setPostsLoading(true);
+      const response = await apiClient.get(BackendRoutes.COMMUNITY_POSTS);
+      const data = Array.isArray(response.data) ? response.data : (response.data?.posts ?? []);
+      setPosts(data);
+    } catch {
+      setPostsError('Failed to load forum posts');
+    } finally {
+      setPostsLoading(false);
+      setPostsRefreshing(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab === 'clans' && rooms.length === 0 && !loading) {
       fetchRooms();
     }
   }, [activeTab, rooms.length, loading, fetchRooms]);
+
+  useEffect(() => {
+    if (activeTab === 'forum' && !hasFetchedPosts) {
+      setHasFetchedPosts(true);
+      fetchPosts();
+    }
+  }, [activeTab, hasFetchedPosts, fetchPosts]);
+
+  // Track keyboard height to float the Post button above it
+  useEffect(() => {
+    const onShow = (e: any) => {
+      const height = e?.endCoordinates?.height ?? 0;
+      setKeyboardHeight(height);
+    };
+    const onHide = () => setKeyboardHeight(0);
+    const subShow = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', onShow);
+    const subHide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', onHide);
+    return () => {
+      subShow.remove();
+      subHide.remove();
+    };
+  }, []);
+  const resetCreateForm = () => {
+    setNewPostTitle('');
+    setNewPostContent('');
+    setCreateError(null);
+  };
+
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    resetCreateForm();
+  };
+
+  const handleCreatePost = useCallback(async () => {
+    if (creatingPost) return;
+    const title = (newPostTitle || '').trim();
+    const content = (newPostContent || '').trim();
+    if (!title && !content) {
+      setCreateError('Add a title and content.');
+      return;
+    }
+    try {
+      setCreateError(null);
+      setCreatingPost(true);
+      await apiClient.post(BackendRoutes.COMMUNITY_POSTS, { title, content });
+      setShowCreateModal(false);
+      resetCreateForm();
+      // Refresh posts after creating
+      setPostsRefreshing(true);
+      await fetchPosts();
+    } catch {
+      setCreateError('Nu am putut crea postarea. Încearcă din nou.');
+    } finally {
+      setCreatingPost(false);
+    }
+  }, [creatingPost, newPostTitle, newPostContent, fetchPosts]);
 
   return (
     <GradientBackground>
@@ -81,6 +211,27 @@ export default function CommunityInfoScreen() {
                 <View style={styles.pillContent}>
                   <Ionicons name="trophy-outline" size={16} color={theme.colors.textPrimary} style={styles.pillIcon} />
                   <Text style={styles.pillTextInactive}>Info</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+
+          {activeTab === 'forum' ? (
+            <TouchableOpacity activeOpacity={0.8} style={[styles.pillWrap, styles.pillActive]}>
+              <View style={styles.pillContent}>
+                <Ionicons name="chatbubbles-outline" size={16} color="#111827" style={styles.pillIcon} />
+                <Text style={styles.pillTextActive}>Forum</Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity activeOpacity={0.8} style={styles.pillWrap} onPress={() => setActiveTab('forum')}>
+              <LinearGradient
+                colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
+                style={styles.pillGradient}
+              >
+                <View style={styles.pillContent}>
+                  <Ionicons name="chatbubbles-outline" size={16} color={theme.colors.textPrimary} style={styles.pillIcon} />
+                  <Text style={styles.pillTextInactive}>Forum</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -340,6 +491,216 @@ export default function CommunityInfoScreen() {
             )}
           </View>
         )}
+
+        {activeTab === 'forum' && (
+          <View style={{ flex: 1 }}>
+            {postsError ? (
+              <View style={styles.centered}>
+                <Text style={styles.errorText}>{postsError}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={fetchPosts}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <FlatList
+                data={posts}
+                keyExtractor={(item, index) => String((item as any)?.id ?? index)}
+                ListEmptyComponent={() =>
+                  !postsLoading && !postsRefreshing ? (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyText}>Nu există postări în forum încă.</Text>
+                    </View>
+                  ) : null
+                }
+                renderItem={({ item }) => {
+                  const title = (item as any).title as string | undefined;
+                  const body = ((item as any).content as string | undefined) ?? ((item as any).body as string | undefined) ?? '';
+                  const displayTitle = (title && title.trim().length > 0) ? title : (body ? body.slice(0, 60) : 'Post');
+                  const author = (item as any).author;
+                  const authorName =
+                    typeof author === 'string'
+                      ? author
+                      : (author?.username || author?.name || 'Unknown');
+                  const authorId = typeof author === 'object'
+                    ? (author?.id ?? (author as any)?._id ?? (author as any)?.user_id ?? (author as any)?.uid ?? (author as any)?.uuid)
+                    : undefined;
+                  const authorAvatarUrl = typeof author === 'object' ? (author as any)?.avatar_url : undefined;
+                  const achievementCode = (item as any)?.user_last_achievement_code as string | undefined;
+                  const achievementAvatarSource = achievementCode ? getAchievementImage(String(achievementCode)) : null;
+                  const createdRaw = (item as any).created_at ?? (item as any).createdAt;
+                  const relativeCreatedLabel = formatTimeAgo(createdRaw);
+
+                  return (
+                    <View style={styles.postCard}>
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => {
+                          const postId = (item as any)?.id;
+                              const userNameParam =
+                                (item as any)?.user_name ||
+                                (typeof author === 'object' ? (author?.username || author?.name) : authorName) ||
+                                '';
+                          router.push({
+                            pathname: '/(tabs)/community/post/[postId]' as any,
+                            params: {
+                              postId: String(postId ?? ''),
+                              title: title || '',
+                              content: body || '',
+                                  // Provide both legacy authorName and new userName for robust fallback
+                                  authorName: String(authorName || ''),
+                                  userName: String(userNameParam || ''),
+                                  user_name: String(userNameParam || ''),
+                              authorId: authorId ? String(authorId) : '',
+                              authorAvatarUrl: String(authorAvatarUrl || ''),
+                              achievementCode: String(achievementCode || ''),
+                                  created_at: String(createdRaw || ''),
+                            }
+                          });
+                        }}
+                      >
+                      <LinearGradient
+                        colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
+                        style={styles.postGradient}
+                      >
+                        <View style={styles.postHeaderRow}>
+                          <TouchableOpacity
+                            activeOpacity={0.85}
+                            disabled={!authorId}
+                            onPress={() => {
+                              if (!authorId) return;
+                              router.push({
+                                pathname: '/(tabs)/community/user/[userId]' as any,
+                                params: { userId: String(authorId), achievementCode: achievementCode || '' }
+                              });
+                            }}
+                          >
+                            {achievementAvatarSource ? (
+                              <Image source={achievementAvatarSource} style={styles.postAvatar} resizeMode="cover" />
+                            ) : authorAvatarUrl ? (
+                              <Image source={{ uri: authorAvatarUrl }} style={styles.postAvatar} resizeMode="cover" />
+                            ) : (
+                              <View style={styles.postAvatarPlaceholder} />
+                            )}
+                          </TouchableOpacity>
+                          <View style={styles.postContent}>
+                            <Text style={styles.postTitle} numberOfLines={1}>
+                              {displayTitle}
+                            </Text>
+                            {body ? (
+                              <Text style={styles.postExcerpt} numberOfLines={2}>
+                                {body}
+                              </Text>
+                            ) : null}
+                            <Text style={styles.postMeta} numberOfLines={1}>
+                              {authorName}{relativeCreatedLabel ? ` • ${relativeCreatedLabel}` : ''}
+                            </Text>
+                          </View>
+                          <View style={styles.roomArrow}>
+                            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+                          </View>
+                        </View>
+                      </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                }}
+                contentContainerStyle={styles.listContent}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={postsLoading || postsRefreshing}
+                    onRefresh={() => {
+                      setPostsRefreshing(true);
+                      fetchPosts();
+                    }}
+                    tintColor={theme.colors.primary}
+                  />
+                }
+              />
+            )}
+          </View>
+        )}
+
+        {activeTab === 'forum' && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setShowCreateModal(true)}
+            style={styles.fabButton}
+          >
+            <Ionicons name="add" size={24} color="white" />
+          </TouchableOpacity>
+        )}
+
+        <Modal
+          visible={showCreateModal}
+          transparent
+          animationType="none"
+          statusBarTranslucent
+          onRequestClose={closeCreateModal}
+        >
+          <View style={styles.fsOverlay}>
+            <GradientBackground ignoreFocus>
+              <View style={styles.fsContainer}>
+                <View style={[styles.fsHeader, { paddingTop: Math.max(insets.top, 20) + 10 }]}>
+                  <TouchableOpacity
+                    style={styles.fsCloseButton}
+                    onPress={closeCreateModal}
+                    activeOpacity={0.7}
+                  >
+                    <AntDesign name="close" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+                <KeyboardAvoidingView
+                  behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                  style={[styles.fsContent, { paddingBottom: Platform.OS === 'ios' ? (insets.bottom + 8) : (Math.max(insets.bottom, 20) + 20) }]}
+                >
+                  <LinearGradient
+                    colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
+                    style={[styles.modalGradient, { flex: 1 }]}
+                  >
+                    <TextInput
+                      value={newPostTitle}
+                      onChangeText={setNewPostTitle}
+                      placeholder="title"
+                      placeholderTextColor="rgba(255,255,255,0.6)"
+                      style={styles.modalTitleInput}
+                      maxLength={200}
+                      returnKeyType="next"
+                      autoFocus
+                    />
+                    <TextInput
+                      value={newPostContent}
+                      onChangeText={setNewPostContent}
+                      placeholder="What's on your mind?"
+                      placeholderTextColor="rgba(255,255,255,0.6)"
+                      style={[styles.modalContentInput, { flex: 1 }]}
+                      multiline
+                      textAlignVertical="top"
+                    />
+                    {!!createError && <Text style={[styles.errorText, { marginTop: 8 }]}>{createError}</Text>}
+                    <View style={[
+                      styles.modalButtonsRow,
+                      { marginBottom: Platform.OS === 'ios'
+                        ? 8
+                        : Math.max(24, (keyboardHeight - Math.max(insets.bottom, 20)) + 16)
+                      }
+                    ]}>
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={handleCreatePost}
+                        style={[styles.modalButton, styles.modalButtonPrimary, styles.modalButtonWide, creatingPost ? { opacity: 0.7 } : null]}
+                        disabled={creatingPost}
+                      >
+                        <Text style={[styles.modalButtonText, { color: '#111827', fontWeight: '700', textAlign: 'center' }]}>
+                          {creatingPost ? 'Posting...' : 'Post'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </LinearGradient>
+                </KeyboardAvoidingView>
+              </View>
+            </GradientBackground>
+          </View>
+        </Modal>
       </View>
     </GradientBackground>
   );
@@ -469,6 +830,173 @@ const createStyles = (theme: any) => StyleSheet.create({
   roomArrow: {
     marginLeft: 8,
     alignSelf: 'center',
+  },
+  postCard: {
+    backgroundColor: 'transparent',
+    borderRadius: theme.borderRadius.medium,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  postGradient: {
+    padding: 12,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
+  },
+  postHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  postAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+  },
+  postAvatarPlaceholder: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)'
+  },
+  postContent: {
+    flex: 1,
+    paddingRight: 4,
+  },
+  postTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+    marginRight: 8,
+  },
+  postExcerpt: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  postMeta: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+  },
+  emptyState: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+  },
+  fabButton: {
+    position: 'absolute',
+    right: 24,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0,
+    ...theme.shadows.medium,
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    borderRadius: theme.borderRadius.medium,
+    overflow: 'hidden',
+  },
+  modalGradient: {
+    padding: 16,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)'
+  },
+  modalTitleInput: {
+    color: theme.colors.textPrimary,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderRadius: theme.borderRadius.small,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  modalContentInput: {
+    color: theme.colors.textPrimary,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderRadius: theme.borderRadius.small,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 15,
+    minHeight: 140,
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  modalButton: {
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'android' ? 14 : 10,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: 'transparent',
+  },
+  modalButtonWide: {
+    width: '85%',
+    alignSelf: 'center',
+  },
+  modalButtonPrimary: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+  },
+  modalButtonText: {
+    color: theme.colors.textPrimary,
+    fontWeight: '600',
+  },
+  fsOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+    zIndex: 1000,
+  },
+  fsContainer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+  },
+  fsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  fsCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  fsContent: {
+    flex: 1,
+    paddingHorizontal: 20,
   },
   sectionHeader: {
     flexDirection: 'row',

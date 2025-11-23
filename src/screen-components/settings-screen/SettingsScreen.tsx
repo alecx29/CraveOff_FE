@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ScrollView, Linking, Image } from 'react-native
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { useNotifications } from '@/src/context/NotificationsContext';
@@ -23,6 +24,7 @@ const SettingsScreen = () => {
   const { user: authUser } = useContext(AuthContext);
   const { lastRelapseData } = useLogs();
   const { achievements: achievementsList, summary } = useAchievements();
+  const insets = useSafeAreaInsets();
   const styles = createStyles(theme);
   
   // State pentru clean days
@@ -160,7 +162,7 @@ const SettingsScreen = () => {
   }, [achievementsList]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 44) }]} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false}>
       {/* Header */}
       
       <View style={styles.header}>
@@ -275,7 +277,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 44,
   },
   header: {
     flexDirection: 'row',

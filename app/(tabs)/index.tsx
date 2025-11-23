@@ -7,7 +7,6 @@ import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 
 import { useTheme } from '@/src/context/ThemeProvider';
-import { useUser } from '@/src/context/UserContext';
 import { useLogs, LogEntry } from '@/src/context/LogsContext';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import PledgeModal from '@/src/components/PledgeModal';
@@ -46,19 +45,6 @@ const formatTimeCounter = (seconds: number) => {
   };
 };
 
-// Helper to determine which time units to display
-const getVisibleTimeUnits = (time: ReturnType<typeof formatTimeCounter>) => {
-  if (time.days > 0) {
-    // If we have days, show days and hours
-    return { showDays: true, showHours: true, showMinutes: true, showSeconds: false };
-  } else if (time.hours > 0) {
-    // If we have hours but no days, show hours, minutes and seconds
-    return { showDays: false, showHours: true, showMinutes: true, showSeconds: true };
-  } else {
-    // If we only have minutes or seconds, show both
-    return { showDays: false, showHours: false, showMinutes: true, showSeconds: true };
-  }
-};
 
 // Get the largest time unit to display at the top
 const getLargestTimeUnit = (time: ReturnType<typeof formatTimeCounter>) => {
@@ -129,24 +115,13 @@ const getDateStringForDay = (dayIndex: number, weekOffset: number = 0): string =
   return targetDate.toISOString().split('T')[0];
 };
 
-// Interface for pledge data
-interface PledgeData {
-  id: string;
-  user_id: string;
-  check_in_at: string;
-}
-
-interface PledgeHistoryResponse {
-  pledges: PledgeData[];
-}
 
 export default function HomeScreen() {
   const { theme } = useTheme();
   const oriaInsets = useSafeAreaInsets();
-  const { user } = useUser();
-  const { logs, lastRelapseData, fetchLogs, isLoading } = useLogs();
+  const { logs, lastRelapseData, fetchLogs } = useLogs();
   const { refreshFromApi } = useAchievements();
-  const styles = createStyles(theme);
+  const styles = createStyles(theme, oriaInsets);
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = screenWidth - 40; // Define card width as a constant
   const cardTotalWidth = cardWidth + 40; // Total width including margins
@@ -1257,11 +1232,12 @@ export default function HomeScreen() {
 
   return (
     <GradientBackground>
-      <ScrollView 
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        contentInsetAdjustmentBehavior="never"
-        automaticallyAdjustContentInsets={false}>
+      <SafeAreaView style={{ flex: 1, paddingTop: 1 }} edges={['top','left','right']}>
+        <ScrollView 
+          style={styles.container}
+          contentContainerStyle={styles.contentContainer}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}>
         {/* Header moved to component */}
         <HomeTopBar
           cleanDays={cleanDays}
@@ -1592,7 +1568,8 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
       
       {/* Pledge Modal */}
       <PledgeModal 
@@ -1870,16 +1847,15 @@ export default function HomeScreen() {
   );
 }
 
-const createStyles = (theme: any) => StyleSheet.create({
+const createStyles = (theme: any, insets: { top: number }) => StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingTop: 0,
     backgroundColor: 'transparent',
   },
   contentContainer: {
     paddingBottom: 60, // Increased bottom padding to ensure content is fully visible
-    paddingTop: 8,
   },
   // header moved to HomeTopBar
   // moved to HomeTopBar
