@@ -4,22 +4,22 @@ module.exports = {
     name: "CraveOff",
     slug: "craveoff-app",
     version: "1.2.20",
-    
+
     // Note: These properties will not be synced when android/ios folders are present
     orientation: "portrait",
     icon: "./assets/images/logoCraveoff-512.png",
     scheme: "craveoffapp",
     userInterfaceStyle: "automatic",
 
-    // updates: {
-    //   url: "https://u.expo.dev/ab8a7457-9c09-4b84-946e-2dee70f210b1",
-    //   enabled: true,
-    //   checkAutomatically: "ON_ERROR_RECOVERY",
-    //   fallbackToCacheTimeout: 0,
-    // },
-    // runtimeVersion: {
-    //   policy: "sdkVersion",
-    // },
+    updates: {
+      url: "https://u.expo.dev/ab8a7457-9c09-4b84-946e-2dee70f210b1",
+      enabled: true,
+      checkAutomatically: "ON_ERROR_RECOVERY",
+      fallbackToCacheTimeout: 0,
+    },
+    runtimeVersion: {
+      policy: "sdkVersion",
+    },
     
     newArchEnabled: false,
     

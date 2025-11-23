@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, KeyboardAvoidingView, Platform, Keyboard, TouchableOpacity } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { useTheme } from '@/src/context/ThemeProvider';
@@ -10,6 +10,9 @@ import ChatComposer from '@/src/components/chat/ChatComposer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import CommunityUpvote from '@/src/components/community/CommunityUpvote';
+import LottieUniversal from '@/src/components/LottieUniversal';
 
 type AuthorLike =
   | string
@@ -31,6 +34,8 @@ type PostDetails = {
   created_at?: string;
   createdAt?: string;
   user_last_achievement_code?: string;
+  user_current_streak?: number | string;
+  likes_count?: number;
 };
 
 type CommentResponse = {
@@ -49,32 +54,19 @@ type CommentNode = {
   replies: CommentNode[];
 };
 
-function formatTimeAgo(input?: string | number | Date): string {
-  try {
-    if (!input) return '';
-    const date = new Date(input);
-    if (isNaN(date.getTime())) return '';
-    const now = new Date();
-    let diff = Math.floor((now.getTime() - date.getTime()) / 1000); // seconds
-    if (diff < 0) diff = 0;
-    if (diff < 5) return 'now';
-    if (diff < 60) return `${diff}s ago`;
-    const mins = Math.floor(diff / 60);
-    if (mins < 60) return mins === 1 ? '1 min ago' : `${mins} mins ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
-    const days = Math.floor(hours / 24);
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days} days ago`;
-    const weeks = Math.floor(days / 7);
-    if (weeks < 5) return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
-    const months = Math.floor(days / 30);
-    if (months < 12) return months <= 1 ? '1 month ago' : `${months} months ago`;
-    const years = Math.floor(days / 365);
-    return years <= 1 ? '1 year ago' : `${years} years ago`;
-  } catch {
-    return '';
-  }
+// Sort comments newest-first (top-level and replies)
+function sortCommentsNewestFirst(nodes: CommentNode[] | null | undefined): CommentNode[] {
+  if (!Array.isArray(nodes)) return [];
+  const parsed = nodes.map((n) => ({
+    comment: n.comment,
+    replies: sortCommentsNewestFirst(n.replies),
+  }));
+  parsed.sort((a, b) => {
+    const aTime = new Date(a.comment?.created_at as any).getTime() || 0;
+    const bTime = new Date(b.comment?.created_at as any).getTime() || 0;
+    return bTime - aTime; // newest first
+  });
+  return parsed;
 }
 
 export default function CommunityPostDetailsScreen() {
@@ -118,6 +110,8 @@ export default function CommunityPostDetailsScreen() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [composerH, setComposerH] = useState<number>(0);
   const [androidKb, setAndroidKb] = useState<number>(0);
+  const [showReportMenu, setShowReportMenu] = useState<boolean>(false);
+  const [reportBannerVisible, setReportBannerVisible] = useState<boolean>(false);
 
   const fetchPost = useCallback(async () => {
     if (!postId) {
@@ -156,7 +150,7 @@ export default function CommunityPostDetailsScreen() {
       const nodes: CommentNode[] = Array.isArray(data)
         ? (data as any)
         : (Array.isArray(data?.comments) ? data.comments : []);
-      setComments(nodes);
+      setComments(sortCommentsNewestFirst(nodes));
     } catch {
       setCommentsError(true);
       setComments(null);
@@ -225,12 +219,18 @@ export default function CommunityPostDetailsScreen() {
     ? getAchievementImage(String(achievementCode))
     : null;
 
-  const createdRaw = (post?.created_at ?? post?.createdAt ?? paramCreatedAt ?? paramCreatedAtCamel) as string | undefined;
-  const createdDate = createdRaw ? new Date(createdRaw) : null;
-  const createdLabel =
-    createdDate && !isNaN(createdDate.getTime())
-      ? createdDate.toLocaleDateString()
-      : '';
+  // Build user streak label (from DTO field user_current_streak)
+  const userStreakLabel = useMemo(() => {
+    const val = (post as any)?.user_current_streak;
+    if (val === null || val === undefined) return '';
+    const num = typeof val === 'string' ? parseInt(val, 10) : Number(val);
+    if (!isFinite(num) || isNaN(num)) {
+      // If backend returns a formatted string, show as-is
+      return String(val);
+    }
+    const unit = num === 1 ? 'day' : 'days';
+    return `${num} ${unit} streak`;
+  }, [post]);
 
   const handleSendComment = useCallback(async () => {
     const trimmed = (composerValue || '').trim();
@@ -273,7 +273,6 @@ export default function CommunityPostDetailsScreen() {
                 {node.comment.content}
               </Text>
             </LinearGradient>
-            <Text style={styles.commentMeta}>{formatTimeAgo(node.comment.created_at)}</Text>
           </View>
         </View>
         {Array.isArray(node.replies) && node.replies.length > 0
@@ -287,11 +286,19 @@ export default function CommunityPostDetailsScreen() {
     <GradientBackground>
       <Stack.Screen
         options={{
-          title: 'Post',
+          title: 'Post Details',
           headerShown: true,
           headerBackTitle: 'Back',
         }}
       />
+      {reportBannerVisible ? (
+        <View style={styles.reportBanner}>
+          <View style={styles.reportBannerRow}>
+            <Ionicons name="checkmark" size={16} color="#111827" />
+            <Text style={styles.reportBannerText}>Post has been reported</Text>
+          </View>
+        </View>
+      ) : null}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}>
         <View style={[styles.flexFill, Platform.OS === 'android' ? { paddingBottom: Math.max(androidKb - insets.bottom - 46, 0) } : null]}>
           <ScrollView
@@ -299,7 +306,7 @@ export default function CommunityPostDetailsScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Header: Avatar + Name */}
+            {/* Header: Avatar + Name + Upvote */}
             <View style={styles.header}>
               {achievementAvatarSource ? (
                 <Image source={achievementAvatarSource} style={styles.avatar} />
@@ -312,11 +319,18 @@ export default function CommunityPostDetailsScreen() {
                 <Text style={styles.authorName} numberOfLines={1}>
                   {authorName}
                 </Text>
-                {!!createdLabel && (
+                {!!userStreakLabel && (
                   <Text style={styles.metaText} numberOfLines={1}>
-                    {createdLabel}
+                    {userStreakLabel}
                   </Text>
                 )}
+              </View>
+              <View style={styles.postHeaderActions}>
+                <CommunityUpvote
+                  postId={String(postId)}
+                  likesCount={Number((post as any)?.likes_count ?? 0)}
+                  onChanged={(n) => setPost(prev => prev ? ({ ...(prev as any), likes_count: n }) : prev)}
+                />
               </View>
             </View>
 
@@ -333,6 +347,28 @@ export default function CommunityPostDetailsScreen() {
             {/* Comments */}
             <View style={styles.commentsHeader}>
               <Text style={styles.commentsTitle}>Comments</Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowReportMenu(v => !v)}
+                style={styles.moreButton}
+              >
+                <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+              {showReportMenu ? (
+                <View style={styles.reportMenu}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      setShowReportMenu(false);
+                      setReportBannerVisible(true);
+                      setTimeout(() => setReportBannerVisible(false), 1800);
+                    }}
+                    style={styles.reportMenuItem}
+                  >
+                    <Text style={styles.reportMenuItemText}>Report</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
             {commentsLoading ? (
               <Text style={styles.loadingText}>Loading comments...</Text>
@@ -343,7 +379,15 @@ export default function CommunityPostDetailsScreen() {
                 {comments.map(node => renderCommentNode(node, 0))}
               </View>
             ) : (
-              <Text style={styles.loadingText}>No comments yet.</Text>
+              <View style={styles.emptyComments}>
+                <LottieUniversal
+                  source={require('@/assets/images/space boy developer.json')}
+                  autoPlay
+                  loop
+                  style={styles.emptyLottie}
+                />
+                <Text style={styles.loadingText}>No comments yet. Be the first to engage.</Text>
+              </View>
             )}
 
             {/* Only show loading state for comments, not for post */}
@@ -397,6 +441,12 @@ const createStyles = (theme: any) =>
     headerText: {
       flex: 1,
     },
+    postHeaderActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginLeft: 6,
+      marginTop: 2,
+    },
     authorName: {
       color: theme.colors.textPrimary,
       fontSize: 16,
@@ -425,14 +475,83 @@ const createStyles = (theme: any) =>
       borderTopWidth: 1,
       borderTopColor: 'rgba(255,255,255,0.08)',
       paddingTop: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      position: 'relative',
     },
     commentsTitle: {
       color: theme.colors.textPrimary,
       fontSize: 16,
       fontWeight: '700',
     },
+    moreButton: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    reportMenu: {
+      position: 'absolute',
+      right: 0,
+      top: 32,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 10,
+      paddingVertical: 6,
+      minWidth: 120,
+      borderWidth: 1,
+      borderColor: 'rgba(0,0,0,0.06)',
+      shadowColor: '#000',
+      shadowOpacity: 0.12,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+      zIndex: 20,
+    },
+    reportMenuItem: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    reportMenuItemText: {
+      color: '#111827',
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    reportBanner: {
+      position: 'absolute',
+      top: 12,
+      alignSelf: 'center',
+      backgroundColor: '#FFFFFF',
+      borderRadius: 9999,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: 'rgba(0,0,0,0.06)',
+      shadowColor: '#000',
+      shadowOpacity: 0.12,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      zIndex: 50,
+    },
+    reportBannerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    reportBannerText: {
+      color: '#111827',
+      fontSize: 14,
+      fontWeight: '700',
+      marginLeft: 8,
+    },
     commentsList: {
       paddingTop: 4,
+    },
+    emptyComments: {
+      alignItems: 'center',
+      paddingTop: 8,
+      paddingBottom: 16,
+    },
+    emptyLottie: {
+      width: 180,
+      height: 180,
     },
     // Chat-like message styles (left-aligned for all comments)
     messageRow: {

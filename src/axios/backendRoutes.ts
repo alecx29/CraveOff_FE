@@ -30,6 +30,7 @@ export const BackendRoutes = {
 
   // Community Forum
   COMMUNITY_POSTS: "/community/posts",
+  COMMUNITY_POST_UPVOTE: (postId: string | number) => `/community/posts/${postId}/upvote`,
   COMMUNITY_POST_COMMENTS: (postId: string | number) => `/community/posts/${postId}/comments`,
 
   // Users

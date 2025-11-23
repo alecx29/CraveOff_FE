@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Linking, FlatList, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome, AntDesign } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { BackendRoutes } from '@/src/axios/backendRoutes';
 import { AuthContext } from '@/src/context/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAchievementImage } from '@/src/utils/achievementImages';
+import CommunityUpvote from '@/src/components/community/CommunityUpvote';
 
 function formatTimeAgo(input?: string | number | Date): string {
   try {
@@ -81,6 +82,9 @@ export default function CommunityInfoScreen() {
   const [postsError, setPostsError] = useState<string | null>(null);
   const [postsRefreshing, setPostsRefreshing] = useState<boolean>(false);
   const [hasFetchedPosts, setHasFetchedPosts] = useState<boolean>(false);
+
+  const [navLocked, setNavLocked] = useState<boolean>(false);
+  const navLockRef = useRef<boolean>(false);
 
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [newPostTitle, setNewPostTitle] = useState<string>('');
@@ -164,6 +168,17 @@ export default function CommunityInfoScreen() {
     setShowCreateModal(false);
     resetCreateForm();
   };
+
+  const updatePostLikesCount = useCallback((postId: string | number, newCount: number) => {
+    setPosts(prev =>
+      prev.map(p => {
+        if ((p as any)?.id === postId) {
+          return { ...(p as any), likes_count: newCount };
+        }
+        return p;
+      })
+    );
+  }, []);
 
   const handleCreatePost = useCallback(async () => {
     if (creatingPost) return;
@@ -534,7 +549,11 @@ export default function CommunityInfoScreen() {
                     <View style={styles.postCard}>
                       <TouchableOpacity
                         activeOpacity={0.85}
+                        disabled={navLocked}
                         onPress={() => {
+                          if (navLockRef.current) return;
+                          navLockRef.current = true;
+                          setNavLocked(true);
                           const postId = (item as any)?.id;
                               const userNameParam =
                                 (item as any)?.user_name ||
@@ -556,12 +575,17 @@ export default function CommunityInfoScreen() {
                                   created_at: String(createdRaw || ''),
                             }
                           });
+                          setTimeout(() => {
+                            navLockRef.current = false;
+                            setNavLocked(false);
+                          }, 800);
                         }}
                       >
                       <LinearGradient
                         colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
                         style={styles.postGradient}
                       >
+                        {/* Top meta row: avatar + name/time + chevron */}
                         <View style={styles.postHeaderRow}>
                           <TouchableOpacity
                             activeOpacity={0.85}
@@ -582,22 +606,35 @@ export default function CommunityInfoScreen() {
                               <View style={styles.postAvatarPlaceholder} />
                             )}
                           </TouchableOpacity>
-                          <View style={styles.postContent}>
-                            <Text style={styles.postTitle} numberOfLines={1}>
-                              {displayTitle}
+                          <View style={styles.postHeaderText}>
+                            <Text style={styles.postAuthorName} numberOfLines={1}>
+                              {authorName}
                             </Text>
-                            {body ? (
-                              <Text style={styles.postExcerpt} numberOfLines={2}>
-                                {body}
+                            {!!relativeCreatedLabel && (
+                              <Text style={styles.postTime} numberOfLines={1}>
+                                {relativeCreatedLabel}
                               </Text>
-                            ) : null}
-                            <Text style={styles.postMeta} numberOfLines={1}>
-                              {authorName}{relativeCreatedLabel ? ` • ${relativeCreatedLabel}` : ''}
+                            )}
+                          </View>
+                          <View style={styles.postHeaderActions}>
+                            <CommunityUpvote
+                              postId={(item as any)?.id}
+                              likesCount={Number((item as any)?.likes_count ?? 0)}
+                              onChanged={(n) => updatePostLikesCount((item as any)?.id, n)}
+                            />
+                          </View>
+                        </View>
+
+                        {/* Body: title + excerpt under meta row */}
+                        <View style={styles.postBody}>
+                          <Text style={styles.postTitle} numberOfLines={1}>
+                            {displayTitle}
+                          </Text>
+                          {body ? (
+                            <Text style={styles.postExcerpt} numberOfLines={2}>
+                              {body}
                             </Text>
-                          </View>
-                          <View style={styles.roomArrow}>
-                            <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-                          </View>
+                          ) : null}
                         </View>
                       </LinearGradient>
                       </TouchableOpacity>
@@ -657,6 +694,7 @@ export default function CommunityInfoScreen() {
                     colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
                     style={[styles.modalGradient, { flex: 1 }]}
                   >
+                    <Text style={styles.modalHeading}>New Post</Text>
                     <TextInput
                       value={newPostTitle}
                       onChangeText={setNewPostTitle}
@@ -848,6 +886,29 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  postHeaderText: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  postHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 6,
+    marginTop: 2,
+  },
+  postAuthorName: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  postTime: {
+    marginTop: 2,
+    color: theme.colors.textMuted,
+    fontSize: 12,
+  },
+  postBody: {
+    marginTop: 8,
+  },
   postAvatar: {
     width: 44,
     height: 44,
@@ -925,9 +986,16 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)'
   },
+  modalHeading: {
+    color: theme.colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
   modalTitleInput: {
     color: theme.colors.textPrimary,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.small,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -936,7 +1004,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   modalContentInput: {
     color: theme.colors.textPrimary,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.small,
     paddingHorizontal: 12,
     paddingVertical: 12,
