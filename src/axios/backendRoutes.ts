@@ -32,6 +32,7 @@ export const BackendRoutes = {
   COMMUNITY_POSTS: "/community/posts",
   COMMUNITY_POST_UPVOTE: (postId: string | number) => `/community/posts/${postId}/upvote`,
   COMMUNITY_POST_COMMENTS: (postId: string | number) => `/community/posts/${postId}/comments`,
+  COMMUNITY_POST: (postId: string | number) => `/community/posts/${postId}`,
 
   // Users
   USER_BY_ID: (userId: string) => `/users/by-id/${userId}`,
@@ -41,7 +42,7 @@ export const BackendRoutes = {
     `/user/delete-account-confirm/${token}`,
 
   // Streaks
-  STREAKS: "/streak/streaks",
+  STREAKS: "/streak/summary",
 
   // Oria chat routes
   ORIA_CHATS: "/oria/chats",

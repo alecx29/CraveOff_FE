@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, KeyboardAvoidingView, Platform, Keyboard, TouchableOpacity } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState, useContext } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, KeyboardAvoidingView, Platform, Keyboard, TouchableOpacity, Modal } from 'react-native';
+import { Stack, useLocalSearchParams, router } from 'expo-router';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { useTheme } from '@/src/context/ThemeProvider';
 import { apiClient } from '@/src/axios/apiClient';
@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import CommunityUpvote from '@/src/components/community/CommunityUpvote';
 import LottieUniversal from '@/src/components/LottieUniversal';
+import { AuthContext } from '@/src/context/AuthContext';
 
 type AuthorLike =
   | string
@@ -29,6 +30,7 @@ type PostDetails = {
   title?: string;
   content?: string;
   body?: string;
+  upvotes?: number;
   user_name?: string;
   author?: AuthorLike;
   created_at?: string;
@@ -112,6 +114,10 @@ export default function CommunityPostDetailsScreen() {
   const [androidKb, setAndroidKb] = useState<number>(0);
   const [showReportMenu, setShowReportMenu] = useState<boolean>(false);
   const [reportBannerVisible, setReportBannerVisible] = useState<boolean>(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [deleting, setDeleting] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { user: authUser } = useContext(AuthContext);
 
   const fetchPost = useCallback(async () => {
     if (!postId) {
@@ -210,6 +216,47 @@ export default function CommunityPostDetailsScreen() {
     return (paramAuthorAvatarUrl as string) || '';
   }, [authorObj, paramAuthorAvatarUrl]);
 
+  const authorId = useMemo(() => {
+    // 1) From author object if present
+    if (typeof authorObj === 'object') {
+      const idFromObj =
+        (authorObj as any)?.id ??
+        (authorObj as any)?._id ??
+        (authorObj as any)?.user_id ??
+        (authorObj as any)?.uid ??
+        (authorObj as any)?.uuid;
+      if (idFromObj !== undefined && idFromObj !== null) return String(idFromObj);
+    }
+    // 2) From top-level post fields if backend uses different shape
+    const idFromPost =
+      (post as any)?.user_id ??
+      (post as any)?.userId ??
+      (post as any)?.author_id ??
+      (post as any)?.authorId ??
+      (post as any)?.owner_id ??
+      (post as any)?.ownerId;
+    if (idFromPost !== undefined && idFromPost !== null) return String(idFromPost);
+    // 3) From route params as fallback
+    if ((paramAuthorId || '').trim().length > 0) return String(paramAuthorId);
+    return '';
+  }, [authorObj, post, paramAuthorId]);
+
+  const myId = useMemo(() => {
+    return String(
+      (authUser as any)?.id ??
+      (authUser as any)?._id ??
+      (authUser as any)?.user_id ??
+      (authUser as any)?.uid ??
+      (authUser as any)?.uuid ??
+      ''
+    );
+  }, [authUser]);
+
+  const isOwnPost = useMemo(() => {
+    if (!authorId || !myId) return false;
+    return String(authorId) === String(myId);
+  }, [authorId, myId]);
+
   const achievementCode =
     (typeof authorObj === 'object' && (authorObj?.last_achievement_code as string)) ||
     (post?.user_last_achievement_code as string) ||
@@ -299,6 +346,57 @@ export default function CommunityPostDetailsScreen() {
           </View>
         </View>
       ) : null}
+      <Modal
+        visible={showDeleteConfirm}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setShowDeleteConfirm(false)}
+      >
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>Delete post?</Text>
+            <Text style={styles.confirmText}>Are you sure you want to delete this post?</Text>
+            {!!deleteError && <Text style={styles.confirmError}>{deleteError}</Text>}
+            <View style={styles.confirmButtonsRow}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowDeleteConfirm(false)}
+                style={[styles.confirmButton, styles.confirmButtonSecondary]}
+                disabled={deleting}
+              >
+                <Text style={[styles.confirmButtonText, styles.confirmButtonSecondaryText]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={async () => {
+                  if (!postId) return;
+                  try {
+                    console.log('[PostDetails] Deleting post', postId);
+                    setDeleteError(null);
+                    setDeleting(true);
+                    await apiClient.delete(BackendRoutes.COMMUNITY_POST(String(postId)));
+                    setShowDeleteConfirm(false);
+                    // Navigate back after successful deletion
+                    router.back();
+                  } catch {
+                    console.warn('[PostDetails] Delete failed for post', postId);
+                    setDeleteError('Could not delete. Please try again.');
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                style={[styles.confirmButton, styles.confirmButtonPrimary, deleting ? { opacity: 0.7 } : null]}
+                disabled={deleting}
+              >
+                <Text style={[styles.confirmButtonText, styles.confirmButtonPrimaryText]}>
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}>
         <View style={[styles.flexFill, Platform.OS === 'android' ? { paddingBottom: Math.max(androidKb - insets.bottom - 46, 0) } : null]}>
           <ScrollView
@@ -328,8 +426,8 @@ export default function CommunityPostDetailsScreen() {
               <View style={styles.postHeaderActions}>
                 <CommunityUpvote
                   postId={String(postId)}
-                  likesCount={Number((post as any)?.likes_count ?? 0)}
-                  onChanged={(n) => setPost(prev => prev ? ({ ...(prev as any), likes_count: n }) : prev)}
+                  likesCount={Number((post as any)?.upvotes ?? (post as any)?.likes_count ?? 0)}
+                  onChanged={(n) => setPost(prev => prev ? ({ ...(prev as any), upvotes: n, likes_count: n }) : prev)}
                 />
               </View>
             </View>
@@ -349,8 +447,9 @@ export default function CommunityPostDetailsScreen() {
               <Text style={styles.commentsTitle}>Comments</Text>
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() => setShowReportMenu(v => !v)}
+                onPress={() => setShowReportMenu(true)}
                 style={styles.moreButton}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.textPrimary} />
               </TouchableOpacity>
@@ -359,14 +458,29 @@ export default function CommunityPostDetailsScreen() {
                   <TouchableOpacity
                     activeOpacity={0.85}
                     onPress={() => {
-                      setShowReportMenu(false);
                       setReportBannerVisible(true);
+                      setShowReportMenu(false);
                       setTimeout(() => setReportBannerVisible(false), 1800);
                     }}
                     style={styles.reportMenuItem}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                   >
                     <Text style={styles.reportMenuItemText}>Report</Text>
                   </TouchableOpacity>
+                  {isOwnPost ? (
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        setDeleteError(null);
+                        setShowDeleteConfirm(true);
+                        setShowReportMenu(false);
+                      }}
+                      style={styles.reportMenuItem}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Text style={styles.reportMenuItemDestructive}>Delete</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               ) : null}
             </View>
@@ -479,6 +593,7 @@ const createStyles = (theme: any) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       position: 'relative',
+      zIndex: 10,
     },
     commentsTitle: {
       color: theme.colors.textPrimary,
@@ -505,6 +620,7 @@ const createStyles = (theme: any) =>
       shadowRadius: 6,
       shadowOffset: { width: 0, height: 3 },
       zIndex: 20,
+      elevation: 12,
     },
     reportMenuItem: {
       paddingHorizontal: 12,
@@ -514,6 +630,11 @@ const createStyles = (theme: any) =>
       color: '#111827',
       fontSize: 14,
       fontWeight: '600',
+    },
+    reportMenuItemDestructive: {
+      color: '#DC2626',
+      fontSize: 14,
+      fontWeight: '700',
     },
     reportBanner: {
       position: 'absolute',
@@ -552,6 +673,78 @@ const createStyles = (theme: any) =>
     emptyLottie: {
       width: 180,
       height: 180,
+    },
+    confirmOverlay: {
+      ...StyleSheet.absoluteFillObject as any,
+      backgroundColor: 'rgba(0,0,0,0.35)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+    confirmCard: {
+      width: '100%',
+      maxWidth: 360,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      borderWidth: 1,
+      borderColor: 'rgba(0,0,0,0.06)',
+      shadowColor: '#000',
+      shadowOpacity: 0.14,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+    },
+    confirmTitle: {
+      color: '#111827',
+      fontSize: 16,
+      fontWeight: '800',
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    confirmText: {
+      color: '#374151',
+      fontSize: 14,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    confirmError: {
+      color: '#DC2626',
+      fontSize: 12,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    confirmButtonsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 8,
+    },
+    confirmButton: {
+      flex: 1,
+      paddingVertical: Platform.OS === 'android' ? 12 : 10,
+      borderRadius: 9999,
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      marginHorizontal: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    confirmButtonText: {
+      fontWeight: '700',
+    },
+    confirmButtonSecondary: {
+      backgroundColor: '#FFFFFF',
+      borderColor: '#E5E7EB',
+    },
+    confirmButtonSecondaryText: {
+      color: '#111827',
+    },
+    confirmButtonPrimary: {
+      backgroundColor: '#DC2626',
+      borderColor: '#DC2626',
+    },
+    confirmButtonPrimaryText: {
+      color: '#FFFFFF',
     },
     // Chat-like message styles (left-aligned for all comments)
     messageRow: {

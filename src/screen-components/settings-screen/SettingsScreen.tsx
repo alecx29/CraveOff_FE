@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Linking, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Linking, Image, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/src/context/ThemeProvider';
@@ -22,7 +23,7 @@ const SettingsScreen = () => {
   const { theme } = useTheme();
   const { isNotificationsEnabled } = useNotifications();
   const { user: authUser } = useContext(AuthContext);
-  const { lastRelapseData } = useLogs();
+  const { lastRelapseData, currentStreak } = useLogs();
   const { achievements: achievementsList, summary } = useAchievements();
   const insets = useSafeAreaInsets();
   const styles = createStyles(theme);
@@ -69,24 +70,29 @@ const SettingsScreen = () => {
     }
   }, [lastRelapseData]);
 
-  // Fetch longest streak from backend (same endpoint as Analytics)
+  // Fetch longest streak from backend summary whenever current streak changes
   useEffect(() => {
     const fetchBackendStreaks = async () => {
       try {
         const response = await apiClient.get(BackendRoutes.STREAKS);
         const data = response.data || {};
-        const longest = data.longesStreak ?? data.longestStreak ?? data.longest ?? 0;
-        if (Number.isFinite(Number(longest))) {
-          setLongestStreak(Number(longest));
-        } else {
-          setLongestStreak(0);
-        }
+        const toNumber = (value: any) => {
+          const n = Number(value);
+          return Number.isFinite(n) ? n : 0;
+        };
+        const longest =
+          data.longest_streak ??
+          data.longestStreak ??
+          data.longesStreak ??
+          data.longest ??
+          0;
+        setLongestStreak(toNumber(longest));
       } catch {
         setLongestStreak(0);
       }
     };
     fetchBackendStreaks();
-  }, []);
+  }, [currentStreak]);
 
   // Helper function to get the flame color safely
   const getFlameColor = (): string => {
@@ -133,6 +139,36 @@ const SettingsScreen = () => {
   
   const openAccountOptions = () => {
     router.push('/settings/account-options');
+  };
+
+  const openStoreListing = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        const pkg = ((Constants as any).expoConfig?.android?.package) || 'com.usualsuspect29.craveoffapp';
+        const marketUrl = `market://details?id=${pkg}&reviewId=0`;
+        const webUrl = `https://play.google.com/store/apps/details?id=${pkg}&reviewId=0`;
+        try {
+          const supported = await Linking.canOpenURL(marketUrl);
+          if (supported) {
+            await Linking.openURL(marketUrl);
+            return;
+          }
+        } catch {}
+        await Linking.openURL(webUrl);
+      } else if (Platform.OS === 'ios') {
+        const appId = ((Constants as any).expoConfig?.extra?.iosAppStoreId) || '';
+        if (appId) {
+          const url = `itms-apps://apps.apple.com/app/id${appId}?action=write-review`;
+          try {
+            await Linking.openURL(url);
+            return;
+          } catch {}
+          await Linking.openURL(`https://apps.apple.com/app/id${appId}`);
+        } else {
+          await Linking.openURL('https://apps.apple.com/search?term=CraveOff');
+        }
+      }
+    } catch {}
   };
 
   // Current (most recently unlocked) achievement to show as avatar
@@ -240,6 +276,14 @@ const SettingsScreen = () => {
         value="Privacy Policy & Terms"
         onPress={openPrivacyPolicy}
         emoji="🔒"
+        variant="primary"
+      />
+      <SettingCard
+        icon="star-outline"
+        title="Rate CraveOff"
+        value="Leave a review"
+        onPress={openStoreListing}
+        emoji="⭐"
         variant="primary"
       />
       <SettingCard

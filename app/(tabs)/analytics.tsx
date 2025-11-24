@@ -108,16 +108,29 @@ export default function AnalyticsScreen() {
 
   // Removed local longest/average streak calculations to rely solely on backend values
 
-  // Fetch longest and average streak from backend
+  // Fetch longest and average streak from backend (/streak/summary)
   const fetchBackendStreaks = async () => {
     try {
       const response = await apiClient.get(BackendRoutes.STREAKS);
       const data = response.data || {};
-      // Support both potential key spellings
-      const longest = data.longesStreak ?? data.longestStreak ?? data.longest ?? 0;
-      const average = data.avgStreak ?? data.averageStreak ?? data.average ?? 0;
-      if (Number.isFinite(Number(longest))) setLongestStreak(Number(longest));
-      if (Number.isFinite(Number(average))) setAverageStreak(Number(average));
+      const toNumber = (value: any) => {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+      };
+      const longest =
+        data.longest_streak ??
+        data.longestStreak ??
+        data.longesStreak ??
+        data.longest ??
+        0;
+      const average =
+        data.avg_streak ??
+        data.avgStreak ??
+        data.averageStreak ??
+        data.average ??
+        0;
+      if (longest !== undefined) setLongestStreak(toNumber(longest));
+      if (average !== undefined) setAverageStreak(toNumber(average));
     } catch (error) {
       console.error('Failed to fetch backend streaks:', error);
       // Keep locally computed values as fallback

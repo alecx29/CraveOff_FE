@@ -56,6 +56,7 @@ type PostResponse = {
   title?: string;
   content?: string;
   body?: string;
+  upvotes?: number;
   user_name?: string;
   author?: { id?: string | number; username?: string; name?: string; avatar_url?: string } | string;
   created_at?: string;
@@ -169,11 +170,12 @@ export default function CommunityInfoScreen() {
     resetCreateForm();
   };
 
-  const updatePostLikesCount = useCallback((postId: string | number, newCount: number) => {
+  const updatePostUpvotes = useCallback((postId: string | number, newCount: number) => {
     setPosts(prev =>
       prev.map(p => {
         if ((p as any)?.id === postId) {
-          return { ...(p as any), likes_count: newCount };
+          // Write to upvotes (primary) and likes_count (legacy) for compatibility
+          return { ...(p as any), upvotes: newCount, likes_count: newCount };
         }
         return p;
       })
@@ -184,7 +186,7 @@ export default function CommunityInfoScreen() {
     if (creatingPost) return;
     const title = (newPostTitle || '').trim();
     const content = (newPostContent || '').trim();
-    if (!title && !content) {
+    if (!title || !content) {
       setCreateError('Add a title and content.');
       return;
     }
@@ -619,8 +621,8 @@ export default function CommunityInfoScreen() {
                           <View style={styles.postHeaderActions}>
                             <CommunityUpvote
                               postId={(item as any)?.id}
-                              likesCount={Number((item as any)?.likes_count ?? 0)}
-                              onChanged={(n) => updatePostLikesCount((item as any)?.id, n)}
+                              likesCount={Number((item as any)?.upvotes ?? (item as any)?.likes_count ?? 0)}
+                              onChanged={(n) => updatePostUpvotes((item as any)?.id, n)}
                             />
                           </View>
                         </View>
@@ -725,8 +727,13 @@ export default function CommunityInfoScreen() {
                       <TouchableOpacity
                         activeOpacity={0.85}
                         onPress={handleCreatePost}
-                        style={[styles.modalButton, styles.modalButtonPrimary, styles.modalButtonWide, creatingPost ? { opacity: 0.7 } : null]}
-                        disabled={creatingPost}
+                        style={[
+                          styles.modalButton,
+                          styles.modalButtonPrimary,
+                          styles.modalButtonWide,
+                          (creatingPost || !newPostTitle.trim() || !newPostContent.trim()) ? { opacity: 0.5 } : null
+                        ]}
+                        disabled={creatingPost || !newPostTitle.trim() || !newPostContent.trim()}
                       >
                         <Text style={[styles.modalButtonText, { color: '#111827', fontWeight: '700', textAlign: 'center' }]}>
                           {creatingPost ? 'Posting...' : 'Post'}
