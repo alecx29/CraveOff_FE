@@ -1,11 +1,15 @@
 import React from 'react';
-import { Platform, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useIAP } from 'react-native-iap';
+import Purchases, { CustomerInfo, PACKAGE_TYPE, PurchasesPackage } from 'react-native-purchases';
 
-import { SUBSCRIPTION_SKUS } from '@/src/config-files/constants/subscription';
 import { useTheme } from '@/src/context/ThemeProvider';
+import {
+  getRevenueCatCustomerInfo,
+  getRevenueCatEntitlementId,
+  getRevenueCatOfferings,
+} from '@/src/services/revenueCat';
 
 type PaywallTestProps = {
   onSubscribed?: () => void;
@@ -14,128 +18,178 @@ type PaywallTestProps = {
 const PaywallTest: React.FC<PaywallTestProps> = ({ onSubscribed }) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
-  const [isFetching, setIsFetching] = React.useState(false);
+  const [isFetching, setIsFetching] = React.useState(true);
   const [isRequesting, setIsRequesting] = React.useState(false);
   const [errorText, setErrorText] = React.useState<string | null>(null);
-  const [productReady, setProductReady] = React.useState(false);
+  const [monthlyPackage, setMonthlyPackage] = React.useState<PurchasesPackage | null>(null);
+  const [annualPackage, setAnnualPackage] = React.useState<PurchasesPackage | null>(null);
+  const [requestingPlan, setRequestingPlan] = React.useState<'monthly' | 'annual' | null>(null);
 
-  const monthlySku = Platform.select({
-    ios: SUBSCRIPTION_SKUS.ios.monthly,
-    android: SUBSCRIPTION_SKUS.android.monthly,
-    default: SUBSCRIPTION_SKUS.android.monthly,
-  })!;
+  const entitlementId = React.useMemo(() => getRevenueCatEntitlementId(), []);
 
-  const {
-    connected,
-    subscriptions,
-    requestPurchase,
-    fetchProducts,
-    finishTransaction,
-    getActiveSubscriptions,
-  } = useIAP({
-    onPurchaseSuccess: async (purchase) => {
-      try {
-        await finishTransaction({ purchase, isConsumable: false });
-      } catch {}
-      try {
-        await getActiveSubscriptions();
-      } catch {}
-      setIsRequesting(false);
-      if (onSubscribed) onSubscribed();
+  const checkEntitlement = React.useCallback(
+    (info?: CustomerInfo | null) => {
+      if (!info || !entitlementId) return false;
+      const active = !!info.entitlements?.active?.[entitlementId];
+      if (active && onSubscribed) {
+        onSubscribed();
+      }
+      return active;
     },
-    onPurchaseError: (err) => {
-      setIsRequesting(false);
-      setErrorText(err?.message || 'Purchase failed');
-    },
-  });
+    [entitlementId, onSubscribed],
+  );
 
-  // Track if the subscription SKU is available from the store
-  React.useEffect(() => {
-    const found = subscriptions?.some((s: any) => s?.id === monthlySku) ?? false;
-    setProductReady(found);
-  }, [subscriptions, monthlySku]);
+  const selectPackages = React.useCallback((offering?: any | null) => {
+    if (!offering) {
+      setMonthlyPackage(null);
+      setAnnualPackage(null);
+      return;
+    }
 
-  const ensureFetched = React.useCallback(async () => {
-    if (!connected) return;
+    const fallback = (pkgType: PACKAGE_TYPE) =>
+      offering.availablePackages?.find((pkg: PurchasesPackage) => pkg.packageType === pkgType) ?? null;
+
+    const nextMonthly = offering.monthly ?? fallback(PACKAGE_TYPE.MONTHLY);
+    const nextAnnual = offering.annual ?? fallback(PACKAGE_TYPE.ANNUAL);
+
+    setMonthlyPackage(nextMonthly ?? null);
+    setAnnualPackage(nextAnnual ?? null);
+  }, []);
+
+  const pickOffering = (offerings?: any | null) => {
+    if (!offerings) return null;
+    if (offerings.current) return offerings.current;
+    const allOfferings = offerings.all ? Object.values(offerings.all) : [];
+    return allOfferings.length > 0 ? allOfferings[0] : null;
+  };
+
+  const refreshData = React.useCallback(async () => {
     setIsFetching(true);
     setErrorText(null);
     try {
-      await fetchProducts({ skus: [monthlySku], type: 'subs' });
-    } catch (e: any) {
-      setErrorText(e?.message || 'Failed to fetch products');
+      const [offerings, info] = await Promise.all([
+        getRevenueCatOfferings(),
+        getRevenueCatCustomerInfo(),
+      ]);
+
+      const offeringToUse = pickOffering(offerings);
+      if (__DEV__) {
+        console.log('[RevenueCat] Offerings fetched', {
+          hasCurrent: !!offerings?.current,
+          usingIdentifier: offeringToUse?.identifier,
+          availablePackages: offeringToUse?.availablePackages?.map((pkg: PurchasesPackage) => ({
+            id: pkg.identifier,
+            type: pkg.packageType,
+          })),
+        });
+      }
+
+      selectPackages(offeringToUse);
+      checkEntitlement(info);
+    } catch (err: any) {
+      setErrorText(err?.message || 'Failed to load subscription options.');
     } finally {
       setIsFetching(false);
     }
-  }, [connected, fetchProducts, monthlySku]);
+  }, [checkEntitlement, selectPackages]);
 
   React.useEffect(() => {
-    ensureFetched();
-  }, [ensureFetched]);
+    refreshData();
+  }, [refreshData]);
 
-  // Safety timeout for long-running requests
-  React.useEffect(() => {
-    if (!isRequesting) return;
-    const t = setTimeout(() => {
-      setIsRequesting(false);
-      setErrorText('Purchase timed out. Please try again.');
-    }, 30000);
-    return () => clearTimeout(t);
-  }, [isRequesting]);
+  const hasAnyPlan = !!monthlyPackage || !!annualPackage;
 
-  const handleSubscribe = async () => {
-    if (!connected) {
-      setErrorText('Store connection not ready yet.');
+  const handleSubscribe = async (planType: 'monthly' | 'annual', pkg: PurchasesPackage | null) => {
+    if (!pkg) {
+      setErrorText('Subscription option not available yet. Please try again.');
       return;
     }
+
+    setIsRequesting(true);
+    setRequestingPlan(planType);
+    setErrorText(null);
+    try {
+      const { customerInfo } = await Purchases.purchasePackage(pkg);
+      if (!checkEntitlement(customerInfo)) {
+        setErrorText('Purchase completed, awaiting activation. Please refresh shortly.');
+      }
+    } catch (err: any) {
+      if (!err?.userCancelled) {
+        setErrorText(err?.message || 'Purchase failed. Please try again.');
+      }
+    } finally {
+      setIsRequesting(false);
+      setRequestingPlan(null);
+    }
+  };
+
+  const handleRestore = async () => {
     setIsRequesting(true);
     setErrorText(null);
     try {
-      await requestPurchase({
-        type: 'subs',
-        request: {
-          ios: { sku: monthlySku },
-          android: { skus: [monthlySku] },
-        },
-      });
-    } catch (e: any) {
-      setErrorText(e?.message || 'Failed to start purchase');
+      const info = await Purchases.restorePurchases();
+      if (!checkEntitlement(info)) {
+        setErrorText('No previous subscription found to restore.');
+      }
+    } catch (err: any) {
+      setErrorText(err?.message || 'Restore failed. Please try again.');
+    } finally {
       setIsRequesting(false);
     }
+  };
+
+  const formatMonthlyPrice = (pkg: PurchasesPackage | null) => {
+    if (!pkg) return undefined;
+    const base = pkg.product.pricePerMonthString ?? pkg.product.priceString;
+    return base ? `${base} / mo` : undefined;
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Ionicons name="star" size={18} color="#FBBF24" />
-        <Text style={styles.title}>Premium Monthly</Text>
+        <Text style={styles.title}>Premium Access</Text>
       </View>
-      <Text style={styles.subtitle}>Unlock everything. Cancel anytime.</Text>
 
-      <TouchableOpacity
-        onPress={handleSubscribe}
-        activeOpacity={0.85}
-        disabled={isRequesting || isFetching || !productReady}
-        style={styles.buttonWrapper}
-      >
-        <LinearGradient
-          colors={[ '#F59E0B', '#EF4444' ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.button}
-        >
-          {isRequesting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Subscribe Monthly (Test)</Text>
-          )}
-        </LinearGradient>
-      </TouchableOpacity>
+      <Text style={styles.subtitle}>Choose the plan that fits you best.</Text>
+      <View style={styles.planRow}>
+        {monthlyPackage && (
+          <PlanCard
+            title="Monthly"
+            subtitle="Billed monthly"
+            price={formatMonthlyPrice(monthlyPackage)}
+            onPress={() => handleSubscribe('monthly', monthlyPackage)}
+            loading={isRequesting && requestingPlan === 'monthly'}
+            disabled={isRequesting && requestingPlan !== 'monthly'}
+          />
+        )}
+        {annualPackage && (
+          <PlanCard
+            title="Annual"
+            subtitle="Best value"
+            price={formatMonthlyPrice(annualPackage)}
+            badge="BEST VALUE"
+            onPress={() => handleSubscribe('annual', annualPackage)}
+            loading={isRequesting && requestingPlan === 'annual'}
+            disabled={isRequesting && requestingPlan !== 'annual'}
+          />
+        )}
+      </View>
 
-      {!connected && (
-        <Text style={styles.infoText}>Connecting to store…</Text>
+      <View style={styles.actionsRow}>
+        <TouchableOpacity onPress={handleRestore} disabled={isRequesting}>
+          <Text style={styles.restoreText}>Restore purchases</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={refreshData} disabled={isFetching}>
+          <Text style={styles.restoreText}>Refresh</Text>
+        </TouchableOpacity>
+      </View>
+
+      {isFetching && (
+        <Text style={styles.infoText}>Loading subscription options…</Text>
       )}
-      {connected && !productReady && !isFetching && (
-        <Text style={styles.infoText}>Subscription not available yet. Ensure SKU exists and is approved.</Text>
+      {!isFetching && !hasAnyPlan && (
+        <Text style={styles.infoText}>Subscription not available yet. Ensure offerings are configured.</Text>
       )}
       {!!errorText && <Text style={styles.errorText}>{errorText}</Text>}
     </View>
@@ -168,19 +222,21 @@ const createStyles = (_theme: any) =>
       fontSize: 13,
       marginBottom: 12,
     },
-    buttonWrapper: {
-      borderRadius: 12,
-      overflow: 'hidden',
+    planRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 12,
+      marginBottom: 12,
     },
-    button: {
-      paddingVertical: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
+    actionsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 12,
     },
-    buttonText: {
-      color: '#fff',
-      fontSize: 15,
-      fontWeight: '700',
+    restoreText: {
+      color: '#C4B5FD',
+      fontSize: 12,
+      fontWeight: '600',
     },
     infoText: {
       color: 'rgba(255,255,255,0.85)',
@@ -196,4 +252,124 @@ const createStyles = (_theme: any) =>
 
 export default PaywallTest;
 
+const planStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    position: 'relative',
+    overflow: 'visible',
+    paddingTop: 28,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  title: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  subtitle: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  price: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '800',
+    marginTop: 8,
+  },
+  badge: {
+    backgroundColor: '#F59E0B',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  badgeFloating: {
+    position: 'absolute',
+    top: -12,
+    alignSelf: 'center',
+  },
+  badgeText: {
+    color: '#111827',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  buttonWrapper: {
+    marginTop: 14,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  buttonInner: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+});
+
+type PlanCardProps = {
+  title: string;
+  subtitle: string;
+  price?: string;
+  badge?: string;
+  loading?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+};
+
+const PlanCard = ({
+  title,
+  subtitle,
+  price,
+  badge,
+  loading,
+  disabled,
+  onPress,
+}: PlanCardProps) => {
+  return (
+    <View style={planStyles.container}>
+      {!!badge && (
+        <View style={[planStyles.badge, planStyles.badgeFloating]}>
+          <Text style={planStyles.badgeText}>{badge}</Text>
+        </View>
+      )}
+      <View style={planStyles.header}>
+        <Text style={planStyles.title}>{title}</Text>
+      </View>
+      <Text style={planStyles.subtitle}>{subtitle}</Text>
+      <Text style={planStyles.price}>{price ?? 'Not available'}</Text>
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={disabled}
+        style={planStyles.buttonWrapper}
+        activeOpacity={0.85}
+      >
+        <LinearGradient
+          colors={['#F59E0B', '#EF4444']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={planStyles.buttonInner}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={planStyles.buttonText}>Subscribe</Text>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
+  );
+};
 

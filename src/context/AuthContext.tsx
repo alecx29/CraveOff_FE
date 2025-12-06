@@ -3,10 +3,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { saveTokens, clearTokens, getRefreshToken, getTokens } from '@/src/Storage/tokenStorage';
+import { saveTokens, clearTokens, getTokens } from '@/src/Storage/tokenStorage';
 import { apiClient, apiClientImage, refreshTokenManually } from '@/src/axios/apiClient';
 import axios from 'axios';
 import { registerDeviceWithBackend } from '@/src/services/pushService';
+import { initRevenueCat, logInRevenueCat, logOutRevenueCat } from '@/src/services/revenueCat';
 
 interface AuthContextProps {
   isAuthenticated: boolean;
@@ -62,6 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const parsed = JSON.parse(raw);
         setUser(parsed);
         console.log('[AuthContext] Loaded user from storage');
+        logInRevenueCat(getRevenueCatUserId(parsed));
       }
     } catch (e) {
       console.warn('[AuthContext] Failed to load user from storage:', e);
@@ -76,6 +78,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const getRevenueCatUserId = (userData?: any): string | undefined => {
+    if (!userData) return undefined;
+    return (
+      userData.id?.toString?.() ??
+      userData.user_id?.toString?.() ??
+      userData.uuid?.toString?.() ??
+      userData.email ??
+      undefined
+    );
+  };
+
   const fetchUserProfile = async () => {
     try {
       // Fetch current user profile after token is set
@@ -84,6 +97,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(response.data);
         persistUser(response.data);
         console.log('[AuthContext] User profile fetched from API');
+        logInRevenueCat(getRevenueCatUserId(response.data));
       }
     } catch (e) {
       console.warn('[AuthContext] Failed to fetch user profile:', (e as any)?.message);
@@ -92,6 +106,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Check for existing token on mount
   useEffect(() => {
+    initRevenueCat();
+
     const checkAuth = async () => {
       try {
         console.log('[AuthContext] Starting authentication check...');
@@ -159,6 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(userData.user);
         persistUser(userData.user);
         console.log('[AuthContext] User data set');
+        logInRevenueCat(getRevenueCatUserId(userData.user));
       } else {
         // If user payload not provided, fetch it now
         await fetchUserProfile();
@@ -215,6 +232,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsAuthenticated(false);
       setUser({});
       clearPersistedUser();
+      logOutRevenueCat();
       
       // Remove the token from the API client headers
       delete apiClient.defaults.headers.common['Authorization'];

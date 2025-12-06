@@ -34,6 +34,21 @@ class CraveOffProtection: NSObject {
     return out
   }
 
+  @available(iOS 16.0, *)
+  private func makeWebDomainTokens(from domains: Set<String>) -> Set<WebDomainToken> {
+    // ManagedSettings now expects WebDomainToken (Token<WebDomain>) objects.
+    // Derive tokens via WebDomain(domain:).token to let the framework hash domains properly.
+    let tokens: [WebDomainToken] = domains.compactMap { domain in
+      let webDomain = WebDomain(domain: domain)
+      if let token = webDomain.token {
+        return token
+      }
+      NSLog("CraveOff[iOS]: Failed to derive token for domain \(domain)")
+      return nil
+    }
+    return Set(tokens)
+  }
+
   @objc func enable(_ resolve: @escaping RCTPromiseResolveBlock,
                     rejecter reject: @escaping RCTPromiseRejectBlock) {
     if #available(iOS 16.0, *) {
@@ -42,7 +57,6 @@ class CraveOffProtection: NSObject {
           // Log current authorization status before requesting
           let before = AuthorizationCenter.shared.authorizationStatus
           let beforeS = statusString(before)
-          RCTLogInfo("CraveOff[iOS]: FamilyControls authorizationStatus BEFORE request: \(beforeS)")
           NSLog("CraveOff[iOS]: FamilyControls authorizationStatus BEFORE request: \(beforeS)")
 
           try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
@@ -50,7 +64,6 @@ class CraveOffProtection: NSObject {
           // Log status after request (may still be the same if user cancelled)
           let after = AuthorizationCenter.shared.authorizationStatus
           let afterS = statusString(after)
-          RCTLogInfo("CraveOff[iOS]: FamilyControls authorizationStatus AFTER request: \(afterS)")
           NSLog("CraveOff[iOS]: FamilyControls authorizationStatus AFTER request: \(afterS)")
 
           resolve(true)
@@ -72,7 +85,6 @@ class CraveOffProtection: NSObject {
           // Append low-level diagnostics for troubleshooting (domain/code)
           let statusS = statusString(status)
           let diagnostic = " (domain=\(nsError.domain), code=\(nsError.code), status=\(statusS))"
-          RCTLogError("CraveOff[iOS]: requestAuthorization failed: \(message)\(diagnostic) full=\(String(describing: error))")
           NSLog("CraveOff[iOS]: requestAuthorization failed: \(message)\(diagnostic) full=\(String(describing: error))")
           reject("AUTH_ERROR", message + diagnostic, error)
         }
@@ -106,9 +118,10 @@ class CraveOffProtection: NSObject {
     if #available(iOS 16.0, *) {
       // Clear local blocklist reference
       lastBlocklist = []
-      // Clear ManagedSettings Web Content filter
+      // Clear ManagedSettings shielded domains and content filter
       let store = ManagedSettingsStore()
-      store.webContentFilter = nil
+      store.shield.webDomains = nil
+      store.webContent.filter = nil
       resolve(true)
     } else {
       resolve(false)
@@ -120,11 +133,11 @@ class CraveOffProtection: NSObject {
                             rejecter reject: RCTPromiseRejectBlock) {
     if #available(iOS 16.0, *) {
       lastBlocklist = normalizeDomains(domains)
-      // Apply ManagedSettings Web Content filter: automatic with blocked exceptions
+      // Apply ManagedSettings shield + web content filter for blocked domains
       let store = ManagedSettingsStore()
-      let blocked: Set<WebDomain> = Set(lastBlocklist.map { WebDomain($0) })
-      // Keep allowlist empty; block explicit domains via exceptions
-      store.webContentFilter = .automatic(exceptions: .init(allowed: [], blocked: blocked))
+      let blocked = makeWebDomainTokens(from: lastBlocklist)
+      store.shield.webDomains = blocked
+      store.webContent.filter = WebContentFilter.specificWebsites(allowed: [], blocked: blocked)
       resolve(true)
     } else {
       resolve(false)
@@ -136,7 +149,7 @@ class CraveOffProtection: NSObject {
     var running = false
     if #available(iOS 16.0, *) {
       let store = ManagedSettingsStore()
-      running = (store.webContentFilter != nil)
+      running = (store.shield.webDomains != nil) || (store.webContent.filter != nil)
     } else {
       running = false
     }

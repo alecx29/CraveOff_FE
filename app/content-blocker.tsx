@@ -144,12 +144,21 @@ export default function ContentBlockerScreen() {
 	// 	}
 	// };
 
+	const topPadding = Platform.OS === 'ios'
+		? Math.max(insets.top - 8, 0)
+		: Math.max(insets.top, 6);
+
 	return (
 		<GradientBackground>
-			<SafeAreaView style={[styles.container, { paddingTop: Math.max(insets.top, 12) }]}>
+			<SafeAreaView style={[styles.container, { paddingTop: topPadding }]}>
 				<View style={styles.header}>
-					<TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, left: 8, right: 8, bottom: 8 }}>
-						<Ionicons name="chevron-back" size={24} color={theme.colors.textPrimary} />
+					<TouchableOpacity
+						onPress={() => router.back()}
+						style={styles.backButton}
+						hitSlop={{ top: 8, left: 8, right: 8, bottom: 8 }}
+					>
+						<Ionicons name="chevron-back" size={20} color={theme.colors.textPrimary} />
+						<Text style={styles.backButtonText}>Back</Text>
 					</TouchableOpacity>
 					<View style={{ width: 24 }} />
 				</View>
@@ -224,6 +233,20 @@ const createStyles = (theme: any) => StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		marginBottom: 12,
+	},
+	backButton: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		paddingVertical: 4,
+		paddingHorizontal: 8,
+		borderRadius: 999,
+		backgroundColor: 'rgba(255,255,255,0.08)',
+	},
+	backButtonText: {
+		color: theme.colors.textPrimary,
+		fontSize: 14,
+		fontWeight: '600',
+		marginLeft: 6,
 	},
 	hero: {
 		alignItems: 'center',

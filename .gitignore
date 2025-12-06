@@ -17,6 +17,7 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+craveoff-fbc35d1f9f25.json
 
 # Native source files (except plugin templates)
 *.h

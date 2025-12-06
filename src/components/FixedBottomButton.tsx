@@ -33,6 +33,10 @@ const FixedBottomButton: React.FC<FixedBottomButtonProps> = ({
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = createStyles(theme, insets, absolute, extendUnderIOSBottom);
+  const loaderColor =
+    typeof textStyle?.color === 'string' && textStyle.color
+      ? (textStyle.color as string)
+      : 'white';
 
   return (
     <View style={[styles.container, customStyle]}>
@@ -47,7 +51,7 @@ const FixedBottomButton: React.FC<FixedBottomButtonProps> = ({
         activeOpacity={0.8}
       >
         {isLoading ? (
-          <ActivityIndicator color="white" size="small" />
+          <ActivityIndicator color={loaderColor} size="small" />
         ) : (
           <>
             <Text style={[styles.buttonText, textStyle]}>{title}</Text>

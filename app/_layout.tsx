@@ -4,6 +4,15 @@ import { ActivityIndicator, StyleSheet, View, StatusBar, AppState, Image } from 
 import { router, Stack, SplashScreen, usePathname } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
+import {
+  DMSans_400Regular,
+  DMSans_400Regular_Italic,
+  DMSans_500Medium,
+  DMSans_500Medium_Italic,
+  DMSans_700Bold,
+  DMSans_700Bold_Italic,
+} from '@expo-google-fonts/dm-sans';
 
 import { apiClient, isTokenExpired } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
@@ -23,22 +32,43 @@ import NotificationInitializer from '@/src/components/NotificationInitializer';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { setCurrentPath } from '@/src/navigation/routeTracker';
 import * as Updates from 'expo-updates';
+import { applyGlobalDMSans } from '@/src/theme/applyGlobalFont';
 
 // Keep native splash visible for a controlled duration on app start
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    'DMSans-Regular': DMSans_400Regular,
+    'DMSans-RegularItalic': DMSans_400Regular_Italic,
+    'DMSans-Medium': DMSans_500Medium,
+    'DMSans-MediumItalic': DMSans_500Medium_Italic,
+    'DMSans-Bold': DMSans_700Bold,
+    'DMSans-BoldItalic': DMSans_700Bold_Italic,
+  });
   const [splashTimerElapsed, setSplashTimerElapsed] = useState(false);
   const [updateGateBlocking, setUpdateGateBlocking] = useState(false);
+  const fontsReady = fontsLoaded || !!fontError;
 
-  // Hide native splash immediately, then show custom overlay for 4 seconds (extend if UpdateGate blocks)
   useEffect(() => {
+    if (!fontsReady) return;
     SplashScreen.hideAsync().catch(() => {});
     const timer = setTimeout(() => {
       setSplashTimerElapsed(true);
     }, 4000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [fontsReady]);
+
+  useEffect(() => {
+    if (!fontsLoaded) return;
+    applyGlobalDMSans();
+  }, [fontsLoaded]);
+
+  useEffect(() => {
+    if (fontError) {
+      console.warn('[Fonts] Failed to load DM Sans', fontError);
+    }
+  }, [fontError]);
 
   // Auto-apply OTA updates (EAS Update) silently on app start
   useEffect(() => {
@@ -55,6 +85,10 @@ export default function RootLayout() {
       }
     })();
   }, []);
+
+  if (!fontsReady) {
+    return null;
+  }
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>

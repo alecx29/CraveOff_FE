@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { apiClient } from '@/src/axios/apiClient';
@@ -22,6 +21,20 @@ interface Goal {
 interface GoalsScreenProps {
   onComplete?: () => void;
 }
+
+const hexToRgba = (hexColor: string, alpha: number): string => {
+  if (!hexColor?.startsWith('#')) return hexColor;
+
+  const trimmed = hexColor.replace('#', '');
+  if (trimmed.length !== 6) return hexColor;
+
+  const r = parseInt(trimmed.slice(0, 2), 16);
+  const g = parseInt(trimmed.slice(2, 4), 16);
+  const b = parseInt(trimmed.slice(4, 6), 16);
+  const safeAlpha = Math.min(1, Math.max(0, alpha));
+
+  return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
+};
 
 const GoalsScreen = ({ onComplete }: GoalsScreenProps) => {
   const { theme } = useTheme();
@@ -154,71 +167,77 @@ const GoalsScreen = ({ onComplete }: GoalsScreenProps) => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.Text 
-          entering={FadeInDown.duration(600).delay(100)}
+        <Text 
           style={styles.title}
         >
           Choose Your Goals
-        </Animated.Text>
+        </Text>
         
-        <Animated.Text 
-          entering={FadeInDown.duration(600).delay(200)}
+        <Text 
           style={styles.subtitle}
         >
           Select the goals you want to achieve during your recovery journey
-        </Animated.Text>
+        </Text>
         
         <View style={styles.goalsContainer}>
-          {goals.map((goal, index) => (
-            <Animated.View 
-              key={goal.id}
-              entering={FadeInDown.duration(400).delay(300 + index * 100)}
-              style={styles.goalItemWrapper}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.goalItem,
-                  goal.selected && styles.selectedGoal
-                ]}
-                onPress={() => toggleGoal(goal.id)}
-                activeOpacity={0.8}
+          {goals.map((goal) => {
+            const cardBackgroundColor = hexToRgba(goal.iconColor, goal.selected ? 0.32 : 0.12);
+            const cardBorderColor = goal.selected ? goal.iconColor : hexToRgba(goal.iconColor, 0.45);
+            const checkboxBorderColor = goal.selected ? goal.iconColor : hexToRgba(goal.iconColor, 0.6);
+            const checkboxBackgroundColor = goal.selected ? goal.iconColor : 'transparent';
+            const iconBackgroundColor = hexToRgba(goal.iconColor, 0.18);
+
+            return (
+              <View 
+                key={goal.id}
+                style={styles.goalItemWrapper}
               >
-                <View style={styles.goalHeader}>
-                  <View style={[
-                    styles.iconContainer,
-                    { backgroundColor: goal.iconColor + '20' }
-                  ]}>
-                    <Ionicons 
-                      name={goal.icon as any} 
-                      size={22} 
-                      color={goal.selected ? theme.colors.primary : goal.iconColor} 
-                    />
-                  </View>
-                  <View style={styles.checkboxContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.goalItem,
+                    { backgroundColor: cardBackgroundColor, borderColor: cardBorderColor },
+                    goal.selected && styles.selectedGoal
+                  ]}
+                  onPress={() => toggleGoal(goal.id)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.goalHeader}>
                     <View style={[
-                      styles.checkbox,
-                      goal.selected && styles.checkboxSelected
+                      styles.iconContainer,
+                      { backgroundColor: iconBackgroundColor }
                     ]}>
-                      {goal.selected && (
-                        <Ionicons name="checkmark" size={16} color={theme.colors.cardBackground} />
-                      )}
+                      <Ionicons 
+                        name={goal.icon as any} 
+                        size={22} 
+                        color={goal.iconColor} 
+                      />
+                    </View>
+                    <View style={styles.checkboxContainer}>
+                      <View style={[
+                        styles.checkbox,
+                        { borderColor: checkboxBorderColor, backgroundColor: checkboxBackgroundColor }
+                      ]}>
+                        {goal.selected && (
+                          <Ionicons name="checkmark" size={16} color={theme.colors.cardBackground} />
+                        )}
+                      </View>
                     </View>
                   </View>
-                </View>
-                
-                <Text style={[
-                  styles.goalTitle,
-                  goal.selected && styles.selectedGoalText
-                ]}>
-                  {goal.title}
-                </Text>
-                
-                <Text style={styles.goalDescription}>
-                  {goal.description}
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
-          ))}
+                  
+                  <Text style={[
+                    styles.goalTitle,
+                    goal.selected && { color: goal.iconColor }
+                  ]}>
+                    {goal.title}
+                  </Text>
+                  
+                  <Text style={styles.goalDescription}>
+                    {goal.description}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
         </View>
         
         {/* Add padding at the bottom to ensure content is not hidden behind the fixed button */}
@@ -231,6 +250,8 @@ const GoalsScreen = ({ onComplete }: GoalsScreenProps) => {
         onPress={handleTrackGoals}
         disabled={!hasSelectedGoals || isLoading}
         isLoading={isLoading}
+        buttonStyle={{ backgroundColor: '#ffffff' }}
+        textStyle={{ color: theme.colors.primary }}
       />
       
       {/* Error Alert */}
@@ -297,18 +318,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 12,
   },
   goalItem: {
-    backgroundColor: theme.colors.cardBackground,
     borderRadius: 30,
     padding: 14,
     minHeight: 200,
-    ...theme.shadows.light,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
+    overflow: 'hidden',
   },
   selectedGoal: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.cardInteractive,
-    ...theme.shadows.medium,
+    borderWidth: 1.2,
   },
   goalHeader: {
     flexDirection: 'row',
@@ -331,22 +348,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     height: 20,
     borderRadius: 30,
     borderWidth: 2,
-    borderColor: theme.colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkboxSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
   },
   goalTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: theme.colors.textPrimary,
     marginBottom: 6,
-  },
-  selectedGoalText: {
-    color: theme.colors.primary,
   },
   goalDescription: {
     fontSize: 11,

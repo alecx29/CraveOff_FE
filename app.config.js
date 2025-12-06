@@ -1,9 +1,12 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
 // Expo configuration
 module.exports = {
   expo: {
     name: "CraveOff",
     slug: "craveoff-app",
-    version: "1.2.20",
+    version: "1.2.22",
 
     // Note: These properties will not be synced when android/ios folders are present
     orientation: "portrait",
@@ -11,15 +14,15 @@ module.exports = {
     scheme: "craveoffapp",
     userInterfaceStyle: "automatic",
 
-    // updates: {
-    //   url: "https://u.expo.dev/ab8a7457-9c09-4b84-946e-2dee70f210b1",
-    //   enabled: true,
-    //   checkAutomatically: "ON_ERROR_RECOVERY",
-    //   fallbackToCacheTimeout: 0,
-    // },
-    // runtimeVersion: {
-    //   policy: "sdkVersion",
-    // },
+    updates: {
+      url: "https://u.expo.dev/ab8a7457-9c09-4b84-946e-2dee70f210b1",
+      enabled: true,
+      checkAutomatically: "ON_ERROR_RECOVERY",
+      fallbackToCacheTimeout: 0,
+    },
+    runtimeVersion: {
+      policy: "sdkVersion",
+    },
     
     newArchEnabled: false,
     
@@ -43,7 +46,7 @@ module.exports = {
       softwareKeyboardLayoutMode: "resize",
     
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 45,
+      versionCode: 47,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"
@@ -85,7 +88,6 @@ module.exports = {
       "expo-notifications",
       "expo-secure-store",
       "expo-dev-client",
-      "react-native-iap",
       "expo-web-browser",
       [
         "expo-apple-authentication",
@@ -126,7 +128,13 @@ module.exports = {
       enableUpdateGateInDev: true,
       // Supabase (read from env at build time; do NOT expose service_role key in client)
       supabaseUrl: process.env.SUPABASE_PROJECT_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || "",
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ""
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "",
+      revenueCat: {
+        iosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY || "",
+        androidApiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY || "",
+        publicApiKey: process.env.EXPO_PUBLIC_REVENUECAT_PUBLIC_KEY || "",
+        entitlementId: process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID || "premium"
+      }
     },
     
     // Disable the development status bar

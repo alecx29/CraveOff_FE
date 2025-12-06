@@ -318,12 +318,13 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     zIndex: 2,
   },
   closeButton: {
-    width: 40,
-    height: 40,
+    width: 34,
+    height: 34,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 5,
   },
   backgroundImage: {
     width: '100%',

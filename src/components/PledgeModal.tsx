@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   StatusBar,
   Animated as RNAnimated,
-  ScrollView
+  ScrollView,
+  Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -72,48 +73,53 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
     }, 800);
   };
   
-  if (!visible) return null;
-  
   const styles = createStyles(theme, bottomPadding);
   
   return (
-    <Animated.View 
-      style={styles.container}
-      entering={FadeIn.duration(300)}
-      exiting={FadeOut.duration(200)}
+    <Modal
+      transparent
+      visible={visible}
+      onRequestClose={handleClose}
+      animationType="none"
+      statusBarTranslucent
     >
-      <StatusBar barStyle="light-content" />
-      
-      <LinearGradient
-        colors={['rgba(20,20,30,0.98)', 'rgba(10,10,20,0.99)']}
-        style={styles.backgroundGradient}
+      <Animated.View 
+        style={styles.container}
+        entering={FadeIn.duration(300)}
+        exiting={FadeOut.duration(200)}
       >
-        <RNAnimated.View 
-          style={[
-            styles.fullScreenContainer,
-            { opacity: opacityAnim }
-          ]}
+        <StatusBar barStyle="light-content" />
+        
+        <LinearGradient
+          colors={['rgba(20,20,30,0.98)', 'rgba(10,10,20,0.99)']}
+          style={styles.backgroundGradient}
         >
-          {/* Using the reusable Header component */}
-          <Header 
-            title="Pledge" 
-            onClose={handleClose}
-            backgroundColor="transparent"
-          />
-          
+          <RNAnimated.View 
+            style={[
+              styles.fullScreenContainer,
+              { opacity: opacityAnim }
+            ]}
+          >
+            {/* Using the reusable Header component */}
+            <Header 
+              title="Pledge" 
+              onClose={handleClose}
+              backgroundColor="transparent"
+            />
+            
             <ScrollView
-            style={styles.scrollView}
+              style={styles.scrollView}
               contentContainerStyle={styles.contentContainer}
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.iconContainer}>
                 <Ionicons name="hand-right" size={94} color="#fff" />
               </View>
-            
-            <Text style={styles.title}>Pledge Sobriety Today</Text>
-            
+              
+              <Text style={styles.title}>Pledge Sobriety Today</Text>
+              
               <Text style={styles.pledgeText}>
-              Commit to 24 hours of strength. You&apos;re stronger than the urge — and we&apos;ll be here to check in when you&apos;ve won.
+                Commit to 24 hours of strength. You&apos;re stronger than the urge — and we&apos;ll be here to check in when you&apos;ve won.
               </Text>
               <View style={styles.optionsOuterContainer}>
                 <View style={styles.optionsContainer}>
@@ -160,33 +166,34 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
                   </View>
                 </View>
               </View>
-            
-            {/* Pledge Button now inside ScrollView */}
-            <View style={styles.buttonWrapper}>
-            <TouchableOpacity
-              style={styles.pledgeButton}
-              onPress={handlePledge}
-              activeOpacity={0.7}
-              disabled={isPledging}
-            >
-              <View style={styles.pledgeButtonContent}>
-                {isPledging ? (
-                  <View style={styles.loadingContainer}>
-                    <Ionicons name="sync" size={22} color="#000000" style={{ transform: [{ rotate: '45deg' }] }} />
+              
+              {/* Pledge Button now inside ScrollView */}
+              <View style={styles.buttonWrapper}>
+                <TouchableOpacity
+                  style={styles.pledgeButton}
+                  onPress={handlePledge}
+                  activeOpacity={0.7}
+                  disabled={isPledging}
+                >
+                  <View style={styles.pledgeButtonContent}>
+                    {isPledging ? (
+                      <View style={styles.loadingContainer}>
+                        <Ionicons name="sync" size={22} color="#000000" style={{ transform: [{ rotate: '45deg' }] }} />
+                      </View>
+                    ) : (
+                      <>
+                        <Ionicons name="hand-right" size={22} color="#000000" style={styles.pledgeIcon} />
+                        <Text style={styles.pledgeButtonText}>Pledge Now</Text>
+                      </>
+                    )}
                   </View>
-                ) : (
-                    <>
-                      <Ionicons name="hand-right" size={22} color="#000000" style={styles.pledgeIcon} />
-                  <Text style={styles.pledgeButtonText}>Pledge Now</Text>
-                    </>
-                )}
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          </View>
-          </ScrollView>
-        </RNAnimated.View>
-      </LinearGradient>
-    </Animated.View>
+            </ScrollView>
+          </RNAnimated.View>
+        </LinearGradient>
+      </Animated.View>
+    </Modal>
   );
 };
 
@@ -225,6 +232,7 @@ const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
   iconContainer: {
     alignItems: 'center',
     marginBottom: 16,
+    marginTop: 16,
   },
   pledgeText: {
     fontSize: 14,

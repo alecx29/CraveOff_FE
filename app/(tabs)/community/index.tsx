@@ -74,6 +74,7 @@ export default function CommunityInfoScreen() {
   const { user: authUser } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState<'info' | 'forum' | 'clans'>('info');
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  const [hasPrefetchedRooms, setHasPrefetchedRooms] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -131,6 +132,13 @@ export default function CommunityInfoScreen() {
       setPostsRefreshing(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!hasPrefetchedRooms && rooms.length === 0) {
+      setHasPrefetchedRooms(true);
+      fetchRooms();
+    }
+  }, [hasPrefetchedRooms, rooms.length, fetchRooms]);
 
   useEffect(() => {
     if (activeTab === 'clans' && rooms.length === 0 && !loading) {
@@ -399,7 +407,7 @@ export default function CommunityInfoScreen() {
               >
                 <Text style={styles.comingSoonTitle}>Coming Soon</Text>
                 <Text style={styles.comingSoonText}>
-                  We&apos;re working on more community features, including direct messaging, accountability partners, and live support groups.
+                  We&apos;re working on more community features, including direct messaging and notifications on forum comments.
                 </Text>
                 <View style={styles.comingSoonBadge}>
                   <Text style={styles.comingSoonBadgeText}>Stay Tuned</Text>
@@ -534,10 +542,12 @@ export default function CommunityInfoScreen() {
                   const body = ((item as any).content as string | undefined) ?? ((item as any).body as string | undefined) ?? '';
                   const displayTitle = (title && title.trim().length > 0) ? title : (body ? body.slice(0, 60) : 'Post');
                   const author = (item as any).author;
+                  const senderNameRaw = String(((item as any)?.sender_name ?? '') || '').trim();
                   const authorName =
-                    typeof author === 'string'
+                    senderNameRaw ||
+                    (typeof author === 'string'
                       ? author
-                      : (author?.username || author?.name || 'Unknown');
+                      : (author?.username || author?.name || (item as any)?.user_name || 'Unknown'));
                   const authorId = typeof author === 'object'
                     ? (author?.id ?? (author as any)?._id ?? (author as any)?.user_id ?? (author as any)?.uid ?? (author as any)?.uuid)
                     : undefined;
@@ -558,6 +568,7 @@ export default function CommunityInfoScreen() {
                           setNavLocked(true);
                           const postId = (item as any)?.id;
                               const userNameParam =
+                                senderNameRaw ||
                                 (item as any)?.user_name ||
                                 (typeof author === 'object' ? (author?.username || author?.name) : authorName) ||
                                 '';

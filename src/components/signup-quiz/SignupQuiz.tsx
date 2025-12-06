@@ -60,6 +60,10 @@ interface SignupQuizProps {
   isLoading?: boolean;
 }
 
+const STEP_TRANSITION_DELAY = 250;
+const SPENDING_TO_PERSONAL_DELAY = 400;
+const PROGRESS_ANIMATION_DURATION = 350;
+
 const SignupQuiz = ({ onComplete, isLoading = false }: SignupQuizProps) => {
   const { theme } = useTheme();
   const router = useRouter();
@@ -97,13 +101,13 @@ const SignupQuiz = ({ onComplete, isLoading = false }: SignupQuizProps) => {
       ? 0 
       : (currentIndex) / (steps.length - 1);
     
-    progressValue.value = withTiming(progress, { duration: 600 });
+    progressValue.value = withTiming(progress, { duration: PROGRESS_ANIMATION_DURATION });
     
     // If we're at the spending step, progress to personal info
     if (currentStep === 'spending' && quizData.spentMoney) {
       const timer = setTimeout(() => {
         setCurrentStep('personal');
-      }, 800);
+      }, SPENDING_TO_PERSONAL_DELAY);
       return () => clearTimeout(timer);
     }
   }, [currentStep, quizData]);
@@ -151,7 +155,7 @@ const SignupQuiz = ({ onComplete, isLoading = false }: SignupQuizProps) => {
       // Add a small delay for a better visual experience
       setTimeout(() => {
         setCurrentStep(steps[currentIndex + 1]);
-      }, 500);
+      }, STEP_TRANSITION_DELAY);
     }
   };
   

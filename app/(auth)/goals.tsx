@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, SafeAreaView, View } from 'react-native';
+import { StyleSheet, SafeAreaView, View, Image } from 'react-native';
 import { router } from 'expo-router';
 
 import GoalsScreen from '@/src/screen-components/goals/GoalsScreen';
@@ -36,6 +36,12 @@ export default function Goals() {
         end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
+      <Image
+        source={require('@/assets/images/star_background.png')}
+        style={styles.starBackground}
+        resizeMode="cover"
+        pointerEvents="none"
+      />
       <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]}>
         <StatusBar style="auto" />
         <GoalsScreen onComplete={handleComplete} />
@@ -56,5 +62,9 @@ export default function Goals() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  starBackground: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.65,
   },
 }); 
