@@ -1,16 +1,18 @@
-import { ImageSourcePropType } from 'react-native';
+import { ImageSourcePropType } from "react-native";
 
 // Static mapping required by Metro bundler for asset inclusion
 const achievementImageMap: Record<string, ImageSourcePropType> = {
-  WELCOME: require('@/assets/images/output1.webp'),
+  WELCOME: require("@/assets/images/output1.webp"),
   // Provided assets
-  STREAK_1: require('@/assets/images/output1.webp'),
-  STREAK_3: require('@/assets/images/output3.webp'),
-  STREAK_7: require('@/assets/images/output7.webp'),
-  STREAK_14: require('@/assets/images/output14.webp'),
-  STREAK_60: require('@/assets/images/output60.webp'),
-  STREAK_90: require('@/assets/images/output90.webp'),
-  STREAK_365: require('@/assets/images/output365.webp'),
+  STREAK_1: require("@/assets/images/output1.webp"),
+  STREAK_3: require("@/assets/images/output7.webp"),
+  STREAK_7: require("@/assets/images/output14.webp"),
+  STREAK_14: require("@/assets/images/output30.webp"),
+  STREAK_30: require("@/assets/images/output45.webp"),
+  STREAK_45: require("@/assets/images/output60.webp"),
+  STREAK_60: require("@/assets/images/output90.webp"),
+  STREAK_90: require("@/assets/images/output365.webp"),
+  STREAK_365: require("@/assets/images/output365.webp"),
 };
 
 /**
@@ -22,15 +24,15 @@ export function getAchievementImage(code: string): ImageSourcePropType {
   const exact = achievementImageMap[code];
   if (exact) return exact;
 
-  const match = /^STREAK_(\d+)$/.exec(code || '');
+  const match = /^STREAK_(\d+)$/.exec(code || "");
   if (match) {
     const requestedDays = Number(match[1]);
     const availableDays = Object.keys(achievementImageMap)
-      .map(k => {
+      .map((k) => {
         const m = /^STREAK_(\d+)$/.exec(k);
         return m ? Number(m[1]) : null;
       })
-      .filter((n): n is number => typeof n === 'number')
+      .filter((n): n is number => typeof n === "number")
       .sort((a, b) => a - b);
 
     for (let i = availableDays.length - 1; i >= 0; i--) {
@@ -43,9 +45,7 @@ export function getAchievementImage(code: string): ImageSourcePropType {
     }
   }
 
-  return require('@/assets/images/output1.webp');
+  return require("@/assets/images/output1.webp");
 }
 
 export const KNOWN_ACHIEVEMENT_IMAGE_CODES = Object.keys(achievementImageMap);
-
-

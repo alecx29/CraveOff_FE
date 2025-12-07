@@ -71,6 +71,11 @@ export default function CommunityInfoScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const insets = useSafeAreaInsets();
+  const scrollContentPadding = Math.max(insets.bottom, 0) + 24;
+  const contentPaddingStyle = React.useMemo(
+    () => ({ paddingBottom: scrollContentPadding }),
+    [scrollContentPadding]
+  );
   const { user: authUser } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState<'info' | 'forum' | 'clans'>('info');
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
@@ -285,7 +290,12 @@ export default function CommunityInfoScreen() {
         </View>
 
         {activeTab === 'info' && (
-          <ScrollView style={styles.infoScroll} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false}>
+          <ScrollView
+            style={styles.infoScroll}
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustContentInsets={false}
+            contentContainerStyle={[styles.infoContent, contentPaddingStyle]}
+          >
             {/* Hero Section */}
             <View style={styles.heroCard}>
               <LinearGradient
@@ -501,7 +511,7 @@ export default function CommunityInfoScreen() {
                     </TouchableOpacity>
                   );
                 }}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={[styles.listContent, contentPaddingStyle]}
                 refreshControl={
                   <RefreshControl
                     refreshing={loading || refreshing}
@@ -654,7 +664,7 @@ export default function CommunityInfoScreen() {
                     </View>
                   );
                 }}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={[styles.listContent, contentPaddingStyle]}
                 refreshControl={
                   <RefreshControl
                     refreshing={postsLoading || postsRefreshing}
@@ -767,7 +777,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 44,
-    paddingBottom: 40,
+    paddingBottom: 0,
     backgroundColor: 'transparent',
   },
   title: {
@@ -809,6 +819,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   infoScroll: {
     flex: 1,
   },
+  infoContent: {
+    paddingBottom: 0,
+  },
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -831,7 +844,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    paddingBottom: 40,
+    paddingBottom: 0,
   },
   roomCard: {
     backgroundColor: 'transparent',
@@ -1259,17 +1272,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'flex-start',
   },
   tipNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: theme.colors.primary,
+    minWidth: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
     marginTop: 2,
   },
   tipNumberText: {
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
     fontSize: 14,
     fontWeight: 'bold',
   },

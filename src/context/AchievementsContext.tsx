@@ -67,9 +67,10 @@ export const AchievementsProvider = ({ children }: { children: ReactNode }) => {
       xp: 200 
     },
     { code: 'STREAK_30', title: '30 Days Clean', description: 'One month free. Your mind is getting sharper and stronger.', threshold: 30, xp: 300 },
+    { code: 'STREAK_45', title: '45 Days Clean', description: 'Almost two months of discipline. You’re building real power.', threshold: 45, xp: 450 },
     { code: 'STREAK_60', title: '60 Days Clean', description: 'Sixty days of discipline. You’re building real power.', threshold: 60, xp: 600 },
     { code: 'STREAK_90', title: '90 Days Clean', description: 'Three months clean. This is where transformation begins.', threshold: 90, xp: 1000 },
-    { code: 'STREAK_365', title: '365 Days Clean', description: 'One full year clean. Few end up here but its a sign of self-mastery.', threshold: 365, xp: 5000 },
+    // { code: 'STREAK_365', title: '365 Days Clean', description: 'One full year clean. Few end up here but its a sign of self-mastery.', threshold: 365, xp: 5000 },
   ];
 
   // Normalize and merge server payload with our known definitions
