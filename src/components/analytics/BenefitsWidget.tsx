@@ -1,76 +1,124 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
-type BenefitItem = {
+type BenefitDefinition = {
+  key: string;
   emoji: string;
   title: string;
   description: string;
-  progress: number;
+  minProgress: number;
+  targetDay: number;
+  growthExponent: number;
 };
 
-const benefitsList: BenefitItem[] = [
+type BenefitsWidgetProps = {
+  cleanDays?: number;
+};
+
+const benefitDefinitions: BenefitDefinition[] = [
   {
+    key: 'confidence',
     emoji: '💬',
     title: 'Improved confidence',
     description: 'Confidence grows, especially in social and personal interactions.',
-    progress: 35,
+    minProgress: 4,
+    targetDay: 90,
+    growthExponent: 1.25,
   },
   {
-    emoji: '⭐',
-    title: 'Increased Self-Esteem',
-    description: 'Improving control boosts your self-image and self-esteem.',
-    progress: 30,
-  },
-  {
-    emoji: '🧘‍♂️',
-    title: 'Mental Clarity',
-    description: 'Clear thinking and focus returns after quitting.',
-    progress: 40,
-  },
-  {
-    emoji: '🔥',
-    title: 'Increased Sex Drive',
-    description: 'Healthier sex drive and performance after 30–45 days.',
-    progress: 28,
-  },
-  {
-    emoji: '🧠',
-    title: 'Healthier Thoughts',
-    description: 'Less anxiety; healthier views on sex and relationships develop over time.',
-    progress: 32,
-  },
-  {
-    emoji: '⏱️',
-    title: 'More Time & Productivity',
-    description: 'More energy and focus for meaningful, productive daily activities.',
-    progress: 36,
-  },
-  {
+    key: 'sleep',
     emoji: '😴',
     title: 'Better Sleep',
     description: 'Improved sleep quality often seen within a few days.',
-    progress: 38,
+    minProgress: 5,
+    targetDay: 85,
+    growthExponent: 1.25,
+  },
+  {
+    key: 'sexDrive',
+    emoji: '🔥',
+    title: 'Increased Sex Drive',
+    description: 'Healthier sex drive and performance after 30–45 days.',
+    minProgress: 4,
+    targetDay: 110,
+    growthExponent: 1.3,
+  },
+  {
+    key: 'selfEsteem',
+    emoji: '⭐',
+    title: 'Increased Self-Esteem',
+    description: 'Improving control boosts your self-image and self-esteem.',
+    minProgress: 3,
+    targetDay: 130,
+    growthExponent: 1.4,
+  },
+  {
+    key: 'mentalClarity',
+    emoji: '🧘‍♂️',
+    title: 'Mental Clarity',
+    description: 'Clear thinking and focus returns after quitting.',
+    minProgress: 3,
+    targetDay: 140,
+    growthExponent: 1.4,
+  },
+  {
+    key: 'healthierThoughts',
+    emoji: '🧠',
+    title: 'Healthier Thoughts',
+    description: 'Less anxiety; healthier views on sex and relationships develop over time.',
+    minProgress: 2,
+    targetDay: 160,
+    growthExponent: 1.45,
+  },
+  {
+    key: 'productivity',
+    emoji: '⏱️',
+    title: 'More Time & Productivity',
+    description: 'More energy and focus for meaningful, productive daily activities.',
+    minProgress: 2,
+    targetDay: 180,
+    growthExponent: 1.5,
   },
 ];
 
-const BenefitsWidget = () => {
+const calculateProgress = (
+  cleanDays: number,
+  minProgress: number,
+  targetDay: number,
+  growthExponent: number
+) => {
+  const safeDays = Math.max(0, cleanDays);
+  const ratio = Math.min(1, safeDays / targetDay);
+  const eased = Math.pow(ratio, growthExponent);
+  const progress = minProgress + eased * (100 - minProgress);
+  return Math.round(Math.min(100, progress));
+};
+
+const BenefitsWidget: React.FC<BenefitsWidgetProps> = ({ cleanDays = 0 }) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+
+  const benefitsWithProgress = useMemo(() => {
+    return benefitDefinitions.map(def => ({
+      ...def,
+      progress: calculateProgress(cleanDays, def.minProgress, def.targetDay, def.growthExponent),
+    }));
+  }, [cleanDays]);
 
   return (
     <LinearGradient
       colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
       style={styles.container}
     >
-      {benefitsList.map((benefit, index) => (
+      {benefitsWithProgress.map((benefit, index) => (
         <View
-          key={benefit.title}
+          key={benefit.key}
           style={[
             styles.item,
-            index !== benefitsList.length - 1 && styles.divider,
+            index !== benefitsWithProgress.length - 1 && styles.divider,
           ]}
         >
           <View style={styles.header}>

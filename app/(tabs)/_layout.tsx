@@ -32,8 +32,7 @@ export default function TabLayout() {
           paddingBottom: bottomPadding,
           paddingTop: 8,
           backgroundColor: getColor('backgroundDeep', theme.colors.background),
-          borderTopWidth: 1,
-          borderTopColor: getColor('borderLight', '#e2e8f0'),
+          borderTopWidth: 0,
           ...theme.shadows.medium
         },
         tabBarLabelStyle: {

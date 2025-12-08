@@ -133,24 +133,23 @@ const AchievementsScreen = () => {
                         ? (achievement.unlocked ? styles.achievementIconBg : styles.achievementIconBgLocked)
                         : (achievement.unlocked ? styles.achievementIconBgLarge : styles.achievementIconBgLockedLarge)
                     }>
-                      {achievement.id === 'WELCOME' ? (
-                        <LottieUniversal
-                          source={require('@/assets/images/Animation - winner.json')}
-                          autoPlay
-                          loop
-                          style={styles.achievementLottie}
-                        />
+                      {achievement.unlocked ? (
+                        achievement.id === 'WELCOME' ? (
+                          <LottieUniversal
+                            source={require('@/assets/images/Animation - winner.json')}
+                            autoPlay
+                            loop
+                            style={styles.achievementLottie}
+                          />
+                        ) : (
+                          <Image
+                            source={achievement.imageSource}
+                            style={styles.achievementImage}
+                            resizeMode="cover"
+                          />
+                        )
                       ) : (
-                        <Image
-                          source={achievement.imageSource}
-                          style={[styles.achievementImage, !achievement.unlocked && styles.achievementImageLocked]}
-                          resizeMode="cover"
-                        />
-                      )}
-                      {!achievement.unlocked && (
-                        <View style={styles.lockBadge}>
-                          <Ionicons name="lock-closed" size={12} color={theme.colors.textMuted} />
-                        </View>
+                        <Ionicons name="lock-closed" size={20} color={theme.colors.textMuted} />
                       )}
                     </View>
                   </TouchableOpacity>
@@ -358,8 +357,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: 'transparent',
   },
   achievementUnlocked: {
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.primary,
+    borderLeftWidth: 0,
+    borderLeftColor: 'transparent',
   },
   achievementLocked: {
     opacity: 0.7,
@@ -416,19 +415,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 24,
-  },
-  achievementImageLocked: {
-    opacity: 0.6,
-  },
-  lockBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: theme.colors.backgroundDeep,
-    borderRadius: 8,
-    padding: 2,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   achievementContent: {
     flex: 1,

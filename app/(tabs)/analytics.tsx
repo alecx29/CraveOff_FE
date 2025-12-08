@@ -278,7 +278,7 @@ export default function AnalyticsScreen() {
         {/* Monthly Progress removed */}
 
         {/* Benefits list widget */}
-        <BenefitsWidget />
+        <BenefitsWidget cleanDays={cleanDays} />
 
         </ScrollView>
       </SafeAreaView>
