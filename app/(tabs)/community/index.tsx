@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Linking, FlatList, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Linking, FlatList, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform, Keyboard, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome, AntDesign } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -83,6 +83,7 @@ export default function CommunityInfoScreen() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [roomImageLoaded, setRoomImageLoaded] = useState<Record<string | number, boolean>>({});
 
   const [posts, setPosts] = useState<PostResponse[]>([]);
   const [postsLoading, setPostsLoading] = useState<boolean>(false);
@@ -486,9 +487,30 @@ export default function CommunityInfoScreen() {
                       >
                         <View style={styles.roomRow}>
                           {imageUrl ? (
-                            <Image source={{ uri: imageUrl }} style={styles.roomImage} resizeMode="cover" />
+                            <View style={styles.roomImageWrapper}>
+                              <Image
+                                source={{ uri: imageUrl }}
+                                style={[styles.roomImage, !roomImageLoaded[item.id] && styles.roomImageHidden]}
+                                resizeMode="cover"
+                                onLoadEnd={() =>
+                                  setRoomImageLoaded(prev => ({
+                                    ...prev,
+                                    [item.id]: true
+                                  }))
+                                }
+                              />
+                              {!roomImageLoaded[item.id] && (
+                                <View style={[styles.roomImagePlaceholder, styles.roomImagePlaceholderOverlay]}>
+                                  <ActivityIndicator size="small" color="#ffffff" />
+                                </View>
+                              )}
+                            </View>
                           ) : (
-                            <View style={styles.roomImagePlaceholder} />
+                            <View style={styles.roomImageWrapper}>
+                              <View style={styles.roomImagePlaceholder}>
+                                <Ionicons name="image-outline" size={18} color={theme.colors.textSecondary} />
+                              </View>
+                            </View>
                           )}
                           <View style={styles.roomContent}>
                             <Text style={styles.roomTitle} numberOfLines={1}>
@@ -713,21 +735,22 @@ export default function CommunityInfoScreen() {
                   behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                   style={[styles.fsContent, { paddingBottom: Platform.OS === 'ios' ? (insets.bottom + 8) : (Math.max(insets.bottom, 20) + 20) }]}
                 >
+                  <Text style={styles.modalHeading}>New Post</Text>
                   <LinearGradient
                     colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
                     style={[styles.modalGradient, { flex: 1 }]}
                   >
-                    <Text style={styles.modalHeading}>New Post</Text>
                     <TextInput
                       value={newPostTitle}
                       onChangeText={setNewPostTitle}
-                      placeholder="title"
+                      placeholder="Title"
                       placeholderTextColor="rgba(255,255,255,0.6)"
                       style={styles.modalTitleInput}
                       maxLength={200}
                       returnKeyType="next"
                       autoFocus
                     />
+                    <View style={styles.modalTitleDivider} />
                     <TextInput
                       value={newPostContent}
                       onChangeText={setNewPostContent}
@@ -756,7 +779,7 @@ export default function CommunityInfoScreen() {
                         ]}
                         disabled={creatingPost || !newPostTitle.trim() || !newPostContent.trim()}
                       >
-                        <Text style={[styles.modalButtonText, { color: '#111827', fontWeight: '700', textAlign: 'center' }]}>
+                        <Text style={[styles.modalButtonText, { color: '#111827', textAlign: 'center' }]}>
                           {creatingPost ? 'Posting...' : 'Post'}
                         </Text>
                       </TouchableOpacity>
@@ -863,18 +886,38 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  roomImage: {
+  roomImageWrapper: {
     width: 56,
     height: 56,
     borderRadius: 28,
     marginRight: 12,
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  roomImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+  },
+  roomImageHidden: {
+    opacity: 0,
   },
   roomImagePlaceholder: {
-    width: 56,
-    height: 56,
+    width: '100%',
+    height: '100%',
     borderRadius: 28,
-    marginRight: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)'
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  roomImagePlaceholderOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   roomContent: {
     flex: 1,
@@ -1019,18 +1062,24 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   modalHeading: {
     color: theme.colors.textPrimary,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    marginBottom: 16,
+    paddingHorizontal: 0,
   },
   modalTitleInput: {
     color: theme.colors.textPrimary,
     backgroundColor: 'transparent',
-    borderRadius: theme.borderRadius.small,
+    borderRadius: theme.borderRadius.large,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
+    marginBottom: 10,
+  },
+  modalTitleDivider: {
+    width: '100%',
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     marginBottom: 10,
   },
   modalContentInput: {
@@ -1049,7 +1098,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   modalButton: {
     paddingHorizontal: 16,
-    paddingVertical: Platform.OS === 'android' ? 14 : 10,
+    paddingVertical: 16,
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -1065,7 +1114,8 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   modalButtonText: {
     color: theme.colors.textPrimary,
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 16,
   },
   fsOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -135,18 +135,18 @@ const AchievementsScreen = () => {
                     }>
                       {achievement.unlocked ? (
                         achievement.id === 'WELCOME' ? (
-                          <LottieUniversal
-                            source={require('@/assets/images/Animation - winner.json')}
-                            autoPlay
-                            loop
-                            style={styles.achievementLottie}
-                          />
-                        ) : (
-                          <Image
-                            source={achievement.imageSource}
+                        <LottieUniversal
+                          source={require('@/assets/images/Animation - winner.json')}
+                          autoPlay
+                          loop
+                          style={styles.achievementLottie}
+                        />
+                      ) : (
+                        <Image
+                          source={achievement.imageSource}
                             style={styles.achievementImage}
-                            resizeMode="cover"
-                          />
+                          resizeMode="cover"
+                        />
                         )
                       ) : (
                         <Ionicons name="lock-closed" size={20} color={theme.colors.textMuted} />

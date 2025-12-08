@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* global __dirname */
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
@@ -6,7 +8,7 @@ module.exports = {
   expo: {
     name: "CraveOff",
     slug: "craveoff-app",
-    version: "1.2.22",
+    version: "1.2.23",
 
     // Note: These properties will not be synced when android/ios folders are present
     orientation: "portrait",
@@ -46,7 +48,7 @@ module.exports = {
       softwareKeyboardLayoutMode: "resize",
     
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 47,
+      versionCode: 48,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"
@@ -82,7 +84,8 @@ module.exports = {
           "image": "./assets/images/logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#000000"
+          // Align native splash with the animated gradient background to avoid a visible flash
+          "backgroundColor": "#16171a"
         }
       ],
       "expo-notifications",

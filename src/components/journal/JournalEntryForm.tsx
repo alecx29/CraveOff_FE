@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView, Keyboard } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +31,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const insets = useSafeAreaInsets();
+  const contentInputRef = useRef<TextInput | null>(null);
   
   const today = new Date().toISOString();
   
@@ -192,9 +193,24 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
               placeholder="Enter a title..."
               placeholderTextColor={theme.colors.textMuted}
               editable={!isSaving}
-              returnKeyType="done"
-              blurOnSubmit
-              onSubmitEditing={() => Keyboard.dismiss()}
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => contentInputRef.current?.focus()}
+            />
+          </View>
+          
+          {/* Content Input - with fixed height */}
+          <View style={styles.journalEntryContainer}>
+            <TextInput
+              ref={contentInputRef}
+              style={styles.textArea}
+              value={content}
+              onChangeText={setContent}
+              placeholder="Write your thoughts..."
+              placeholderTextColor={theme.colors.textMuted}
+              multiline
+              textAlignVertical="top"
+              editable={!isSaving}
             />
           </View>
           
@@ -234,20 +250,6 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                 );
               })}
             </View>
-          </View>
-          
-          {/* Content Input - with fixed height */}
-          <View style={styles.journalEntryContainer}>
-            <TextInput
-              style={styles.textArea}
-              value={content}
-              onChangeText={setContent}
-              placeholder="Write your thoughts..."
-              placeholderTextColor={theme.colors.textMuted}
-              multiline
-              textAlignVertical="top"
-              editable={!isSaving}
-            />
           </View>
           
           {/* Tags Input - at the bottom */}
@@ -323,10 +325,25 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                 onChangeText={setTitle}
                 placeholder="Enter a title..."
                 placeholderTextColor={theme.colors.textMuted}
+              editable={!isSaving}
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => contentInputRef.current?.focus()}
+              />
+            </View>
+            
+            {/* Content Input - with fixed height */}
+            <View style={styles.journalEntryContainer}>
+              <TextInput
+                ref={contentInputRef}
+                style={styles.textArea}
+                value={content}
+                onChangeText={setContent}
+                placeholder="Write your thoughts..."
+                placeholderTextColor={theme.colors.textMuted}
+                multiline
+                textAlignVertical="top"
                 editable={!isSaving}
-                returnKeyType="done"
-                blurOnSubmit
-                onSubmitEditing={() => Keyboard.dismiss()}
               />
             </View>
             
@@ -366,20 +383,6 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                   );
                 })}
               </View>
-            </View>
-            
-            {/* Content Input - with fixed height */}
-            <View style={styles.journalEntryContainer}>
-              <TextInput
-                style={styles.textArea}
-                value={content}
-                onChangeText={setContent}
-                placeholder="Write your thoughts..."
-                placeholderTextColor={theme.colors.textMuted}
-                multiline
-                textAlignVertical="top"
-                editable={!isSaving}
-              />
             </View>
             
             {/* Tags Input - at the bottom */}

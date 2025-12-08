@@ -9,25 +9,40 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LottieUniversal from '@/src/components/LottieUniversal';
 import Constants from 'expo-constants';
 
+const logRatingEvent = (event: string, data?: Record<string, any>) => {
+  try {
+    console.log(`[RatingScreen] ${event}`, {
+      platform: Platform.OS,
+      timestamp: new Date().toISOString(),
+      ...data,
+    });
+  } catch {}
+};
+
+const getStoreReview = async (): Promise<any | null> => {
+  try {
+    const g: any = globalThis as any;
+    const hasNative = !!(g?.ExpoModules?.ExpoStoreReview) || !!(g?.NativeModules?.ExpoStoreReview);
+    logRatingEvent('store_review_native_check', { hasNative });
+    if (!hasNative) {
+      logRatingEvent('store_review_native_missing');
+      return null;
+    }
+    const mod = await import('expo-store-review');
+    logRatingEvent('store_review_module_loaded');
+    return mod;
+  } catch (error: any) {
+    logRatingEvent('store_review_module_failed', { message: error?.message });
+    return null;
+  }
+};
+
 export default function ConquerRating() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const styles = createStyles(insets);
   const colorsMap = theme.colors as Record<string, string>;
   const topPurple = colorsMap['primaryDark'] ?? colorsMap['primary'];
-
-  // Safely load store review only if native module exists in the binary
-  const getStoreReview = async (): Promise<any | null> => {
-    try {
-      const g: any = globalThis as any;
-      const hasNative = !!(g?.ExpoModules?.ExpoStoreReview) || !!(g?.NativeModules?.ExpoStoreReview);
-      if (!hasNative) return null;
-      const mod = await import('expo-store-review');
-      return mod;
-    } catch {
-      return null;
-    }
-  };
 
   const handleNext = () => {
     router.push('/conquer/commitment');
@@ -36,19 +51,25 @@ export default function ConquerRating() {
   React.useEffect(() => {
     const promptForReview = async () => {
       try {
+        logRatingEvent('auto_prompt_start');
         // Dynamic import guarded to avoid TS resolution error when module not installed
         await new Promise(res => setTimeout(res, 1600)); // 1.6s polite delay
-        const StoreReview = await getStoreReview();
-        if (StoreReview && (await StoreReview.isAvailableAsync())) {
-          await StoreReview.requestReview();
+        const StoreReview: any | null = await getStoreReview();
+        if (!StoreReview) {
+          logRatingEvent('auto_prompt_store_review_missing');
           return;
         }
-      } catch {}
-
-      // Fallback: open store listing
-      try {
-        await openStoreListing();
-      } catch {}
+        const isAvailable = await StoreReview.isAvailableAsync();
+        logRatingEvent('auto_prompt_availability', { isAvailable });
+        if (!isAvailable) {
+          return;
+        }
+        await StoreReview.requestReview();
+        logRatingEvent('auto_prompt_request_review_called', { source: 'auto' });
+      } catch (error: any) {
+        logRatingEvent('auto_prompt_failed', { message: error?.message });
+        // Intentionally swallow — on this screen we no longer push users out of the app automatically.
+      }
     };
 
     promptForReview();
@@ -56,19 +77,30 @@ export default function ConquerRating() {
 
   const openStoreManually = async () => {
     try {
+      logRatingEvent('manual_prompt_start');
       await new Promise(res => setTimeout(res, 300)); // tiny UX delay
-      const StoreReview = await getStoreReview();
-      if (StoreReview && (await StoreReview.isAvailableAsync())) {
-        await StoreReview.requestReview();
-        return;
+      const StoreReview: any | null = await getStoreReview();
+      if (!StoreReview) {
+        logRatingEvent('manual_prompt_store_review_missing');
+      } else {
+        const isAvailable = await StoreReview.isAvailableAsync();
+        logRatingEvent('manual_prompt_availability', { isAvailable });
+        if (isAvailable) {
+          await StoreReview.requestReview();
+          logRatingEvent('manual_prompt_request_review_called', { source: 'cta' });
+          return;
+        }
       }
-    } catch {}
+    } catch (error: any) {
+      logRatingEvent('manual_prompt_failed', { message: error?.message });
+    }
 
-    await openStoreListing();
+    await openStoreListing('manual');
   };
 
-  const openStoreListing = async () => {
+  const openStoreListing = async (source: 'manual' | 'auto' = 'manual') => {
     try {
+      logRatingEvent('store_listing_attempt', { source });
       if (Platform.OS === 'android') {
         const pkg = ((Constants as any).expoConfig?.android?.package) || 'com.usualsuspect29.craveoffapp';
         // Try to open Play review composer directly when possible
@@ -76,12 +108,17 @@ export default function ConquerRating() {
         const webUrl = `https://play.google.com/store/apps/details?id=${pkg}&reviewId=0`;
         try {
           const supported = await Linking.canOpenURL(marketUrl);
+          logRatingEvent('store_listing_market_supported', { supported, marketUrl });
           if (supported) {
             await Linking.openURL(marketUrl);
+            logRatingEvent('store_listing_opened', { method: 'android_market', url: marketUrl, source });
             return;
           }
-        } catch {}
+        } catch (error: any) {
+          logRatingEvent('store_listing_market_error', { message: error?.message });
+        }
         await Linking.openURL(webUrl);
+        logRatingEvent('store_listing_opened', { method: 'android_web', url: webUrl, source });
       } else if (Platform.OS === 'ios') {
         const appId = ((Constants as any).expoConfig?.extra?.iosAppStoreId) || '';
         if (appId) {
@@ -89,15 +126,24 @@ export default function ConquerRating() {
           const url = `itms-apps://apps.apple.com/app/id${appId}?action=write-review`;
           try {
             await Linking.openURL(url);
+            logRatingEvent('store_listing_opened', { method: 'ios_itms', url, source });
             return;
-          } catch {}
-          await Linking.openURL(`https://apps.apple.com/app/id${appId}`);
+          } catch (error: any) {
+            logRatingEvent('store_listing_itms_error', { message: error?.message });
+          }
+          const fallbackUrl = `https://apps.apple.com/app/id${appId}`;
+          await Linking.openURL(fallbackUrl);
+          logRatingEvent('store_listing_opened', { method: 'ios_web', url: fallbackUrl, source });
         } else {
           // Fallback search if appId is not set
-          await Linking.openURL('https://apps.apple.com/search?term=CraveOff');
+          const searchUrl = 'https://apps.apple.com/search?term=CraveOff';
+          await Linking.openURL(searchUrl);
+          logRatingEvent('store_listing_opened', { method: 'ios_search', url: searchUrl, source });
         }
       }
-    } catch {}
+    } catch (error: any) {
+      logRatingEvent('store_listing_error', { message: error?.message, source });
+    }
   };
 
   return (
@@ -466,5 +512,6 @@ const createStyles = (insets: any) => StyleSheet.create({
     marginLeft: 6,
   },
 });
+
 
 

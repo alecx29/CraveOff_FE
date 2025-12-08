@@ -118,10 +118,9 @@ class CraveOffProtection: NSObject {
     if #available(iOS 16.0, *) {
       // Clear local blocklist reference
       lastBlocklist = []
-      // Clear ManagedSettings shielded domains and content filter
+      // Clear ManagedSettings shielded domains
       let store = ManagedSettingsStore()
       store.shield.webDomains = nil
-      store.webContent.filter = nil
       resolve(true)
     } else {
       resolve(false)
@@ -133,11 +132,10 @@ class CraveOffProtection: NSObject {
                             rejecter reject: RCTPromiseRejectBlock) {
     if #available(iOS 16.0, *) {
       lastBlocklist = normalizeDomains(domains)
-      // Apply ManagedSettings shield + web content filter for blocked domains
+      // Apply ManagedSettings shield configuration for blocked domains
       let store = ManagedSettingsStore()
       let blocked = makeWebDomainTokens(from: lastBlocklist)
       store.shield.webDomains = blocked
-      store.webContent.filter = WebContentFilter.specificWebsites(allowed: [], blocked: blocked)
       resolve(true)
     } else {
       resolve(false)
@@ -149,7 +147,7 @@ class CraveOffProtection: NSObject {
     var running = false
     if #available(iOS 16.0, *) {
       let store = ManagedSettingsStore()
-      running = (store.shield.webDomains != nil) || (store.webContent.filter != nil)
+      running = (store.shield.webDomains != nil)
     } else {
       running = false
     }

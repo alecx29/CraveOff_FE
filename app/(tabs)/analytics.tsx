@@ -134,7 +134,7 @@ export default function AnalyticsScreen() {
 
     const sorted = [...achievements].sort(
       (a, b) => (a.threshold ?? 0) - (b.threshold ?? 0)
-    );
+        );
 
     const current =
       sorted.slice().reverse().find(item => item.unlocked) ||
@@ -262,15 +262,15 @@ export default function AnalyticsScreen() {
               </View>
               <View style={styles.achievementProgressTrack}>
                 <View
-                  style={[
+                    style={[
                     styles.achievementProgressFill,
                     { width: `${achievementWidgetProgress}%` }
                   ]}
                 />
-              </View>
+                  </View>
               <Text style={styles.achievementDescription}>
                 {achievementWidgetDescription}
-              </Text>
+            </Text>
             </View>
           </LinearGradient>
         </View>
