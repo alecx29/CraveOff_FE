@@ -48,7 +48,7 @@ module.exports = {
       softwareKeyboardLayoutMode: "resize",
     
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 48,
+      versionCode: 49,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"
