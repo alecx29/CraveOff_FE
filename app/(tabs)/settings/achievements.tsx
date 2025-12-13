@@ -12,6 +12,8 @@ import LottieUniversal from '@/src/components/LottieUniversal';
 import { getAchievementImage } from '@/src/utils/achievementImages';
 import { BlurView } from 'expo-blur';
 
+const isStarterAchievement = (code?: string) => code === 'STREAK_0' || code === 'WELCOME';
+
 const AchievementsScreen = () => {
   const { theme } = useTheme();
   const { achievements: ctxAchievements } = useAchievements();
@@ -113,81 +115,85 @@ const AchievementsScreen = () => {
             <Text style={styles.sectionTitle}>Your Achievements</Text>
           </View>
           
-          {achievements.map((achievement, index) => (
-            <Animated.View 
-              key={achievement.id}
-              entering={FadeInUp.delay(200 + index * 100).duration(400)}
-              style={[
-                styles.achievementCard,
-                achievement.unlocked ? styles.achievementUnlocked : styles.achievementLocked
-              ]}
-            >
-              <View style={styles.achievementRow}>
-                <View style={styles.achievementIconContainer}>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => openShowcase(achievement)}
-                  >
-                    <View style={
-                      achievement.id === 'WELCOME'
-                        ? (achievement.unlocked ? styles.achievementIconBg : styles.achievementIconBgLocked)
-                        : (achievement.unlocked ? styles.achievementIconBgLarge : styles.achievementIconBgLockedLarge)
-                    }>
-                      {achievement.unlocked ? (
-                        achievement.id === 'WELCOME' ? (
-                        <LottieUniversal
-                          source={require('@/assets/images/Animation - winner.json')}
-                          autoPlay
-                          loop
-                          style={styles.achievementLottie}
-                        />
-                      ) : (
-                        <Image
-                          source={achievement.imageSource}
-                            style={styles.achievementImage}
-                          resizeMode="cover"
-                        />
-                        )
-                      ) : (
-                        <Ionicons name="lock-closed" size={20} color={theme.colors.textMuted} />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                </View>
-                
-                <View style={styles.achievementContent}>
-                  <Text style={[
-                    styles.achievementTitle,
-                    !achievement.unlocked && styles.achievementTitleLocked
-                  ]}>
-                    {achievement.title}
-                  </Text>
-                  <Text style={[
-                    styles.achievementDescription,
-                    !achievement.unlocked && styles.achievementDescriptionLocked
-                  ]}>
-                    {achievement.description}
-                  </Text>
+          {achievements.map((achievement, index) => {
+            const starterBadge = isStarterAchievement(achievement.id);
+            return (
+              <Animated.View 
+                key={achievement.id}
+                entering={FadeInUp.delay(200 + index * 100).duration(400)}
+                style={[
+                  styles.achievementCard,
+                  achievement.unlocked ? styles.achievementUnlocked : styles.achievementLocked
+                ]}
+              >
+                <View style={styles.achievementRow}>
+                  <View style={styles.achievementIconContainer}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => openShowcase(achievement)}
+                    >
+                      <View style={
+                        starterBadge
+                          ? (achievement.unlocked ? styles.achievementIconBg : styles.achievementIconBgLocked)
+                          : (achievement.unlocked ? styles.achievementIconBgLarge : styles.achievementIconBgLockedLarge)
+                      }>
+                        {achievement.unlocked ? (
+                          starterBadge ? (
+                          <LottieUniversal
+                            source={require('@/assets/images/Animation - winner.json')}
+                            autoPlay
+                            loop
+                            style={styles.achievementLottie}
+                          />
+                        ) : (
+                          <Image
+                            source={achievement.imageSource}
+                              style={styles.achievementImage}
+                            resizeMode="cover"
+                          />
+                          )
+                        ) : (
+                          <Ionicons name="lock-closed" size={20} color={theme.colors.textMuted} />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  </View>
                   
-                  {achievement.unlocked && achievement.date && (
-                    <View style={styles.achievementDateContainer}>
-                      <Ionicons name="calendar-outline" size={12} color={theme.colors.textMuted} />
-                      <Text style={styles.achievementDate}>Unlocked on {achievement.date}</Text>
-                    </View>
-                  )}
-                </View>
-                
-                <View style={styles.achievementXpContainer}>
+                  <View style={styles.achievementContent}>
+                    <Text style={[
+                      styles.achievementTitle,
+                      !achievement.unlocked && styles.achievementTitleLocked
+                    ]}>
+                      {achievement.title}
+                    </Text>
+                    <Text style={[
+                      styles.achievementDescription,
+                      !achievement.unlocked && styles.achievementDescriptionLocked
+                    ]}>
+                      {achievement.description}
+                    </Text>
+                    
+                    {achievement.unlocked && achievement.date && (
+                      <View style={styles.achievementDateContainer}>
+                        <Ionicons name="calendar-outline" size={12} color={theme.colors.textMuted} />
+                        <Text style={styles.achievementDate}>Unlocked on {achievement.date}</Text>
+                      </View>
+                    )}
+                  </View>
+                  
+                  <View style={styles.achievementXpContainer}>
                   <Text style={[
                     styles.achievementXp,
-                    !achievement.unlocked && styles.achievementXpLocked
+                    !achievement.unlocked && styles.achievementXpLocked,
+                    achievement.unlocked && styles.achievementXpUnlocked
                   ]}>
-                    {achievement.xp} XP
-                  </Text>
+                      {achievement.xp} XP
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </Animated.View>
-          ))}
+              </Animated.View>
+            );
+          })}
         </View>
       </ScrollView>
       
@@ -210,7 +216,7 @@ const AchievementsScreen = () => {
           />
           <View style={styles.overlayCenter}>
             <View style={styles.previewCircle}>
-              {showcase.id === 'WELCOME' ? (
+              {isStarterAchievement(showcase.id) ? (
                 <LottieUniversal
                   source={require('@/assets/images/Animation - winner.json')}
                   autoPlay
@@ -282,7 +288,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   progressBadgeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.primary,
+    color:     theme.colors.textSecondary,
   },
   progressBarContainer: {
     height: 10,
@@ -297,7 +303,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#a855f7',
     borderRadius: 5,
   },
   progressInfo: {
@@ -315,7 +321,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   xpText: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.primary,
+    color: '#a855f7',
     marginLeft: 4,
   },
   progressPercentText: {
@@ -457,6 +463,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   achievementXpLocked: {
     color: theme.colors.textMuted,
+  },
+  achievementXpUnlocked: {
+    color: '#ffffff',
   },
   celebrationContainer: {
     position: 'absolute',

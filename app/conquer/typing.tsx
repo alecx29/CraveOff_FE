@@ -143,10 +143,15 @@ export default function ConquerTyping() {
       {/* Security animation appears only after the second message completes */}
       {seqIndex >= 2 && (
         <View style={styles.animationAbsoluteContainer} pointerEvents="none">
-          <Animated.View entering={SlideInUp.duration(600).springify()} style={styles.animationShift}>
+          <Animated.View
+            entering={SlideInUp.duration(650).springify().damping(26).stiffness(140).overshootClamping(true).withInitialValues({
+              transform: [{ translateY: height * 0.2 }],
+            })}
+            style={styles.animationShift}
+          >
             <View style={styles.animationBox}>
               <LottieUniversal
-                source={require('@/assets/images/SecuritySystem.json')}
+                source={require('@/assets/images/Medieval lock.json')}
                 autoPlay
                 loop
                 style={styles.animation}
@@ -268,17 +273,20 @@ const createStyles = (insets: any) => StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: insets.top + 60,
+    paddingBottom: insets.bottom + 32,
   },
   animationBox: {
-    width: 300,
-    height: 300,
+    width: 220,
+    height: 220,
   },
   animation: {
     width: '100%',
     height: '100%',
   },
   animationShift: {
-    transform: [{ translateY: 20 }],
+    width: '100%',
+    alignItems: 'center',
   },
   bottomHintContainer: {
     position: 'absolute',

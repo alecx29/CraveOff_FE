@@ -1,7 +1,8 @@
 import React, { useContext, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Modal, StatusBar, StyleSheet, Text, View, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeOut, SlideInUp, SlideOutDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
@@ -24,11 +25,20 @@ interface FeatureItem {
 const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) => {
   const { theme } = useTheme();
   const { signIn } = useContext(AuthContext);
-  const styles = createStyles(theme);
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const styles = createStyles(theme);
+  const [isJourneyModalVisible, setIsJourneyModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Helpers
+  // Features with icons
+  const features: FeatureItem[] = [
+    { text: 'Personalized recovery plan', icon: 'document-text' },
+    { text: 'Progress tracking', icon: 'trending-up' },
+    { text: 'Community support', icon: 'people' },
+    { text: 'Advanced analytics', icon: 'analytics' },
+    { text: 'Content blocker', icon: 'shield-checkmark' },
+  ];
+  
   const isValidToken = (token?: string | null) => {
     if (!token) return false;
     const trimmed = token.trim();
@@ -69,14 +79,11 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
     if (lastAuthProvider === 'google' && isValidToken(rawGoogleIdToken)) provider = 'google';
     if (lastAuthProvider === 'apple' && isValidToken(rawAppleIdToken)) provider = 'apple';
 
-    // Determine near-expiry window (<= 120s)
     const exp = decodeJwtExp(idToken);
     const nowSec = Math.floor(Date.now() / 1000);
     const nearExpiry = exp !== undefined ? exp - nowSec <= 120 : false;
 
-    // Try refresh if missing or near expiry
     if (!idToken || !provider || nearExpiry) {
-      // Google silent first
       if (provider === 'google' || (!provider && isValidToken(rawGoogleIdToken))) {
         try {
           const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
@@ -90,7 +97,6 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         } catch {}
       }
 
-      // Interactive path
       if (provider === 'google' || (!provider && !isValidToken(rawAppleIdToken))) {
         try {
           const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
@@ -139,22 +145,26 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
     return { idToken, provider };
   };
 
-  // Features with icons
-  const features: FeatureItem[] = [
-    { text: 'Personalized recovery plan', icon: 'document-text' },
-    { text: 'Progress tracking', icon: 'trending-up' },
-    { text: 'Community support', icon: 'people' },
-    { text: 'Advanced analytics', icon: 'analytics' },
-    { text: 'Exclusive premium content', icon: 'star' },
-  ];
-  
-  // Handler for continue button with API calls
+  const openJourneyModal = () => setIsJourneyModalVisible(true);
+  const closeJourneyModal = () => {
+    if (!isLoading) setIsJourneyModalVisible(false);
+  };
+
+  const proceedToApp = () => {
+    setIsJourneyModalVisible(false);
+    onContinue();
+  };
+
+  const redirectToLogin = () => {
+    setIsJourneyModalVisible(false);
+    router.replace('/login');
+  };
+
   const handleContinue = async () => {
-    // Set loading state to true when starting API calls
+    if (isLoading) return;
     setIsLoading(true);
     
     try {
-      // Ensure we have a fresh idToken just-in-time
       const { idToken, provider } = await ensureFreshIdToken();
       
       console.log('Using idToken for signup-complete:', idToken ? 'Yes (valid)' : 'No (not found)');
@@ -162,8 +172,10 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
 
       const effectiveIdToken = idToken;
       
-      // Prepare request body
-      const resolvedTimeZone = (Intl as any)?.DateTimeFormat?.().resolvedOptions?.().timeZone || (Intl as any)?.resolvedOptions?.().timeZone || 'UTC';
+      const resolvedTimeZone =
+        (Intl as any)?.DateTimeFormat?.().resolvedOptions?.().timeZone ||
+        (Intl as any)?.resolvedOptions?.().timeZone ||
+        'UTC';
       const tzOffsetMinutes = new Date().getTimezoneOffset();
       console.log('[SignupComplete] Detected timezone:', resolvedTimeZone);
       console.log('[SignupComplete] Current GMT offset (minutes):', tzOffsetMinutes, '=> hours:', -(tzOffsetMinutes / 60));
@@ -172,7 +184,6 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         timezone: resolvedTimeZone
       };
       
-      // Add idToken and provider only if we have a valid token and matching provider
       if (effectiveIdToken && provider) {
         requestBody.idToken = effectiveIdToken;
         requestBody.provider = provider;
@@ -180,23 +191,19 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
       
       console.log('Signup-complete request body:', JSON.stringify(requestBody, null, 2));
       
-      // If provider is missing or idToken is missing, log and proceed with minimal body
       if (!provider || !effectiveIdToken) {
         console.warn('Proceeding with signup-complete without idToken/provider. This may cause backend 500 if required.');
       }
 
-      // First API call: Mark signup as complete, including the idToken and provider if available
       const doRequest = async () => apiClient.post(BackendRoutes.SIGNUP_COMPLETE_AUTH, requestBody);
       let response = await doRequest();
       console.log('Signup marked as complete');
       console.log('Response structure:', JSON.stringify(response.data, null, 2));
       
-      // Handle authentication response like authenticate action
       if (response.data && response.data.session && response.data.user) {
         console.log('Authentication data received from signup-complete');
         console.log('Session data:', JSON.stringify(response.data.session, null, 2));
         
-        // Verificăm exact ce cheie folosește serverul pentru tokens
         const accessToken = response.data.session.access_token || response.data.session.accessToken;
         const refreshToken = response.data.session.refresh_token || response.data.session.refreshToken;
         
@@ -207,11 +214,10 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         if (!accessToken || !refreshToken) {
           console.error('ERROR: Missing tokens in response!');
           console.error('Full response:', JSON.stringify(response.data, null, 2));
-          onContinue();
+          proceedToApp();
           return;
         }
         
-        // Use signIn from AuthContext to handle the session data
         await signIn({
           accessToken,
           refreshToken,
@@ -220,28 +226,22 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         
         console.log('Authentication state updated successfully');
         
-        // Verificăm dacă tokenul a fost salvat corect
         const storedToken = await SecureStore.getItemAsync('accessToken');
         console.log('Stored access token after signIn:', storedToken ? 'Yes (found)' : 'No (not found)');
         
-        // Clear the stored idTokens and metadata as they're no longer needed
         await AsyncStorage.removeItem('googleIdToken');
         await AsyncStorage.removeItem('appleIdToken');
         console.log('Cleared stored provider idTokens after use');
         await AsyncStorage.removeItem('lastAuthProvider');
         await AsyncStorage.removeItem('idTokenSavedAt');
         
-        // Add a small delay to ensure token is properly stored and available for subsequent requests
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Verificăm din nou dacă tokenul este disponibil
         const tokenAfterDelay = await SecureStore.getItemAsync('accessToken');
         console.log('Access token after delay:', tokenAfterDelay ? 'Yes (found)' : 'No (not found)');
         
-        // Second API call: Log first entry with is_clean: true
         try {
-          // Adăugăm data curentă în formatul ISO
-          const currentDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+          const currentDate = new Date().toISOString().split('T')[0];
           const logResponse = await apiClient.post(BackendRoutes.LOGS, { 
             is_clean: true,
             date: currentDate
@@ -252,7 +252,6 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
           console.error('Error creating initial log:', logError);
         }
         
-        // Third API call: Update last relapse
         try {
           const relapseResponse = await apiClient.patch(BackendRoutes.UPDATE_LAST_RELAPSE, {});
           console.log('Last relapse updated');
@@ -261,13 +260,11 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
           console.error('Error updating last relapse:', relapseError);
         }
         
-        // Only continue with navigation after all API calls are complete
-        onContinue();
+        proceedToApp();
       } else {
         console.error('Invalid response format from signup-complete endpoint');
         console.error('Full response:', JSON.stringify(response.data, null, 2));
-        // Continue with navigation even if authentication failed
-        onContinue();
+        proceedToApp();
       }
     } catch (error: any) {
       console.error('Error during API calls:', error?.response?.data || error?.message || error);
@@ -278,14 +275,15 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         (status === 401 && (code === 'ID_TOKEN_EXPIRED' || code === 'ID_TOKEN_INVALID'));
 
       if (shouldReacquire) {
-        // Reacquire idToken and retry once
         const { idToken: freshIdToken, provider: freshProvider } = await ensureFreshIdToken();
         if (isValidToken(freshIdToken) && (freshProvider === 'google' || freshProvider === 'apple')) {
-          const resolvedTimeZone = (Intl as any)?.DateTimeFormat?.().resolvedOptions?.().timeZone || (Intl as any)?.resolvedOptions?.().timeZone || 'UTC';
+          const resolvedTimeZone =
+            (Intl as any)?.DateTimeFormat?.().resolvedOptions?.().timeZone ||
+            (Intl as any)?.resolvedOptions?.().timeZone ||
+            'UTC';
           const retryBody: any = { signup_complete: true, timezone: resolvedTimeZone, idToken: freshIdToken, provider: freshProvider };
           try {
             const retryResponse = await apiClient.post(BackendRoutes.SIGNUP_COMPLETE_AUTH, retryBody);
-            // mimic success path
             console.log('Signup marked as complete (after retry)');
             console.log('Response structure:', JSON.stringify(retryResponse.data, null, 2));
             if (retryResponse.data && retryResponse.data.session && retryResponse.data.user) {
@@ -293,85 +291,163 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
               const refreshToken = retryResponse.data.session.refresh_token || retryResponse.data.session.refreshToken;
               await signIn({ accessToken, refreshToken, user: retryResponse.data.user });
             }
-            onContinue();
-            setIsLoading(false);
+            proceedToApp();
             return;
           } catch (retryErr: any) {
             console.error('Retry after reacquire failed:', retryErr?.response?.data || retryErr?.message || retryErr);
-            router.replace('/login');
+            redirectToLogin();
             return;
           }
         } else {
-          router.replace('/login');
+          redirectToLogin();
           return;
         }
       }
 
-      // Fallback behavior
       if (status === 400 || status === 401) {
-        router.replace('/login');
+        redirectToLogin();
         return;
       }
-      onContinue();
+      proceedToApp();
     } finally {
-      // Reset loading state (though navigation will likely have occurred by now)
       setIsLoading(false);
     }
   };
 
   return (
     <>
-      <Animated.View entering={FadeInDown.duration(600).delay(200)}>
-        <View style={{ height: 8 }} />
-      </Animated.View>
-      
-      <Animated.View 
-        entering={FadeInDown.duration(500).delay(300)}
-        style={styles.freeOfferContainer}
-      >
-        <View style={styles.badgeContainer}>
-          <Text style={styles.badgeText}>EARLY ACCESS</Text>
-        </View>
-        <Text style={styles.offerTitle}>Start Your Journey For Free</Text>
-        <Text style={styles.offerDescription}>
-          As we are just launching, we are offering all premium features for free for a limited time. Be among the first to experience the full power of CraveOff.
-        </Text>
-        <View style={styles.featuresGrid}>
-          {features.map((feature, index) => (
-            <View key={index} style={styles.featureChip}>
-              <Ionicons name={feature.icon as any} size={14} color="#fff" />
-              <Text style={styles.featureChipText}>{feature.text}</Text>
-            </View>
-          ))}
-        </View>
-      </Animated.View>
-      
       <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.actionContainer}>
+        <Text style={styles.reframeText}>
+          Willpower alone is not enough. You need to entirely reframe the way you view yourself, the purpose of sex, and your relationships.
+        </Text>
         <TouchableOpacity 
           style={styles.continueButtonContainer}
-          onPress={handleContinue}
+          onPress={openJourneyModal}
           activeOpacity={0.8}
           disabled={isLoading}
         >
-          <LinearGradient
-            colors={['#8B5CF6', '#6366F1']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.continueButton}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Text style={styles.continueButtonText}>START MY FREE JOURNEY</Text>
-            )}
-          </LinearGradient>
+          <View style={styles.continueButtonSolid}>
+            <Text style={styles.continueButtonTextSolid}>Turn Crave OFF</Text>
+          </View>
         </TouchableOpacity>
         
         <Text style={styles.limitedTimeText}>
           Limited time offer • No credit card required
         </Text>
       </Animated.View>
+
+      <JourneyModal
+        visible={isJourneyModalVisible}
+        onClose={closeJourneyModal}
+        onTry={handleContinue}
+        features={features}
+        loading={isLoading}
+      />
     </>
+  );
+};
+
+interface JourneyModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onTry: () => void;
+  features: FeatureItem[];
+  loading: boolean;
+}
+
+const JourneyModal = ({ visible, onClose, onTry, features, loading }: JourneyModalProps) => {
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const modalStyles = createModalStyles(theme, insets);
+
+  return (
+    <Modal
+      transparent
+      visible={visible}
+      onRequestClose={onClose}
+      animationType="none"
+      statusBarTranslucent
+    >
+      <Animated.View
+        style={modalStyles.overlay}
+        entering={FadeIn.duration(250)}
+        exiting={FadeOut.duration(200)}
+      >
+        <StatusBar barStyle="light-content" />
+        <Animated.View
+          style={modalStyles.modal}
+          entering={SlideInUp.duration(350).springify()}
+          exiting={SlideOutDown.duration(250).springify()}
+        >
+          <View style={modalStyles.haloWrapper} pointerEvents="none">
+            <LinearGradient
+              colors={[
+                'rgba(124, 58, 237, 0.32)',
+                'rgba(124, 58, 237, 0.18)',
+                'rgba(124, 58, 237, 0.10)',
+                'rgba(124, 58, 237, 0.04)',
+                'rgba(124, 58, 237, 0)',
+              ]}
+              locations={[0, 0.35, 0.6, 0.78, 1]}
+              start={{ x: 0.5, y: 0.15 }}
+              end={{ x: 0.5, y: 1 }}
+              style={modalStyles.halo}
+            />
+          </View>
+
+          <View style={modalStyles.modalHeader}>
+            <TouchableOpacity style={modalStyles.closeButton} onPress={onClose} activeOpacity={0.8}>
+              <Ionicons name="close" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={modalStyles.modalBody}>
+            <ScrollView
+              contentContainerStyle={modalStyles.modalBodyContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <Image
+                source={require('@/assets/images/logo.png')}
+                style={modalStyles.modalLogo}
+                resizeMode="contain"
+              />
+              <Text style={modalStyles.modalTitle}>We want you to try CraveOff for free</Text>
+              <Text style={modalStyles.modalSubtitle}>
+                We unlocked every premium tool while we finish the experience. Take a moment to review what you&apos;re getting before you jump in.
+              </Text>
+
+              <View style={modalStyles.modalFeatures}>
+                {features.map((feature, index) => (
+                  <View key={`${feature.text}-${index}`} style={modalStyles.modalFeatureChip}>
+                    <Ionicons name={feature.icon as any} size={16} color="#fff" />
+                    <Text style={modalStyles.modalFeatureText}>{feature.text}</Text>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+
+          <View style={modalStyles.modalActions}>
+            <View style={modalStyles.modalNoteRow}>
+              <Ionicons name="checkmark-circle" size={16} color="#fff" />
+              <Text style={modalStyles.modalNoteText}>No Card Needed</Text>
+            </View>
+            <TouchableOpacity
+              style={modalStyles.modalPrimary}
+              onPress={onTry}
+              activeOpacity={0.85}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={modalStyles.modalPrimaryText}>Try For FREE</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
   );
 };
 
@@ -391,28 +467,8 @@ const createStyles = (_theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(129, 140, 248, 0.28)',
     position: 'relative',
-    paddingTop: 38,
     backdropFilter: 'blur(10px)',
     marginTop: 50,
-  },
-  badgeContainer: {
-    position: 'absolute',
-    top: -15,
-    alignSelf: 'center',
-    backgroundColor: '#6366F1',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 30,
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
   },
   offerTitle: {
     fontSize: 24,
@@ -454,9 +510,17 @@ const createStyles = (_theme: any) => StyleSheet.create({
   actionContainer: {
     marginTop: 16,
   },
+  reframeText: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 22,
+  },
   continueButtonContainer: {
     borderRadius: 30,
     overflow: 'hidden',
+    marginTop: 4,
     marginBottom: 16,
     shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 4 },
@@ -469,8 +533,21 @@ const createStyles = (_theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  continueButtonSolid: {
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 30,
+  },
   continueButtonText: {
     color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  continueButtonTextSolid: {
+    color: '#111827',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -480,6 +557,120 @@ const createStyles = (_theme: any) => StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     marginBottom: 16,
+  },
+});
+
+const createModalStyles = (_theme: any, insets: { top: number; bottom: number }) => StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+  },
+  modal: {
+    flex: 1,
+    backgroundColor: '#05060d',
+    paddingTop: Math.max(insets.top + 12, 40),
+  },
+  modalHeader: {
+    paddingHorizontal: 24,
+    paddingBottom: 8,
+    alignItems: 'flex-end',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBody: {
+    flex: 1,
+    paddingHorizontal: 24,
+    justifyContent: 'flex-start',
+  },
+  modalBodyContent: {
+    paddingBottom: 32,
+    gap: 16,
+  },
+  modalLogo: {
+    width: 160,
+    height: 64,
+    alignSelf: 'center',
+    marginBottom: 18,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  modalSubtitle: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  modalFeatures: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  modalFeatureChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  modalFeatureText: {
+    color: '#fff',
+    fontSize: 14,
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  modalActions: {
+    paddingHorizontal: 24,
+    paddingBottom: Math.max(insets.bottom + 16, 32),
+  },
+  haloWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  halo: {
+    width: 900,
+    height: 900,
+    borderRadius: 450,
+    marginTop: -260,
+  },
+  modalNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  modalNoteText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  modalPrimary: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 30,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalPrimaryText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
   },
 });
 

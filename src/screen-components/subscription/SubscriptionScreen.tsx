@@ -3,10 +3,10 @@ import { StyleSheet, View, ScrollView, ImageBackground, Text, Image, Platform } 
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import LottieView from 'lottie-react-native';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import FreeJourneyContent from './FreeJourneyContent';
@@ -23,6 +23,7 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const styles = createStyles(theme, insets);
+  const showPaywall = __DEV__;
 
   // Mark paywall reached when this screen mounts (idempotent backend)
   React.useEffect(() => {
@@ -99,23 +100,6 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
             </View>
           </Animated.View>
 
-          {/* Gradient free offer card */}
-          <Animated.View entering={FadeInDown.duration(500).delay(160)} style={styles.gradientCardWrapper}>
-            <LinearGradient
-              colors={[
-                'rgba(255, 255, 255, 0.22)',
-                'rgba(255, 255, 255, 0.12)',
-                'rgba(255, 255, 255, 0.0)'
-              ]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={styles.gradientCard}
-            >
-              <Text style={styles.offerTitle}>Free Offer</Text>
-              <Text style={styles.offerSubtitle}>It may not be free tomorrow</Text>
-            </LinearGradient>
-          </Animated.View>
-
           {/* Divider + Laurel + Taglines */}
           <View style={styles.hr} />
           <View style={styles.laurelContainer}>
@@ -127,14 +111,100 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
           </View>
           <Text style={styles.tagline}>Become the best version of yourself with CraveOff.</Text>
           <Text style={styles.subTagline}>Emerge Stronger, Healthier, Happier</Text>
+          <View style={styles.lottieWrapper}>
+            <LottieView
+              source={require('@/assets/images/MeditationGuy.json')}
+              autoPlay
+              loop
+              style={styles.lottie}
+            />
+          </View>
+          <Text style={styles.conquerText}>Conquer Yourself</Text>
+          <View style={styles.bulletList}>
+            <View style={styles.bulletRow}>
+              <View style={[styles.bulletBadge, { backgroundColor: '#2563EB' }]}>
+                <Ionicons name="lock-closed" size={16} color="#ffffff" />
+              </View>
+              <Text style={styles.bulletText}>Build unbreakable self control</Text>
+            </View>
+            <View style={styles.bulletRow}>
+              <View style={[styles.bulletBadge, { backgroundColor: '#8B5CF6' }]}>
+                <Ionicons name="person" size={16} color="#ffffff" />
+              </View>
+              <Text style={styles.bulletText}>Become more attractive and confident</Text>
+            </View>
+            <View style={styles.bulletRow}>
+              <View style={[styles.bulletBadge, { backgroundColor: '#22C55E' }]}>
+                <Ionicons name="leaf" size={16} color="#ffffff" />
+              </View>
+              <Text style={styles.bulletText}>Boost your self worth</Text>
+            </View>
+            <View style={styles.bulletRow}>
+              <View style={[styles.bulletBadge, { backgroundColor: '#FACC15' }]}>
+                <Ionicons name="happy" size={16} color="#0F172A" />
+              </View>
+              <Text style={styles.bulletText}>Fill each day with pride and happiness</Text>
+            </View>
+          </View>
+          <Image
+            source={require('@/assets/images/5star.png')}
+            style={styles.starsImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.quoteText}>
+            “All this time my social anxiety was just because I was secretly ashamed of my porn problem. I never want to feel that small again.”
+          </Text>
+          <Text style={styles.quoteAuthor}>Anonymous</Text>
+          <View style={styles.hr} />
+          <View style={styles.lottieWrapper}>
+            <LottieView
+              source={require('@/assets/images/Hero.json')}
+              autoPlay
+              loop
+              style={styles.heroLottie}
+            />
+          </View>
+          <Text style={styles.takeBackText}>Take back control</Text>
+        <View style={styles.bulletList}>
+          <View style={styles.bulletRow}>
+            <View style={[styles.bulletBadge, { backgroundColor: '#2563EB' }]}>
+              <Ionicons name="refresh" size={16} color="#ffffff" />
+            </View>
+            <Text style={styles.bulletText}>Learn to redirect harmful cravings</Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <View style={[styles.bulletBadge, { backgroundColor: '#8B5CF6' }]}>
+              <Ionicons name="rocket" size={16} color="#ffffff" />
+            </View>
+            <Text style={styles.bulletText}>Regain focus and motivation</Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <View style={[styles.bulletBadge, { backgroundColor: '#22C55E' }]}>
+              <Ionicons name="heart" size={16} color="#ffffff" />
+            </View>
+            <Text style={styles.bulletText}>Find real joy and satisfaction in life</Text>
+          </View>
+        </View>
+        <Image
+          source={require('@/assets/images/5star.png')}
+          style={styles.starsImage}
+          resizeMode="contain"
+        />
+        <Text style={styles.quoteText}>
+          “I had started to dread having sex with my girlfriend because I was so anxious all the time. But now our sex is so good it&apos;s made our relationship much stronger.”
+        </Text>
+        <Text style={styles.quoteAuthor}>Anonymous</Text>
+        <View style={styles.hr} />
           
           {/* Free Journey Content */}
           <FreeJourneyContent onContinue={handleContinue} />
 
-          {/* Subscription paywall */}
-          <Animated.View entering={FadeInDown.duration(500).delay(600)}>
-            <PaywallTest onSubscribed={handleContinue} />
-          </Animated.View>
+          {/* Subscription paywall (dev only) */}
+          {showPaywall && (
+            <Animated.View entering={FadeInDown.duration(500).delay(600)}>
+              <PaywallTest onSubscribed={handleContinue} />
+            </Animated.View>
+          )}
         </ScrollView>
       </View>
     </ImageBackground>
@@ -164,13 +234,13 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 60 + (insets.bottom || 0),
+    paddingBottom: 56 + (insets.bottom || 0),
     paddingTop: 16,
   },
   heroContainer: {
     alignItems: 'center',
-    marginBottom: 22,
-    marginTop: Platform.OS === 'android' ? 26 : 6,
+    marginBottom: 20,
+    marginTop: Platform.OS === 'android' ? 24 : 4,
   },
   checkBadge: {
     width: 56,
@@ -184,81 +254,132 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
   },
   heroTitle: {
     color: 'white',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     marginTop: 12,
     textAlign: 'center',
   },
   goalContainer: {
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 16,
   },
   greySubtitle: {
     color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 15,
-    marginBottom: 10,
+    fontSize: 12,
+    marginBottom: 8,
   },
   datePill: {
     paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 24,
     backgroundColor: '#ffffff',
     opacity: 0.95,
   },
   datePillText: {
     color: '#111827',
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '700',
   },
   hr: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    marginVertical: 18,
+    marginVertical: 16,
+    width: '70%',
+    alignSelf: 'center',
   },
   laurelContainer: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   laurelImage: {
-    width: 280,
-    height: 80,
+    width: 360,
+    height: 110,
   },
   tagline: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     textAlign: 'center',
     marginTop: 8,
   },
   subTagline: {
     color: 'rgba(255,255,255,0.85)',
-    fontSize: 13,
+    fontSize: 16,
     textAlign: 'center',
-    marginTop: 6,
-    marginBottom: 10,
+    marginTop: 4,
+    marginBottom: 12,
   },
-  gradientCardWrapper: {
-    marginBottom: 20,
-    marginTop: Platform.OS === 'android' ? 14 : 6,
+  lottieWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    marginBottom: 0,
   },
-  gradientCard: {
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)'
+  lottie: {
+    width: 180,
+    height: 180,
   },
-  offerTitle: {
+  heroLottie: {
+    width: 224,
+    height: 224,
+  },
+  conquerText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 12,
   },
-  offerSubtitle: {
+  takeBackText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  bulletList: {
+    marginBottom: 4,
+    gap: 8,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  bulletBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bulletText: {
     color: 'rgba(255,255,255,0.9)',
     fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
+  },
+  starsImage: {
+    width: 190,
+    height: 38,
+    alignSelf: 'center',
+    marginTop: 24,
+  },
+  quoteText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 16,
+    fontStyle: 'italic',
     textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 26,
+    paddingHorizontal: 12,
+  },
+  quoteAuthor: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 8,
   },
 });
 
