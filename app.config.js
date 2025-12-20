@@ -11,7 +11,7 @@ module.exports = {
     version: "1.2.23",
 
     // Note: These properties will not be synced when android/ios folders are present
-    orientation: "portrait",
+    orientation: "portrait", 
     icon: "./assets/images/logoCraveoff-512.png",
     scheme: "craveoffapp",
     userInterfaceStyle: "automatic",

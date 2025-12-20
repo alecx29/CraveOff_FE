@@ -266,6 +266,16 @@ export default function CommunityPostDetailsScreen() {
     ? getAchievementImage(String(achievementCode))
     : null;
 
+  const canNavigateProfile = useMemo(() => !!authorId && String(authorId).trim().length > 0, [authorId]);
+
+  const handleOpenProfile = useCallback(() => {
+    if (!canNavigateProfile) return;
+    router.push({
+      pathname: '/(tabs)/community/user/[userId]' as any,
+      params: { userId: String(authorId), achievementCode: achievementCode || '' }
+    });
+  }, [canNavigateProfile, authorId, achievementCode]);
+
   // Build user streak label (from DTO field user_current_streak)
   const userStreakLabel = useMemo(() => {
     const val = (post as any)?.user_current_streak;
@@ -404,25 +414,32 @@ export default function CommunityPostDetailsScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Header: Avatar + Name + Upvote */}
+            {/* Header: Avatar + Name (pressable) + Upvote */}
             <View style={styles.header}>
-              {achievementAvatarSource ? (
-                <Image source={achievementAvatarSource} style={styles.avatar} />
-              ) : authorAvatarUrl ? (
-                <Image source={{ uri: authorAvatarUrl }} style={styles.avatar} />
-              ) : (
-                <View style={styles.avatarPlaceholder} />
-              )}
-              <View style={styles.headerText}>
-                <Text style={styles.authorName} numberOfLines={1}>
-                  {authorName}
-                </Text>
-                {!!userStreakLabel && (
-                  <Text style={styles.metaText} numberOfLines={1}>
-                    {userStreakLabel}
-                  </Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                disabled={!canNavigateProfile}
+                onPress={handleOpenProfile}
+                style={styles.headerPressArea}
+              >
+                {achievementAvatarSource ? (
+                  <Image source={achievementAvatarSource} style={styles.avatar} />
+                ) : authorAvatarUrl ? (
+                  <Image source={{ uri: authorAvatarUrl }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatarPlaceholder} />
                 )}
-              </View>
+                <View style={styles.headerText}>
+                  <Text style={styles.authorName} numberOfLines={1}>
+                    {authorName}
+                  </Text>
+                  {!!userStreakLabel && (
+                    <Text style={styles.metaText} numberOfLines={1}>
+                      {userStreakLabel}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
               <View style={styles.postHeaderActions}>
                 <CommunityUpvote
                   postId={String(postId)}
@@ -536,6 +553,12 @@ const createStyles = (theme: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: 16,
+    },
+    headerPressArea: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      minWidth: 0,
     },
     avatar: {
       width: 56,

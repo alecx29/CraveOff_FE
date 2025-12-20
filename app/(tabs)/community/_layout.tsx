@@ -18,6 +18,8 @@ export default function CommunityLayout() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="room/[slug]" options={{ headerShown: true }} />
       <Stack.Screen name="user/[userId]" options={{ headerShown: true }} />
+      <Stack.Screen name="notifications" options={{ headerShown: false }} />
+      <Stack.Screen name="notifications-settings" options={{ headerShown: false }} />
     </Stack>
   );
 }

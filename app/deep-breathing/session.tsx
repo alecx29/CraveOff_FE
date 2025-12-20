@@ -28,6 +28,7 @@ export default function DeepBreathingSessionScreen() {
   const [phase, setPhase] = useState<'inhale' | 'exhale'>('inhale');
   const [, setPhaseLeft] = useState<number>(INHALE_SEC);
   const [hapticsOn, setHapticsOn] = useState<boolean>(true);
+  const [audioOn, setAudioOn] = useState<boolean>(true);
   const [paused, setPaused] = useState<boolean>(false);
   const phaseRef = useRef<'inhale' | 'exhale'>('inhale');
   const leftRef = useRef<number>(INHALE_SEC);
@@ -38,6 +39,12 @@ export default function DeepBreathingSessionScreen() {
   const inhaleSoundRef = useRef<any>(null);
   const exhaleSoundRef = useRef<any>(null);
   const audioModuleRef = useRef<any>(null);
+  const audioOnRef = useRef<boolean>(true);
+
+  const stopAllSounds = React.useCallback(async () => {
+    try { await inhaleSoundRef.current?.stopAsync?.(); } catch {}
+    try { await exhaleSoundRef.current?.stopAsync?.(); } catch {}
+  }, []);
 
   useEffect(() => {
     let secTimer: any;
@@ -49,7 +56,9 @@ export default function DeepBreathingSessionScreen() {
       setPhase('inhale');
       leftRef.current = durationSec;
       setPhaseLeft(durationSec);
-      try { void inhaleSoundRef.current?.replayAsync(); } catch {}
+      if (audioOnRef.current) {
+        try { void inhaleSoundRef.current?.replayAsync(); } catch {}
+      }
       // stop any previous animation to avoid overlapping chains
       animRef.current?.stop?.();
       // native haptics handled by CraveHaptics loop
@@ -73,7 +82,9 @@ export default function DeepBreathingSessionScreen() {
       setPhase('exhale');
       leftRef.current = durationSec;
       setPhaseLeft(durationSec);
-      try { void exhaleSoundRef.current?.replayAsync(); } catch {}
+      if (audioOnRef.current) {
+        try { void exhaleSoundRef.current?.replayAsync(); } catch {}
+      }
       // stop any previous animation to avoid overlapping chains
       animRef.current?.stop?.();
       // native haptics handled by CraveHaptics loop
@@ -184,6 +195,22 @@ export default function DeepBreathingSessionScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
+              setAudioOn(v => {
+                const next = !v;
+                audioOnRef.current = next;
+                if (!next) {
+                  void stopAllSounds();
+                }
+                return next;
+              });
+            }}
+            style={[styles.controlCircle, styles.audioRight, audioOn && styles.controlCircleActive]}
+            activeOpacity={0.8}
+          >
+            <Ionicons name={audioOn ? 'volume-high' : 'volume-mute'} size={20} color={audioOn ? theme.colors.primary : theme.colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
               setPaused(p => {
                 const next = !p;
                 pausedRef.current = next;
@@ -217,7 +244,9 @@ export default function DeepBreathingSessionScreen() {
                     setPhase('inhale');
                     leftRef.current = INHALE_SEC;
                     setPhaseLeft(INHALE_SEC);
-                    try { void inhaleSoundRef.current?.replayAsync(); } catch {}
+                    if (audioOnRef.current) {
+                      try { void inhaleSoundRef.current?.replayAsync(); } catch {}
+                    }
                     animRef.current = Animated.timing(scaleAnim, {
                       toValue: 1,
                       duration: INHALE_SEC * 1000,
@@ -230,7 +259,9 @@ export default function DeepBreathingSessionScreen() {
                         setPhase('exhale');
                         leftRef.current = EXHALE_SEC;
                         setPhaseLeft(EXHALE_SEC);
-                        try { void exhaleSoundRef.current?.replayAsync(); } catch {}
+                        if (audioOnRef.current) {
+                          try { void exhaleSoundRef.current?.replayAsync(); } catch {}
+                        }
                         animRef.current = Animated.timing(scaleAnim, {
                           toValue: innerScale,
                           duration: EXHALE_SEC * 1000,
@@ -399,7 +430,11 @@ const createStyles = (theme: any) => {
     },
     hapticsLeft: {
       position: 'absolute',
-      left: 16,
+      left: 28, // extra inset from screen edge
+    },
+    audioRight: {
+      position: 'absolute',
+      right: 28, // match left inset
     },
     shiftUpSlightly: {
       transform: [{ translateY: -20 }],

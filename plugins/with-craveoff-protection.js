@@ -12,6 +12,7 @@ const path = require("path");
 
 const DEFAULT_DOH = "https://cloudflare-dns.com/dns-query";
 const POD_DEP_TOKEN = "pod 'CraveOffProtection', :path => '../plugins/craveoff-protection/ios'";
+// Keep widest support; use shield.webDomains (WebContentFilter not available in current SDK)
 const MIN_IOS_VERSION = "16.0";
 
 const log = (...args) => {

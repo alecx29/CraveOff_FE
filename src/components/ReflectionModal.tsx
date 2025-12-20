@@ -411,7 +411,7 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     lineHeight: 22,
   },
   finishButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#ffffff',
     paddingVertical: IS_SMALL_DEVICE ? 12 : 16,
     paddingHorizontal: 32,
     borderRadius: 30,
@@ -419,7 +419,7 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     alignItems: 'center',
   },
   buttonText: {
-    color: '#fff',
+    color: '#000',
     fontSize: IS_SMALL_DEVICE ? 16 : 18,
     fontWeight: '600',
     lineHeight: 22,

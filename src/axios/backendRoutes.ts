@@ -33,6 +33,9 @@ export const BackendRoutes = {
   COMMUNITY_POST_UPVOTE: (postId: string | number) => `/community/posts/${postId}/upvote`,
   COMMUNITY_POST_COMMENTS: (postId: string | number) => `/community/posts/${postId}/comments`,
   COMMUNITY_POST: (postId: string | number) => `/community/posts/${postId}`,
+  COMMUNITY_NOTIFICATIONS: "/community/notifications",
+  COMMUNITY_NOTIFICATIONS_READ: "/community/notifications/read",
+  COMMUNITY_NOTIFICATIONS_READ_ALL: "/community/notifications/read-all",
 
   // Users
   USER_BY_ID: (userId: string) => `/users/by-id/${userId}`,

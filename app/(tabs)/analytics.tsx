@@ -149,7 +149,7 @@ export default function AnalyticsScreen() {
 
   const achievementWidgetProgress = achievementStats.progress;
   const achievementWidgetImage = getAchievementImage(
-    achievementStats.currentAchievement?.code || 'STREAK_1'
+    achievementStats.currentAchievement?.code || 'STREAK_0'
   );
   const achievementWidgetDescription =
     achievementStats.currentAchievement?.description ||

@@ -1,10 +1,11 @@
 import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
+import { BlurView } from 'expo-blur';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { useLogs, LogEntry } from '@/src/context/LogsContext';
@@ -26,6 +27,7 @@ import { useAchievements } from '@/src/context/AchievementsContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import HomeTopBar from '@/src/components/header/HomeTopBar';
 import ContentBlockerComingSoonModal from '@/src/components/ContentBlockerComingSoonModal';
+import { getAchievementImage } from '@/src/utils/achievementImages';
 
 // Helper function to format time with more precision
 const formatTimeCounter = (seconds: number) => {
@@ -120,7 +122,7 @@ export default function HomeScreen() {
   const { theme } = useTheme();
   const oriaInsets = useSafeAreaInsets();
   const { logs, lastRelapseData, fetchLogs } = useLogs();
-  const { refreshFromApi } = useAchievements();
+  const { refreshFromApi, achievements: achievementsList } = useAchievements();
   const styles = createStyles(theme, oriaInsets);
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = screenWidth - 40; // Define card width as a constant
@@ -137,6 +139,7 @@ export default function HomeScreen() {
   
   // State for showing the relapsed modal
   const [showRelapsedModal, setShowRelapsedModal] = useState(false);
+  const [showStreakModal, setShowStreakModal] = useState(false);
   
   // State for showing the Oria chat modal
   const [showOriaModal, setShowOriaModal] = useState(false);
@@ -217,6 +220,32 @@ export default function HomeScreen() {
   useEffect(() => {
     refreshFromApi();
   }, []);
+
+  const currentAchievementImage = useMemo(() => {
+    try {
+      const unlocked = (achievementsList || []).filter((a: any) => !!a.unlocked);
+      if (unlocked.length === 0) return null;
+      const withDate = unlocked.map((a: any) => ({
+        item: a,
+        date: a.unlockedAt ? new Date(a.unlockedAt) : null,
+        threshold: typeof a.threshold === 'number' ? a.threshold : -1,
+      }));
+      // Prefer latest by date if available, otherwise by highest threshold
+      withDate.sort((a: any, b: any) => {
+        if (a.date && b.date) return b.date.getTime() - a.date.getTime();
+        if (a.date && !b.date) return -1;
+        if (!a.date && b.date) return 1;
+        return b.threshold - a.threshold;
+      });
+      const winner = withDate[0]?.item;
+      if (!winner) return null;
+      return getAchievementImage(winner.code);
+    } catch {
+      return null;
+    }
+  }, [achievementsList]);
+
+  const profileAvatarSource = currentAchievementImage || require('@/assets/images/output1.webp');
   
   // Animated style for loading indicator
   const loadingIndicatorStyle = useAnimatedStyle(() => {
@@ -1178,6 +1207,30 @@ export default function HomeScreen() {
     return theme.colors.accent as string || '#dc2626'; // Default red
   };
 
+  const renderCleanDaysCard = (customStyle?: any) => (
+    <View style={[styles.widgetCard, styles.widgetCardTransparent, { width: cardWidth, marginLeft: 20 }, customStyle]}>
+      <View style={styles.cleanDaysContent}>
+        <Text style={styles.cleanDaysNumber}>{cleanDays}</Text>
+        <Ionicons name="flame" size={28} color={getFlameColor()} style={styles.flameIcon} />
+      </View>
+      <Text style={styles.cleanDaysText}>Clean Days</Text>
+      {cleanDays === 0 ? (
+        <Text style={styles.cleanDaysSubtext}>Keep going! Enter the streak</Text>
+      ) : (
+        <Text style={styles.cleanDaysSubtext}>Keep going! You&apos;re on fire</Text>
+      )}
+    </View>
+  );
+
+  const renderProfileAvatarCard = () => (
+    <View style={[styles.widgetCard, styles.widgetCardTransparent, { width: cardWidth, marginLeft: 20 }]}>
+      <View style={styles.profileAvatarCircle}>
+        <Image source={profileAvatarSource} style={styles.profileAvatarImage} resizeMode="cover" />
+      </View>
+      <Text style={styles.profileCleanDaysText}>{cleanDays} clean days</Text>
+    </View>
+  );
+
   const { pledgeHistory, canMakePledge, activePledgeTimeRemaining, activePledgeStartTime, activePledgeEndTime, isLoadingPledgeHistory, fetchPledgeHistory } = usePledge();
 
   // Handle pledge button press
@@ -1245,6 +1298,7 @@ export default function HomeScreen() {
           onChatPress={() => setShowOriaModal(true)}
           onPetPress={() => { animatePet(); setShowPetModal(true); }}
           petAnimatedStyle={petAnimatedStyle}
+          onStreakPress={() => setShowStreakModal(true)}
         />
         
         {/* Calendar săptămânal */}
@@ -1303,19 +1357,8 @@ export default function HomeScreen() {
               <Text style={styles.cleanDaysText}>Porn-Free Time</Text>
             </View>
             
-            {/* Card zile curate */}
-            <View style={[styles.widgetCard, styles.widgetCardTransparent, { width: cardWidth, marginLeft: 20 }]}>
-              <View style={styles.cleanDaysContent}>
-                <Text style={styles.cleanDaysNumber}>{cleanDays}</Text>
-                <Ionicons name="flame" size={28} color={getFlameColor()} style={styles.flameIcon} />
-              </View>
-              <Text style={styles.cleanDaysText}>Clean Days</Text>
-              {cleanDays === 0 ? (
-                <Text style={styles.cleanDaysSubtext}>Keep going! Enter the streak</Text>
-              ) : (
-                <Text style={styles.cleanDaysSubtext}>Keep going! You&apos;re on fire</Text>
-              )}
-            </View>
+            {/* Card avatar (same image as Profile tab top) */}
+            {renderProfileAvatarCard()}
           </Animated.ScrollView>
           
           {/* Widget indicators */}
@@ -1436,6 +1479,7 @@ export default function HomeScreen() {
           <Feather name="shield" size={20} color="#fff" />
           <Text style={styles.panicButtonText}>Panic Button</Text>
         </TouchableOpacity>
+        <Text style={styles.panicSubtitle}>CraveOff 2.0 launching soon</Text>
         
         {/* Chenare 21 Day Challenge și Pet */}
         <View style={styles.challengeRow}>
@@ -1570,6 +1614,36 @@ export default function HomeScreen() {
         )}
         </ScrollView>
       </SafeAreaView>
+      
+      {/* Streak Modal from header badge */}
+      <Modal
+        visible={showStreakModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowStreakModal(false)}
+      >
+        <View style={styles.streakModalRoot} pointerEvents="box-none">
+          <>
+            <BlurView intensity={80} tint="dark" style={styles.streakModalBlur} />
+            <View style={styles.streakModalDim} />
+          </>
+          <TouchableWithoutFeedback onPress={() => setShowStreakModal(false)}>
+            <View style={styles.streakModalBackdrop} />
+          </TouchableWithoutFeedback>
+          <View style={styles.streakModalCardWrap} pointerEvents="box-none">
+            <View style={styles.streakModalCard}>
+              {renderCleanDaysCard({ width: '100%', marginLeft: 0, marginRight: 0 })}
+              <TouchableOpacity
+                style={styles.streakCloseButton}
+                onPress={() => setShowStreakModal(false)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.streakCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       
       {/* Pledge Modal */}
       <PledgeModal 
@@ -1910,6 +1984,26 @@ const createStyles = (theme: any, insets: { top: number }) => StyleSheet.create(
   cleanDaysSubtext: {
     fontSize: 14,
     color: theme.colors.textMuted,
+  },
+  profileAvatarCircle: {
+    width: 152,
+    height: 152,
+    borderRadius: 66,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  profileAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileCleanDaysText: {
+    // marginTop: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
   craveOffButton: {
     backgroundColor: theme.colors.emergency,
@@ -2437,6 +2531,56 @@ const createStyles = (theme: any, insets: { top: number }) => StyleSheet.create(
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  panicSubtitle: {
+    marginTop: 6,
+    marginBottom: 12,
+    textAlign: 'center',
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+  },
+  streakModalRoot: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  streakModalBlur: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  streakModalDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+  },
+  streakModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+  },
+  streakModalCardWrap: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  streakModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: theme.borderRadius.medium,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    padding: 0,
+  },
+  streakCloseButton: {
+    marginTop: 16,
+    alignSelf: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  streakCloseText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   challengeRow: {
     flexDirection: 'row',

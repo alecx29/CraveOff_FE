@@ -11,6 +11,7 @@ type HomeTopBarProps = {
   onChatPress: () => void;
   onPetPress: () => void;
   petAnimatedStyle?: any;
+  onStreakPress?: () => void;
 };
 
 const HomeTopBar: React.FC<HomeTopBarProps> = ({
@@ -19,6 +20,7 @@ const HomeTopBar: React.FC<HomeTopBarProps> = ({
   onChatPress,
   onPetPress,
   petAnimatedStyle,
+  onStreakPress,
 }) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -44,10 +46,14 @@ const HomeTopBar: React.FC<HomeTopBarProps> = ({
       </View>
 
       <View style={styles.headerButtons}>
-        <View style={[styles.streakBadge, { marginRight: 10 }]}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={onStreakPress}
+          style={[styles.streakBadge, { marginRight: 10 }]}
+        >
           <Ionicons name="flame" size={18} color={getFlameColor()} />
           <Text style={styles.streakBadgeText}>{cleanDays}</Text>
-        </View>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.petButton, { marginRight: 10 }]}
           activeOpacity={0.8}
@@ -74,7 +80,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   logoContainer: {
     flexDirection: 'column',

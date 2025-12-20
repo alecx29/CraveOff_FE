@@ -1,7 +1,6 @@
 import React from 'react';
-import { Modal, TouchableOpacity, View, Text } from 'react-native';
+import { Modal, TouchableOpacity, View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/context/ThemeProvider';
 
 interface PetComingSoonModalProps {
@@ -11,46 +10,112 @@ interface PetComingSoonModalProps {
 
 const PetComingSoonModal: React.FC<PetComingSoonModalProps> = ({ visible, onClose }) => {
   const { theme } = useTheme();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   return (
     <Modal
       animationType="fade"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
+      statusBarTranslucent
+      presentationStyle="overFullScreen"
     >
-      <TouchableOpacity 
-        style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' }} 
-        activeOpacity={1} 
-        onPress={onClose}
-      >
-        <Animated.View 
-          style={{ backgroundColor: theme.colors.background, borderRadius: theme.borderRadius.large, padding: 24, width: '85%', maxWidth: 340, ...theme.shadows.medium }}
+      <View style={styles.overlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Animated.View
+          style={styles.card}
           entering={FadeIn.duration(300).springify()}
           exiting={FadeOut.duration(200)}
         >
-          <TouchableOpacity activeOpacity={1}>
-            <View style={{ alignItems: 'center' }}>
-              <View style={{ backgroundColor: `${theme.colors.primary}15`, borderRadius: 30, padding: 16, marginBottom: 20 }}>
-                <Text style={{ fontSize: 36 }}>🐶</Text>
-              </View>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: theme.colors.textPrimary, marginBottom: 4 }}>Virtual Pet</Text>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: theme.colors.primary, marginBottom: 16 }}>Coming Soon</Text>
-              <Text style={{ fontSize: 15, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 24 }}>
-                Soon you&apos;ll be able to adopt a virtual pet that grows and evolves as you progress in your recovery journey.
-                Stay tuned for this exciting feature!
-              </Text>
-              <TouchableOpacity 
-                style={{ backgroundColor: theme.colors.primary, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 32, marginTop: 8 }}
-                onPress={onClose}
-              >
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#fff' }}>Got it</Text>
-              </TouchableOpacity>
+          <View style={styles.content}>
+            <View style={styles.iconWrapper}>
+              <Text style={styles.emoji}>🐶</Text>
             </View>
-          </TouchableOpacity>
+            <Text style={styles.title}>Virtual Pet</Text>
+            <Text style={styles.subtitle}>Coming Soon</Text>
+            <Text style={styles.description}>
+              Soon you&apos;ll be able to adopt a virtual pet that grows and evolves as you progress in your recovery journey.
+              Stay tuned for this exciting feature!
+            </Text>
+            <TouchableOpacity 
+              style={styles.ctaButton}
+              onPress={onClose}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.ctaText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
-      </TouchableOpacity>
+      </View>
     </Modal>
   );
 };
 
 export default PetComingSoonModal; 
+
+const createStyles = (theme: any) => StyleSheet.create({
+  overlay: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  },
+  card: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.large,
+    padding: 24,
+    ...theme.shadows.medium,
+  },
+  content: {
+    alignItems: 'center',
+  },
+  iconWrapper: {
+    backgroundColor: `${theme.colors.primary}15`,
+    borderRadius: 30,
+    padding: 16,
+    marginBottom: 20,
+  },
+  emoji: {
+    fontSize: 36,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.primary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  description: {
+    fontSize: 15,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  ctaButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    marginTop: 8,
+  },
+  ctaText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'center',
+  },
+});

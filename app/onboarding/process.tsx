@@ -7,6 +7,7 @@ import { useTheme } from '@/src/context/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import LottieUniversal from '@/src/components/LottieUniversal';
 import OnboardingProgressDots from '@/src/components/OnboardingProgressDots';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
@@ -46,7 +47,8 @@ const STEPS: Step[] = [
 
 export default function OnboardingProcess() {
   const { theme } = useTheme();
-  const styles = createStyles();
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(insets);
   const scrollRef = React.useRef<ScrollView | null>(null);
   const [index, setIndex] = React.useState(0);
   const lastNavAtRef = React.useRef(0);
@@ -174,7 +176,7 @@ export default function OnboardingProcess() {
   );
 }
 
-const createStyles = () =>
+const createStyles = (insets: any) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -229,7 +231,7 @@ const createStyles = () =>
     },
     bottomContainer: {
       position: 'absolute',
-      bottom: height * 0.08, // Position from bottom
+      bottom: height * 0.08 + insets.bottom, // Align with conquer screens on devices with gesture/navigation bars
       left: 0,
       right: 0,
       alignItems: 'center',

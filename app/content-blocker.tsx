@@ -9,6 +9,8 @@ import { DEFAULT_BLOCKLIST } from '@/src/config/blocklist-default';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import LottieUniversal from '@/src/components/LottieUniversal';
 
+const IOS_MAX_WEBSITES = 20;
+
 export default function ContentBlockerScreen() {
 	const { theme } = useTheme();
 	const insets = useSafeAreaInsets();
@@ -16,6 +18,7 @@ export default function ContentBlockerScreen() {
 	const [enabled, setEnabled] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [, setMode] = useState<'full-tunnel' | 'dns-only' | undefined>();
+	const [blockedCount, setBlockedCount] = useState<number>(0);
 
 	useEffect(() => {
 		let sub: any;
@@ -24,6 +27,7 @@ export default function ContentBlockerScreen() {
 				const s = await CraveOffProtection.status();
 				setEnabled(!!s.running);
 				setMode(s.mode);
+				setBlockedCount(Number.isFinite(s.blocklistSize) ? s.blocklistSize : 0);
 			} catch {}
 		};
 		init();
@@ -87,10 +91,32 @@ export default function ContentBlockerScreen() {
 						);
 						return;
 					}
-					// Apply blocklist after authorization succeeds
-					try { await CraveOffProtection.applyBlocklist(DEFAULT_BLOCKLIST); } catch {}
-					// Optimistic UI after successful authorization
-					setEnabled(true);
+					// After authorization, force user to select websites to block (max 20).
+					// If user cancels, toggle must go back OFF.
+					try {
+						const result = await CraveOffProtection.configureWebsites(IOS_MAX_WEBSITES);
+						if (result?.cancelled) {
+							setEnabled(false);
+							setMode(undefined);
+							return;
+						}
+						if (result?.trimmed) {
+							Alert.alert(
+								'Selection limit',
+								`You can select up to ${IOS_MAX_WEBSITES} websites. Only the first ${IOS_MAX_WEBSITES} were saved.`
+							);
+						}
+						if (typeof result?.selectedCount === 'number') {
+							setBlockedCount(result.selectedCount);
+						}
+						setEnabled(true);
+					} catch (e: any) {
+						// Empty selection or other error
+						setEnabled(false);
+						setMode(undefined);
+						Alert.alert('Setup required', e?.message || 'Please select at least one website to block.');
+						return;
+					}
 				} else {
 					// Android: keep original order (apply list then enable)
 					try { await CraveOffProtection.applyBlocklist(DEFAULT_BLOCKLIST); } catch {}
@@ -172,8 +198,9 @@ export default function ContentBlockerScreen() {
 					/>
 					<Text style={styles.heroTitle}>Content Blocker</Text>
 					<Text style={styles.heroSubtitle}>
-					CraveOff uses a local on-device VPN to filter adult (18+) websites and enforce SafeSearch.
-					No traffic is sent to external VPN servers.
+					{Platform.OS === 'ios'
+						? 'CraveOff uses Screen Time (Family Controls) to block apps and NSFW websites you choose on iOS.'
+						: 'CraveOff uses a local on-device VPN to filter adult (18+) websites and enforce SafeSearch. No traffic is sent to external VPN servers.'}
 					</Text>
 				</View>
 
@@ -194,6 +221,35 @@ export default function ContentBlockerScreen() {
 						</Text>
 					)}
 				</View>
+
+				{Platform.OS === 'ios' && (
+					<TouchableOpacity
+						activeOpacity={0.85}
+						style={styles.appBlockerCard}
+						onPress={() => Alert.alert('Coming soon', 'App Blocker is coming soon.')}
+					>
+						<View style={styles.appBlockerRow}>
+							<View style={styles.appBlockerLeft}>
+								<Text style={styles.appBlockerTitle}>App Blocker</Text>
+								<Text style={styles.appBlockerCount}>{blockedCount}</Text>
+							</View>
+							<Ionicons name="chevron-forward" size={22} color={theme.colors.textPrimary} />
+						</View>
+					</TouchableOpacity>
+				)}
+
+				{Platform.OS === 'ios' && (
+					<TouchableOpacity
+						activeOpacity={0.85}
+						style={styles.troubleshootCard}
+						onPress={() => router.push('/content-blocker-ios-help' as any)}
+					>
+						<View style={styles.troubleshootRow}>
+							<Text style={styles.troubleshootText}>Content isn&apos;t being blocked?</Text>
+							<Ionicons name="chevron-forward" size={20} color={theme.colors.textPrimary} />
+						</View>
+					</TouchableOpacity>
+				)}
 
 				{Platform.OS === 'android' && (
 					<View style={styles.helpCard}>
@@ -280,6 +336,52 @@ const createStyles = (theme: any) => StyleSheet.create({
 		padding: 16,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: theme.colors.inputBorder,
+	},
+	appBlockerCard: {
+		marginTop: 12,
+		backgroundColor: theme.colors.card || theme.colors.surface || '#121218',
+		borderRadius: 14,
+		overflow: 'hidden',
+		padding: 16,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: theme.colors.inputBorder,
+	},
+	appBlockerRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	appBlockerLeft: {
+		flexDirection: 'column',
+	},
+	appBlockerTitle: {
+		color: theme.colors.textPrimary,
+		fontSize: 16,
+		fontWeight: '600',
+	},
+	appBlockerCount: {
+		marginTop: 6,
+		color: theme.colors.textSecondary,
+		fontSize: 14,
+		fontWeight: '600',
+	},
+	troubleshootCard: {
+		marginTop: 12,
+		backgroundColor: theme.colors.card || theme.colors.surface || '#121218',
+		borderRadius: 14,
+		padding: 16,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: theme.colors.inputBorder,
+	},
+	troubleshootRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	troubleshootText: {
+		color: theme.colors.textPrimary,
+		fontSize: 15,
+		fontWeight: '600',
 	},
 	helpCard: {
 		backgroundColor: theme.colors.card || theme.colors.surface || '#121218',

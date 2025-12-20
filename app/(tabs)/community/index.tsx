@@ -77,7 +77,7 @@ export default function CommunityInfoScreen() {
     [scrollContentPadding]
   );
   const { user: authUser } = useContext(AuthContext);
-  const [activeTab, setActiveTab] = useState<'info' | 'forum' | 'clans'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'forum' | 'clans'>('forum');
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [hasPrefetchedRooms, setHasPrefetchedRooms] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -100,6 +100,14 @@ export default function CommunityInfoScreen() {
   const [creatingPost, setCreatingPost] = useState<boolean>(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState<number>(0);
+
+  const handleNotificationsPress = () => {
+    router.push('/community/notifications');
+  };
+
+  const handleChatPress = () => {
+    // Placeholder: functionality will be provided later
+  };
 
   const openReddit = () => {
     Linking.openURL('https://www.reddit.com/r/CraveOff/');
@@ -223,30 +231,28 @@ export default function CommunityInfoScreen() {
   return (
     <GradientBackground>
       <View style={styles.container}>
-        <Text style={styles.title}>Community</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Community</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleNotificationsPress}
+              style={styles.headerIconButton}
+            >
+              <Ionicons name="notifications-outline" size={24} color={theme.colors.textPrimary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleChatPress}
+              style={styles.headerIconButton}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={24} color={theme.colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <View style={styles.tabsContainer}>
-          {activeTab === 'info' ? (
-            <TouchableOpacity activeOpacity={0.8} style={[styles.pillWrap, styles.pillActive]}>
-              <View style={styles.pillContent}>
-                <Ionicons name="trophy-outline" size={16} color="#111827" style={styles.pillIcon} />
-                <Text style={styles.pillTextActive}>Info</Text>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity activeOpacity={0.8} style={styles.pillWrap} onPress={() => setActiveTab('info')}>
-              <LinearGradient
-                colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
-                style={styles.pillGradient}
-              >
-                <View style={styles.pillContent}>
-                  <Ionicons name="trophy-outline" size={16} color={theme.colors.textPrimary} style={styles.pillIcon} />
-                  <Text style={styles.pillTextInactive}>Info</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-
+          {/* Forum */}
           {activeTab === 'forum' ? (
             <TouchableOpacity activeOpacity={0.8} style={[styles.pillWrap, styles.pillActive]}>
               <View style={styles.pillContent}>
@@ -268,6 +274,7 @@ export default function CommunityInfoScreen() {
             </TouchableOpacity>
           )}
 
+          {/* Clans */}
           {activeTab === 'clans' ? (
             <TouchableOpacity activeOpacity={0.8} style={[styles.pillWrap, styles.pillActive]}>
               <View style={styles.pillContent}>
@@ -284,6 +291,28 @@ export default function CommunityInfoScreen() {
                 <View style={styles.pillContent}>
                   <Ionicons name="people-outline" size={16} color={theme.colors.textPrimary} style={styles.pillIcon} />
                   <Text style={styles.pillTextInactive}>Clans</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+
+          {/* Info */}
+          {activeTab === 'info' ? (
+            <TouchableOpacity activeOpacity={0.8} style={[styles.pillWrap, styles.pillActive]}>
+              <View style={styles.pillContent}>
+                <Ionicons name="trophy-outline" size={16} color="#111827" style={styles.pillIcon} />
+                <Text style={styles.pillTextActive}>Info</Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity activeOpacity={0.8} style={styles.pillWrap} onPress={() => setActiveTab('info')}>
+              <LinearGradient
+                colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
+                style={styles.pillGradient}
+              >
+                <View style={styles.pillContent}>
+                  <Ionicons name="trophy-outline" size={16} color={theme.colors.textPrimary} style={styles.pillIcon} />
+                  <Text style={styles.pillTextInactive}>Info</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -803,11 +832,27 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingBottom: 0,
     backgroundColor: 'transparent',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: theme.colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 0,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIconButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
+    padding: 6,
   },
   tabsContainer: {
     flexDirection: 'row',

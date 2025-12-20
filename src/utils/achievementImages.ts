@@ -3,9 +3,6 @@ import { ImageSourcePropType } from "react-native";
 // Static mapping required by Metro bundler for asset inclusion
 const achievementImageMap: Record<string, ImageSourcePropType> = {
   STREAK_0: require("@/assets/images/output1.webp"),
-  WELCOME: require("@/assets/images/output1.webp"), // legacy alias kept for backwards compatibility
-  // Provided assets
-  STREAK_1: require("@/assets/images/output1.webp"),
   STREAK_3: require("@/assets/images/output7.webp"),
   STREAK_7: require("@/assets/images/output14.webp"),
   STREAK_14: require("@/assets/images/output30.webp"),

@@ -395,7 +395,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   weekCard: {
     backgroundColor: 'transparent',
     // borderRadius: theme.borderRadius.medium,
-    marginBottom: 16,
+    marginBottom: 0,
     overflow: 'hidden',
     ...Platform.select({
       android: {

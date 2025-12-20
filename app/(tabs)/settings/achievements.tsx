@@ -12,7 +12,7 @@ import LottieUniversal from '@/src/components/LottieUniversal';
 import { getAchievementImage } from '@/src/utils/achievementImages';
 import { BlurView } from 'expo-blur';
 
-const isStarterAchievement = (code?: string) => code === 'STREAK_0' || code === 'WELCOME';
+const isStarterAchievement = (code?: string) => code === 'WELCOME';
 
 const AchievementsScreen = () => {
   const { theme } = useTheme();
