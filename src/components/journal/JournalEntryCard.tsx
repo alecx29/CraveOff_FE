@@ -100,9 +100,9 @@ const JournalEntryCard: React.FC<JournalEntryCardProps> = ({ entry, onPress }) =
         style={styles.cardGradient}
       >
         <View style={styles.cardHeader}>
-          <View style={styles.dateContainer}>
-            <Text style={styles.date}>{formattedDate}</Text>
-          </View>
+          <Text style={styles.title} numberOfLines={2}>
+            {entry.title}
+          </Text>
           <View style={[
             styles.moodContainer, 
             { 
@@ -114,8 +114,6 @@ const JournalEntryCard: React.FC<JournalEntryCardProps> = ({ entry, onPress }) =
             <Text style={[styles.moodLabel, { color: moodInfo.color }]}>{moodInfo.label}</Text>
           </View>
         </View>
-        
-        <Text style={styles.title}>{entry.title}</Text>
         
         <Text style={styles.content} numberOfLines={1}>
           {entry.content}
@@ -133,6 +131,8 @@ const JournalEntryCard: React.FC<JournalEntryCardProps> = ({ entry, onPress }) =
             )}
           </View>
         )}
+
+        <Text style={styles.date}>{formattedDate}</Text>
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -155,19 +155,8 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      gap: 12,
       marginBottom: 8,
-    },
-    dateContainer: {
-      borderWidth: 1,
-      borderColor: getColor(theme, 'borderLight', '#e2e8f0'),
-      borderRadius: 16,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      backgroundColor: getColor(theme, 'cardInteractive', '#F1F5F9'),
-    },
-    date: {
-      fontSize: 14,
-      color: theme.colors.textSecondary,
     },
     moodContainer: {
       flexDirection: 'row',
@@ -190,7 +179,7 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
       fontSize: 18,
       fontWeight: '600',
       color: theme.colors.textPrimary,
-      marginBottom: 6,
+      flex: 1,
     },
     content: {
       fontSize: 14,
@@ -211,6 +200,14 @@ const createStyles = (theme: any, getColor: (theme: any, colorName: string, fall
     },
     tagText: {
       fontSize: 12,
+      color: theme.colors.textSecondary,
+    },
+    dateContainer: {
+      marginTop: 8,
+    },
+    date: {
+      marginTop: 8,
+      fontSize: 13,
       color: theme.colors.textSecondary,
     }
   });

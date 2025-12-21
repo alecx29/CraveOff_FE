@@ -422,23 +422,23 @@ export default function CommunityPostDetailsScreen() {
                 onPress={handleOpenProfile}
                 style={styles.headerPressArea}
               >
-                {achievementAvatarSource ? (
-                  <Image source={achievementAvatarSource} style={styles.avatar} />
-                ) : authorAvatarUrl ? (
-                  <Image source={{ uri: authorAvatarUrl }} style={styles.avatar} />
-                ) : (
-                  <View style={styles.avatarPlaceholder} />
-                )}
-                <View style={styles.headerText}>
-                  <Text style={styles.authorName} numberOfLines={1}>
-                    {authorName}
+              {achievementAvatarSource ? (
+                <Image source={achievementAvatarSource} style={styles.avatar} />
+              ) : authorAvatarUrl ? (
+                <Image source={{ uri: authorAvatarUrl }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder} />
+              )}
+              <View style={styles.headerText}>
+                <Text style={styles.authorName} numberOfLines={1}>
+                  {authorName}
+                </Text>
+                {!!userStreakLabel && (
+                  <Text style={styles.metaText} numberOfLines={1}>
+                    {userStreakLabel}
                   </Text>
-                  {!!userStreakLabel && (
-                    <Text style={styles.metaText} numberOfLines={1}>
-                      {userStreakLabel}
-                    </Text>
-                  )}
-                </View>
+                )}
+              </View>
               </TouchableOpacity>
               <View style={styles.postHeaderActions}>
                 <CommunityUpvote

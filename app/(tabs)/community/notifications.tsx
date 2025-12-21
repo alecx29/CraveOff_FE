@@ -363,9 +363,9 @@ export default function NotificationsScreen() {
           >
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderLeft}>
-                <Text style={styles.cardTitle} numberOfLines={1}>
-                  {item.actorName}
-                </Text>
+              <Text style={styles.cardTitle} numberOfLines={1}>
+                {item.actorName}
+              </Text>
                 {!item.isRead && <View style={styles.unreadDot} />}
               </View>
               {item.timestamp && (

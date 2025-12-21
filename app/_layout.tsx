@@ -296,6 +296,7 @@ const AuthNavigation: React.FC = () => {
           <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="deep-breathing" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'slide_from_right' }} />
           <Stack.Screen name="deep-breathing/session" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }} />
+          <Stack.Screen name="journal-modal" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
           <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
 
           <Stack.Screen
