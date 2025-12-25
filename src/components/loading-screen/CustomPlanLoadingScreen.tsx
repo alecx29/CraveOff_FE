@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { 
   useSharedValue, 
@@ -23,16 +23,31 @@ const CustomPlanLoadingScreen = ({
 }: CustomPlanLoadingScreenProps) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
-  
+
+  // Keep a React state for the displayed percentage.
+  // Reanimated shared values won't trigger React re-renders when they change.
+  const [percent, setPercent] = useState(0);
+
   // Animation progress value (0 to 1)
   const progress = useSharedValue(0);
-  
+
   // Percentage text scale animation
   const scaleText = useSharedValue(1);
-  
+
   // Reset and start animation when visible changes
   useEffect(() => {
     if (visible) {
+      // Drive the displayed percent in JS over the same duration.
+      // (We keep the visual/opacity animation in Reanimated.)
+      setPercent(0);
+      const start = Date.now();
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - start;
+        const p = Math.min(1, elapsed / duration);
+        setPercent(Math.round(p * 100));
+        if (p >= 1) clearInterval(interval);
+      }, 50);
+
       // Progress animation
       progress.value = 0;
       progress.value = withTiming(1, {
@@ -50,6 +65,8 @@ const CustomPlanLoadingScreen = ({
         -1, // Infinite repeat
         true // With reverse (ping-pong)
       );
+
+      return () => clearInterval(interval);
     }
   }, [visible, duration, progress, scaleText]);
   
@@ -89,7 +106,7 @@ const CustomPlanLoadingScreen = ({
             <Animated.Text 
               style={[styles.percentageText, textAnimatedStyle]}
             >
-              {Math.round(progress.value * 100)}%
+              {percent}%
             </Animated.Text>
           </View>
         </View>
@@ -138,8 +155,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginVertical: 16,
   },
   animationContainer: {
-    width: 220,
-    height: 220,
+    width: 250,
+    height: 250,
     justifyContent: 'center',
     alignItems: 'center',
     marginVertical: 16,

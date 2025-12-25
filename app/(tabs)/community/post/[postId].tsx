@@ -268,13 +268,26 @@ export default function CommunityPostDetailsScreen() {
 
   const canNavigateProfile = useMemo(() => !!authorId && String(authorId).trim().length > 0, [authorId]);
 
+  const navigateToUserProfile = useCallback(
+    (userIdValue?: string | number, achievementCodeValue?: string) => {
+      if (userIdValue === undefined || userIdValue === null) return;
+      const trimmedId = String(userIdValue).trim();
+      if (!trimmedId) return;
+      router.push({
+        pathname: '/(tabs)/community/user/[userId]' as any,
+        params: {
+          userId: trimmedId,
+          achievementCode: achievementCodeValue ? String(achievementCodeValue) : '',
+        },
+      });
+    },
+    [router]
+  );
+
   const handleOpenProfile = useCallback(() => {
     if (!canNavigateProfile) return;
-    router.push({
-      pathname: '/(tabs)/community/user/[userId]' as any,
-      params: { userId: String(authorId), achievementCode: achievementCode || '' }
-    });
-  }, [canNavigateProfile, authorId, achievementCode]);
+    navigateToUserProfile(authorId, achievementCode);
+  }, [canNavigateProfile, navigateToUserProfile, authorId, achievementCode]);
 
   // Build user streak label (from DTO field user_current_streak)
   const userStreakLabel = useMemo(() => {
@@ -311,19 +324,48 @@ export default function CommunityPostDetailsScreen() {
     const displayName = (node.comment?.user_name && String(node.comment.user_name).trim().length > 0)
       ? String(node.comment.user_name)
       : (node.comment?.user_id ? `User ${String(node.comment.user_id)}` : 'User');
-    const achievementCode = node.comment?.user_last_achievement_code as string | undefined;
-    const achievementAvatarSource = achievementCode ? getAchievementImage(String(achievementCode)) : null;
+    const commentAchievementCode = node.comment?.user_last_achievement_code as string | undefined;
+    const achievementAvatarSource = commentAchievementCode ? getAchievementImage(String(commentAchievementCode)) : null;
+    const commenterIdRaw =
+      node.comment?.user_id ??
+      (node.comment as any)?.userId ??
+      (node.comment as any)?.user_id ??
+      (node.comment as any)?.user?.id ??
+      (node.comment as any)?.user?.user_id ??
+      null;
+    const commenterId = commenterIdRaw !== undefined && commenterIdRaw !== null ? String(commenterIdRaw) : '';
+    const canNavigateToCommenter = commenterId.trim().length > 0;
+    const handleCommenterPress = () => {
+      if (!canNavigateToCommenter) return;
+      navigateToUserProfile(commenterId, commentAchievementCode);
+    };
     return (
       <View key={String(node.comment.id)} style={[depth > 0 ? { marginLeft: Math.min(depth * 12, 48) } : null]}>
         <View style={[styles.messageRow, styles.rowTheirs]}>
-          {achievementAvatarSource ? (
-            <Image source={achievementAvatarSource} style={styles.avatarSmall} />
-          ) : (
-            <View style={styles.avatarSmallPlaceholder} />
-          )}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            disabled={!canNavigateToCommenter}
+            onPress={handleCommenterPress}
+            style={styles.commentAvatarPressable}
+            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+          >
+            {achievementAvatarSource ? (
+              <Image source={achievementAvatarSource} style={styles.avatarSmall} />
+            ) : (
+              <View style={styles.avatarSmallPlaceholder} />
+            )}
+          </TouchableOpacity>
           <View style={styles.theirsContent}>
             <View style={styles.nameRow}>
-              <Text style={styles.nameText} numberOfLines={1}>{displayName}</Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                disabled={!canNavigateToCommenter}
+                onPress={handleCommenterPress}
+                hitSlop={{ top: 6, bottom: 6, left: 2, right: 4 }}
+                style={styles.nameTouchable}
+              >
+                <Text style={styles.nameText} numberOfLines={1}>{displayName}</Text>
+              </TouchableOpacity>
             </View>
             <LinearGradient colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']} style={[styles.bubble, styles.bubbleGradient, styles.bubbleTheirsAlign]}>
               <Text style={[styles.messageText, styles.textGeneric]}>
@@ -780,18 +822,20 @@ const createStyles = (theme: any) =>
       justifyContent: 'flex-start',
       alignItems: 'flex-start',
     },
+    commentAvatarPressable: {
+      marginRight: 8,
+      borderRadius: 12,
+    },
     avatarSmall: {
       width: 24,
       height: 24,
       borderRadius: 12,
-      marginRight: 8,
       marginTop: 0,
     },
     avatarSmallPlaceholder: {
       width: 24,
       height: 24,
       borderRadius: 12,
-      marginRight: 8,
       marginTop: 0,
       backgroundColor: 'rgba(255,255,255,0.08)'
     },
@@ -803,6 +847,10 @@ const createStyles = (theme: any) =>
       height: 24,
       paddingTop:3,
       justifyContent: 'center',
+    },
+    nameTouchable: {
+      flexShrink: 1,
+      maxWidth: '100%',
     },
     nameText: {
       fontSize: 12,

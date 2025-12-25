@@ -46,6 +46,7 @@ export default function CommunityUpvote(props: Props) {
       activeOpacity={0.85}
       onPress={handlePress}
       disabled={pending}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       style={[styles.upvoteButton, style]}
     >
       <View style={styles.upvoteCircle}>

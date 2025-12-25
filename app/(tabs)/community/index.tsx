@@ -10,36 +10,8 @@ import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
 import { AuthContext } from '@/src/context/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getAchievementImage } from '@/src/utils/achievementImages';
-import CommunityUpvote from '@/src/components/community/CommunityUpvote';
+import CommunityPostCard from '@/src/components/community/CommunityPostCard';
 
-function formatTimeAgo(input?: string | number | Date): string {
-  try {
-    if (!input) return '';
-    const date = new Date(input);
-    if (isNaN(date.getTime())) return '';
-    const now = new Date();
-    let diff = Math.floor((now.getTime() - date.getTime()) / 1000); // seconds
-    if (diff < 0) diff = 0;
-    if (diff < 5) return 'now';
-    if (diff < 60) return `${diff}s ago`;
-    const mins = Math.floor(diff / 60);
-    if (mins < 60) return mins === 1 ? '1 min ago' : `${mins} mins ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
-    const days = Math.floor(hours / 24);
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days} days ago`;
-    const weeks = Math.floor(days / 7);
-    if (weeks < 5) return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
-    const months = Math.floor(days / 30);
-    if (months < 12) return months <= 1 ? '1 month ago' : `${months} months ago`;
-    const years = Math.floor(days / 365);
-    return years <= 1 ? '1 year ago' : `${years} years ago`;
-  } catch {
-    return '';
-  }
-}
 
 type ChatRoom = {
   id: string | number;
@@ -67,6 +39,186 @@ type PostResponse = {
   user_last_achievement_code?: string;
 };
 
+const POSTS_PAGE_SIZE = 12;
+
+type PostsPaginationMeta = {
+  nextCursor: string | number | null;
+  hasMore?: boolean;
+  totalPages?: number;
+  currentPage?: number;
+  hasNextLink?: boolean;
+};
+
+type PostsFetchMode = 'replace' | 'append';
+
+const firstNonEmptyValue = (...values: any[]): any => {
+  for (const value of values) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'string') {
+      if (value.trim().length === 0) continue;
+      return value;
+    }
+    return value;
+  }
+  return undefined;
+};
+
+const toBoolean = (value: any): boolean | undefined => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.toLowerCase();
+    if (normalized === 'true') return true;
+    if (normalized === 'false') return false;
+  }
+  return undefined;
+};
+
+const toNumber = (value: any): number | undefined => {
+  if (typeof value === 'number' && !isNaN(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return undefined;
+};
+
+const resolvePostsArray = (payload: any): PostResponse[] => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.posts)) return payload.posts;
+  if (Array.isArray(payload?.posts?.data)) return payload.posts.data;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
+};
+
+const normalizePostsPayload = (
+  payload: any
+): { list: PostResponse[]; meta: PostsPaginationMeta } => {
+  const list = resolvePostsArray(payload);
+  const meta: PostsPaginationMeta = {
+    nextCursor:
+      firstNonEmptyValue(
+        payload?.nextCursor,
+        payload?.next_cursor,
+        payload?.cursor,
+        payload?.next,
+        payload?.nextPageToken,
+        payload?.pagination?.nextCursor,
+        payload?.pagination?.next_cursor,
+        payload?.meta?.nextCursor,
+        payload?.meta?.next_cursor
+      ) ?? null,
+    hasMore: toBoolean(
+      firstNonEmptyValue(
+        payload?.hasMore,
+        payload?.has_more,
+        payload?.meta?.hasMore,
+        payload?.meta?.has_more,
+        payload?.pagination?.hasMore,
+        payload?.pagination?.has_more
+      )
+    ),
+    totalPages: toNumber(
+      firstNonEmptyValue(
+        payload?.totalPages,
+        payload?.total_pages,
+        payload?.meta?.totalPages,
+        payload?.meta?.total_pages,
+        payload?.pagination?.totalPages,
+        payload?.pagination?.total_pages
+      )
+    ),
+    currentPage: toNumber(
+      firstNonEmptyValue(
+        payload?.page,
+        payload?.currentPage,
+        payload?.meta?.page,
+        payload?.meta?.currentPage,
+        payload?.pagination?.page,
+        payload?.pagination?.currentPage
+      )
+    ),
+    hasNextLink: Boolean(
+      firstNonEmptyValue(
+        payload?.links?.next,
+        payload?.next_page_url,
+        payload?.meta?.next,
+        payload?.meta?.nextPage,
+        payload?.pagination?.next
+      )
+    ),
+  };
+  return { list, meta };
+};
+
+const computeHasMore = (
+  meta: PostsPaginationMeta,
+  receivedCount: number,
+  pageSize: number
+): boolean => {
+  if (typeof meta.hasMore === 'boolean') {
+    return meta.hasMore;
+  }
+  if (meta.hasNextLink) {
+    return true;
+  }
+  if (meta.nextCursor !== null && meta.nextCursor !== undefined) {
+    return true;
+  }
+  if (
+    typeof meta.totalPages === 'number' &&
+    typeof meta.currentPage === 'number' &&
+    meta.totalPages > 0
+  ) {
+    return meta.currentPage < meta.totalPages;
+  }
+  return receivedCount >= pageSize;
+};
+
+const getPostIdentifier = (post: PostResponse): string => {
+  const rawId =
+    (post as any)?.id ??
+    (post as any)?._id ??
+    (post as any)?.post_id ??
+    (post as any)?.uuid ??
+    (post as any)?.slug;
+  if (rawId !== undefined && rawId !== null) {
+    return String(rawId);
+  }
+  const created = (post as any)?.created_at ?? (post as any)?.createdAt ?? '';
+  const title = (post as any)?.title ?? (post as any)?.content ?? (post as any)?.body ?? '';
+  const fallback = `${created}-${title}`.trim();
+  return fallback.length > 0 ? fallback : JSON.stringify(post);
+};
+
+const mergePosts = (
+  existing: PostResponse[],
+  incoming: PostResponse[]
+): { list: PostResponse[]; added: number } => {
+  if (!Array.isArray(incoming) || incoming.length === 0) {
+    return { list: existing, added: 0 };
+  }
+  const keyToIndex = new Map<string, number>();
+  existing.forEach((item, index) => {
+    keyToIndex.set(getPostIdentifier(item), index);
+  });
+  const list = [...existing];
+  let added = 0;
+  incoming.forEach((item) => {
+    const key = getPostIdentifier(item);
+    const existingIndex = keyToIndex.get(key);
+    if (existingIndex !== undefined) {
+      list[existingIndex] = item;
+    } else {
+      keyToIndex.set(key, list.length);
+      list.push(item);
+      added += 1;
+    }
+  });
+  return { list, added };
+};
+
 export default function CommunityInfoScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -90,9 +242,11 @@ export default function CommunityInfoScreen() {
   const [postsError, setPostsError] = useState<string | null>(null);
   const [postsRefreshing, setPostsRefreshing] = useState<boolean>(false);
   const [hasFetchedPosts, setHasFetchedPosts] = useState<boolean>(false);
-
-  const [navLocked, setNavLocked] = useState<boolean>(false);
-  const navLockRef = useRef<boolean>(false);
+  const [postsPage, setPostsPage] = useState<number>(1);
+  const [postsHasMore, setPostsHasMore] = useState<boolean>(true);
+  const [postsLoadingMore, setPostsLoadingMore] = useState<boolean>(false);
+  const [postsLoadMoreError, setPostsLoadMoreError] = useState<string | null>(null);
+  const postsCursorRef = useRef<string | number | null>(null);
 
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [newPostTitle, setNewPostTitle] = useState<string>('');
@@ -132,20 +286,81 @@ export default function CommunityInfoScreen() {
     }
   }, []);
 
-  const fetchPosts = useCallback(async () => {
-    try {
-      setPostsError(null);
-      setPostsLoading(true);
-      const response = await apiClient.get(BackendRoutes.COMMUNITY_POSTS);
-      const data = Array.isArray(response.data) ? response.data : (response.data?.posts ?? []);
-      setPosts(data);
-    } catch {
-      setPostsError('Failed to load forum posts');
-    } finally {
-      setPostsLoading(false);
-      setPostsRefreshing(false);
-    }
-  }, []);
+  const fetchPosts = useCallback(
+    async (mode: PostsFetchMode = 'replace') => {
+      const isAppend = mode === 'append';
+      if (isAppend) {
+        if (!postsHasMore || postsLoadingMore || postsLoading || postsRefreshing) {
+          return;
+        }
+        setPostsLoadMoreError(null);
+        setPostsLoadingMore(true);
+      } else {
+        setPostsError(null);
+        setPostsLoadMoreError(null);
+        setPostsLoading(true);
+      }
+
+      const nextPage = isAppend ? postsPage + 1 : 1;
+      const params: Record<string, any> = {
+        limit: POSTS_PAGE_SIZE,
+        page: nextPage,
+        offset: Math.max(0, (nextPage - 1) * POSTS_PAGE_SIZE),
+      };
+
+      if (isAppend) {
+        if (postsCursorRef.current !== null && postsCursorRef.current !== undefined) {
+          params.cursor = postsCursorRef.current;
+          params.after = postsCursorRef.current;
+        }
+      } else {
+        postsCursorRef.current = null;
+      }
+
+      try {
+        const response = await apiClient.get(BackendRoutes.COMMUNITY_POSTS, { params });
+        const { list, meta } = normalizePostsPayload(response?.data);
+        postsCursorRef.current = meta.nextCursor ?? postsCursorRef.current ?? null;
+        const derivedHasMore = computeHasMore(meta, list.length, POSTS_PAGE_SIZE);
+
+        if (isAppend) {
+          let addedCount = 0;
+          setPosts((prev) => {
+            const { list: merged, added } = mergePosts(prev, list);
+            addedCount = added;
+            return merged;
+          });
+          const duplicatesOnly =
+            list.length > 0 && addedCount === 0 && !meta.nextCursor && !meta.hasNextLink && meta.hasMore !== true;
+          const shouldContinue = derivedHasMore && !duplicatesOnly;
+          setPostsHasMore(shouldContinue);
+          if (!shouldContinue) {
+            postsCursorRef.current = null;
+          }
+          setPostsPage(nextPage);
+        } else {
+          const { list: merged } = mergePosts([], list);
+          setPosts(merged);
+          setPostsPage(1);
+          setPostsHasMore(derivedHasMore);
+        }
+      } catch {
+        if (isAppend) {
+          setPostsLoadMoreError('Nu am putut încărca mai multe postări.');
+        } else {
+          setPostsError('Failed to load forum posts');
+        }
+      } finally {
+        if (isAppend) {
+          setPostsLoadingMore(false);
+        } else {
+          setPostsLoading(false);
+          setPostsRefreshing(false);
+        }
+      }
+    },
+    [postsHasMore, postsLoadingMore, postsLoading, postsRefreshing, postsPage]
+  );
 
   useEffect(() => {
     if (!hasPrefetchedRooms && rooms.length === 0) {
@@ -220,13 +435,52 @@ export default function CommunityInfoScreen() {
       resetCreateForm();
       // Refresh posts after creating
       setPostsRefreshing(true);
-      await fetchPosts();
+      setPostsHasMore(true);
+      postsCursorRef.current = null;
+      setPostsPage(1);
+      await fetchPosts('replace');
     } catch {
       setCreateError('Nu am putut crea postarea. Încearcă din nou.');
     } finally {
       setCreatingPost(false);
     }
   }, [creatingPost, newPostTitle, newPostContent, fetchPosts]);
+
+  const handleLoadMorePosts = useCallback(() => {
+    fetchPosts('append');
+  }, [fetchPosts]);
+
+  const renderPostsFooter = () => {
+    if (postsLoadingMore) {
+      return (
+        <View style={styles.listFooter}>
+          <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+        </View>
+      );
+    }
+    if (postsLoadMoreError) {
+      return (
+        <View style={styles.listFooter}>
+          <Text style={styles.listFooterText}>{postsLoadMoreError}</Text>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleLoadMorePosts}
+            style={styles.listFooterButton}
+          >
+            <Text style={styles.listFooterButtonText}>Încearcă din nou</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    if (!postsHasMore && posts.length > 0) {
+      return (
+        <View style={styles.listFooter}>
+          <Text style={styles.listFooterText}>Ai ajuns la finalul listei.</Text>
+        </View>
+      );
+    }
+    return null;
+  };
 
   return (
     <GradientBackground>
@@ -583,7 +837,7 @@ export default function CommunityInfoScreen() {
             {postsError ? (
               <View style={styles.centered}>
                 <Text style={styles.errorText}>{postsError}</Text>
-                <TouchableOpacity style={styles.retryButton} onPress={fetchPosts}>
+                <TouchableOpacity style={styles.retryButton} onPress={() => fetchPosts('replace')}>
                   <Text style={styles.retryText}>Retry</Text>
                 </TouchableOpacity>
               </View>
@@ -599,129 +853,26 @@ export default function CommunityInfoScreen() {
                   ) : null
                 }
                 renderItem={({ item }) => {
-                  const title = (item as any).title as string | undefined;
-                  const body = ((item as any).content as string | undefined) ?? ((item as any).body as string | undefined) ?? '';
-                  const displayTitle = (title && title.trim().length > 0) ? title : (body ? body.slice(0, 60) : 'Post');
-                  const author = (item as any).author;
-                  const senderNameRaw = String(((item as any)?.sender_name ?? '') || '').trim();
-                  const authorName =
-                    senderNameRaw ||
-                    (typeof author === 'string'
-                      ? author
-                      : (author?.username || author?.name || (item as any)?.user_name || 'Unknown'));
-                  const authorId = typeof author === 'object'
-                    ? (author?.id ?? (author as any)?._id ?? (author as any)?.user_id ?? (author as any)?.uid ?? (author as any)?.uuid)
-                    : undefined;
-                  const authorAvatarUrl = typeof author === 'object' ? (author as any)?.avatar_url : undefined;
-                  const achievementCode = (item as any)?.user_last_achievement_code as string | undefined;
-                  const achievementAvatarSource = achievementCode ? getAchievementImage(String(achievementCode)) : null;
-                  const createdRaw = (item as any).created_at ?? (item as any).createdAt;
-                  const relativeCreatedLabel = formatTimeAgo(createdRaw);
-
                   return (
-                    <View style={styles.postCard}>
-                      <TouchableOpacity
-                        activeOpacity={0.85}
-                        disabled={navLocked}
-                        onPress={() => {
-                          if (navLockRef.current) return;
-                          navLockRef.current = true;
-                          setNavLocked(true);
-                          const postId = (item as any)?.id;
-                              const userNameParam =
-                                senderNameRaw ||
-                                (item as any)?.user_name ||
-                                (typeof author === 'object' ? (author?.username || author?.name) : authorName) ||
-                                '';
-                          router.push({
-                            pathname: '/(tabs)/community/post/[postId]' as any,
-                            params: {
-                              postId: String(postId ?? ''),
-                              title: title || '',
-                              content: body || '',
-                                  // Provide both legacy authorName and new userName for robust fallback
-                                  authorName: String(authorName || ''),
-                                  userName: String(userNameParam || ''),
-                                  user_name: String(userNameParam || ''),
-                              authorId: authorId ? String(authorId) : '',
-                              authorAvatarUrl: String(authorAvatarUrl || ''),
-                              achievementCode: String(achievementCode || ''),
-                                  created_at: String(createdRaw || ''),
-                            }
-                          });
-                          setTimeout(() => {
-                            navLockRef.current = false;
-                            setNavLocked(false);
-                          }, 800);
-                        }}
-                      >
-                      <LinearGradient
-                        colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
-                        style={styles.postGradient}
-                      >
-                        {/* Top meta row: avatar + name/time + chevron */}
-                        <View style={styles.postHeaderRow}>
-                          <TouchableOpacity
-                            activeOpacity={0.85}
-                            disabled={!authorId}
-                            onPress={() => {
-                              if (!authorId) return;
-                              router.push({
-                                pathname: '/(tabs)/community/user/[userId]' as any,
-                                params: { userId: String(authorId), achievementCode: achievementCode || '' }
-                              });
-                            }}
-                          >
-                            {achievementAvatarSource ? (
-                              <Image source={achievementAvatarSource} style={styles.postAvatar} resizeMode="cover" />
-                            ) : authorAvatarUrl ? (
-                              <Image source={{ uri: authorAvatarUrl }} style={styles.postAvatar} resizeMode="cover" />
-                            ) : (
-                              <View style={styles.postAvatarPlaceholder} />
-                            )}
-                          </TouchableOpacity>
-                          <View style={styles.postHeaderText}>
-                            <Text style={styles.postAuthorName} numberOfLines={1}>
-                              {authorName}
-                            </Text>
-                            {!!relativeCreatedLabel && (
-                              <Text style={styles.postTime} numberOfLines={1}>
-                                {relativeCreatedLabel}
-                              </Text>
-                            )}
-                          </View>
-                          <View style={styles.postHeaderActions}>
-                            <CommunityUpvote
-                              postId={(item as any)?.id}
-                              likesCount={Number((item as any)?.upvotes ?? (item as any)?.likes_count ?? 0)}
-                              onChanged={(n) => updatePostUpvotes((item as any)?.id, n)}
-                            />
-                          </View>
-                        </View>
-
-                        {/* Body: title + excerpt under meta row */}
-                        <View style={styles.postBody}>
-                          <Text style={styles.postTitle} numberOfLines={1}>
-                            {displayTitle}
-                          </Text>
-                          {body ? (
-                            <Text style={styles.postExcerpt} numberOfLines={2}>
-                              {body}
-                            </Text>
-                          ) : null}
-                        </View>
-                      </LinearGradient>
-                      </TouchableOpacity>
-                    </View>
+                    <CommunityPostCard
+                      post={item as any}
+                      onUpvoteChanged={(postId, n) => updatePostUpvotes(postId, n)}
+                    />
                   );
                 }}
+                onEndReached={handleLoadMorePosts}
+                onEndReachedThreshold={0.3}
+                ListFooterComponent={renderPostsFooter}
                 contentContainerStyle={[styles.listContent, contentPaddingStyle]}
                 refreshControl={
                   <RefreshControl
                     refreshing={postsLoading || postsRefreshing}
                     onRefresh={() => {
                       setPostsRefreshing(true);
-                      fetchPosts();
+                      setPostsHasMore(true);
+                      postsCursorRef.current = null;
+                      setPostsPage(1);
+                      fetchPosts('replace');
                     }}
                     tintColor={theme.colors.primary}
                   />
@@ -914,6 +1065,29 @@ const createStyles = (theme: any) => StyleSheet.create({
   listContent: {
     paddingBottom: 0,
   },
+  listFooter: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listFooterText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  listFooterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  listFooterButtonText: {
+    color: theme.colors.textPrimary,
+    fontWeight: '600',
+    fontSize: 13,
+  },
   roomCard: {
     backgroundColor: 'transparent',
     borderRadius: theme.borderRadius.medium,
@@ -988,79 +1162,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginLeft: 8,
     alignSelf: 'center',
   },
-  postCard: {
-    backgroundColor: 'transparent',
-    borderRadius: theme.borderRadius.medium,
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  postGradient: {
-    padding: 12,
-    borderRadius: theme.borderRadius.medium,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)'
-  },
-  postHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  postHeaderText: {
-    flex: 1,
-    paddingRight: 8,
-  },
-  postHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 6,
-    marginTop: 2,
-  },
-  postAuthorName: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  postTime: {
-    marginTop: 2,
-    color: theme.colors.textMuted,
-    fontSize: 12,
-  },
-  postBody: {
-    marginTop: 8,
-  },
-  postAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
-  },
-  postAvatarPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)'
-  },
-  postContent: {
-    flex: 1,
-    paddingRight: 4,
-  },
-  postTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-    marginRight: 8,
-  },
-  postExcerpt: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    marginTop: 4,
-    marginBottom: 6,
-  },
-  postMeta: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-  },
+  // Post styles moved to `src/components/community/CommunityPostCard.tsx` for reuse.
   emptyState: {
     paddingVertical: 24,
     alignItems: 'center',
