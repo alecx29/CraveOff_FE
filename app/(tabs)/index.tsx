@@ -1,6 +1,6 @@
 import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform, Image, InteractionManager } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 import { router } from 'expo-router';
@@ -1474,7 +1474,14 @@ export default function HomeScreen() {
         {/* Buton Panic (fost CraveOff Mode) */}
         <TouchableOpacity 
           style={styles.panicButton}
-          onPress={() => setShowPanicModal(true)}
+          onPress={() => {
+            // Avoid opening a full-screen Android Modal mid-layout/animation; can cause wrong insets until a re-layout.
+            if (Platform.OS === 'android') {
+              InteractionManager.runAfterInteractions(() => setShowPanicModal(true));
+              return;
+            }
+            setShowPanicModal(true);
+          }}
         >
           <Feather name="shield" size={20} color="#fff" />
           <Text style={styles.panicButtonText}>Panic Button</Text>

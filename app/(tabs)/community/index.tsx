@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Linking, F
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome, AntDesign } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
@@ -11,6 +12,7 @@ import { BackendRoutes } from '@/src/axios/backendRoutes';
 import { AuthContext } from '@/src/context/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommunityPostCard from '@/src/components/community/CommunityPostCard';
+import { fetchCommunityNotificationsUnreadCount } from '@/src/services/communityNotificationsBadge';
 
 
 type ChatRoom = {
@@ -255,6 +257,28 @@ export default function CommunityInfoScreen() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState<number>(0);
 
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState<boolean>(false);
+  const notificationsFetchInFlightRef = useRef(false);
+  const lastNotificationsFetchRef = useRef<number>(0);
+
+  const refreshNotificationsBadge = useCallback(async (force = false) => {
+    const now = Date.now();
+    const cooldownMs = 15_000;
+    if (!force && now - lastNotificationsFetchRef.current < cooldownMs) return;
+    if (notificationsFetchInFlightRef.current) return;
+
+    notificationsFetchInFlightRef.current = true;
+    lastNotificationsFetchRef.current = now;
+    try {
+      const unread = await fetchCommunityNotificationsUnreadCount({ limit: 25 });
+      setHasUnreadNotifications(unread > 0);
+    } catch {
+      // Keep the last known state; do not block the UI on badge failures.
+    } finally {
+      notificationsFetchInFlightRef.current = false;
+    }
+  }, []);
+
   const handleNotificationsPress = () => {
     router.push('/community/notifications');
   };
@@ -346,7 +370,7 @@ export default function CommunityInfoScreen() {
         }
       } catch {
         if (isAppend) {
-          setPostsLoadMoreError('Nu am putut încărca mai multe postări.');
+          setPostsLoadMoreError("Couldn't load more posts.");
         } else {
           setPostsError('Failed to load forum posts');
         }
@@ -396,6 +420,14 @@ export default function CommunityInfoScreen() {
       subHide.remove();
     };
   }, []);
+
+  // Fetch notifications as soon as the user lands on the Community tab (async),
+  // and refresh whenever they return from the notifications screen.
+  useFocusEffect(
+    useCallback(() => {
+      refreshNotificationsBadge(false);
+    }, [refreshNotificationsBadge])
+  );
   const resetCreateForm = () => {
     setNewPostTitle('');
     setNewPostContent('');
@@ -440,7 +472,7 @@ export default function CommunityInfoScreen() {
       setPostsPage(1);
       await fetchPosts('replace');
     } catch {
-      setCreateError('Nu am putut crea postarea. Încearcă din nou.');
+      setCreateError("Couldn't create the post. Try again.");
     } finally {
       setCreatingPost(false);
     }
@@ -467,7 +499,7 @@ export default function CommunityInfoScreen() {
             onPress={handleLoadMorePosts}
             style={styles.listFooterButton}
           >
-            <Text style={styles.listFooterButtonText}>Încearcă din nou</Text>
+            <Text style={styles.listFooterButtonText}>Try again</Text>
           </TouchableOpacity>
         </View>
       );
@@ -475,7 +507,7 @@ export default function CommunityInfoScreen() {
     if (!postsHasMore && posts.length > 0) {
       return (
         <View style={styles.listFooter}>
-          <Text style={styles.listFooterText}>Ai ajuns la finalul listei.</Text>
+          <Text style={styles.listFooterText}>You've reached the end of the list.</Text>
         </View>
       );
     }
@@ -493,7 +525,10 @@ export default function CommunityInfoScreen() {
               onPress={handleNotificationsPress}
               style={styles.headerIconButton}
             >
+              <View style={styles.headerIconWrapper}>
               <Ionicons name="notifications-outline" size={24} color={theme.colors.textPrimary} />
+                {hasUnreadNotifications && <View style={styles.headerNotificationDot} />}
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.85}
@@ -848,7 +883,7 @@ export default function CommunityInfoScreen() {
                 ListEmptyComponent={() =>
                   !postsLoading && !postsRefreshing ? (
                     <View style={styles.emptyState}>
-                      <Text style={styles.emptyText}>Nu există postări în forum încă.</Text>
+                      <Text style={styles.emptyText}>There are no forum posts yet.</Text>
                     </View>
                   ) : null
                 }
@@ -1004,6 +1039,22 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 12,
     padding: 6,
+  },
+  headerIconWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerNotificationDot: {
+    position: 'absolute',
+    top: -1,
+    right: -1,
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+    backgroundColor: '#F97316',
+    borderWidth: 2,
+    borderColor: 'rgba(0,0,0,0.35)',
   },
   tabsContainer: {
     flexDirection: 'row',

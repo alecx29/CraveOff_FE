@@ -199,8 +199,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Dacă avem mai multe erori consecutive, notificăm utilizatorul
       if (authErrorCount > 2) {
         Alert.alert(
-          'Probleme de autentificare',
-          'Am întâmpinat probleme la autentificarea ta. Te rugăm să te reconectezi.',
+          'Authentication issues',
+          'We ran into problems signing you in. Please sign in again.',
           [{ text: 'OK' }]
         );
       }
@@ -261,8 +261,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Dacă avem mai multe erori consecutive, notificăm utilizatorul
         if (authErrorCount > 2) {
           Alert.alert(
-            'Sesiune expirată',
-            'Sesiunea ta a expirat. Te rugăm să te reconectezi.',
+            'Session expired',
+            'Your session has expired. Please sign in again.',
             [{ text: 'OK' }]
           );
           // Deconectăm utilizatorul după prea multe încercări eșuate

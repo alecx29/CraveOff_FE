@@ -593,7 +593,7 @@ const createStyles = (theme: any, insetTop: number) =>
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: '#ffffff',
+      backgroundColor: '#F97316',
     },
     actionsRow: {
       flexDirection: 'row',

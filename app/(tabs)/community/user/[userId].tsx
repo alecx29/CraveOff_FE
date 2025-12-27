@@ -233,9 +233,9 @@ export default function CommunityUserProfile() {
         }
       } catch {
         if (isAppend) {
-          setPostsLoadMoreError('Nu am putut încărca mai multe postări.');
+          setPostsLoadMoreError("Couldn't load more posts.");
         } else {
-          setPostsError('Nu am putut încărca postările.');
+          setPostsError("Couldn't load posts.");
           setPosts([]);
         }
       } finally {
