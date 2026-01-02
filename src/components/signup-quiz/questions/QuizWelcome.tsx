@@ -131,6 +131,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 30,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
@@ -157,6 +158,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   continueButton: {
     backgroundColor: theme.colors.primary,
     borderRadius: 30,
+    borderCurve: 'continuous',
     paddingVertical: 14,
     paddingHorizontal: 24,
     width: '100%',

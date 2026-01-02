@@ -8,6 +8,7 @@ import { apiClient, apiClientImage, refreshTokenManually } from '@/src/axios/api
 import axios from 'axios';
 import { registerDeviceWithBackend } from '@/src/services/pushService';
 import { initRevenueCat, logInRevenueCat, logOutRevenueCat } from '@/src/services/revenueCat';
+import { getMonetizationUserId } from '@/src/services/monetizationUserId';
 
 interface AuthContextProps {
   isAuthenticated: boolean;
@@ -78,16 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const getRevenueCatUserId = (userData?: any): string | undefined => {
-    if (!userData) return undefined;
-    return (
-      userData.id?.toString?.() ??
-      userData.user_id?.toString?.() ??
-      userData.uuid?.toString?.() ??
-      userData.email ??
-      undefined
-    );
-  };
+  const getRevenueCatUserId = (userData?: any): string | undefined => getMonetizationUserId(userData);
 
   const fetchUserProfile = async () => {
     try {

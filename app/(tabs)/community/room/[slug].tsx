@@ -30,6 +30,8 @@ type ChatMessage = {
   metadata_json?: any;
 };
 
+const MESSAGES_PAGE_SIZE = 20;
+
 export default function ChatRoomScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -54,7 +56,7 @@ export default function ChatRoomScreen() {
   const fetchInitial = useCallback(async () => {
     try {
       const res = await apiClient.get(BackendRoutes.CHAT_ROOM_MESSAGES(slug), {
-        params: { limit: 50, order: 'desc' },
+        params: { limit: MESSAGES_PAGE_SIZE, order: 'desc' },
       });
       const data = Array.isArray(res.data?.messages) ? res.data.messages : [];
       setMessages(data);
@@ -95,7 +97,7 @@ export default function ChatRoomScreen() {
     if (!oldest) return;
     try {
       const res = await apiClient.get(BackendRoutes.CHAT_ROOM_MESSAGES(slug), {
-        params: { limit: 50, order: 'desc', before: oldest },
+        params: { limit: MESSAGES_PAGE_SIZE, order: 'desc', before: oldest },
       });
       const older = Array.isArray(res.data?.messages) ? res.data.messages : [];
       if (older.length > 0) {

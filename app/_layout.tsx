@@ -1,10 +1,11 @@
 // app/_layout.tsx
 import React, { useContext, useEffect, useState, useRef, useCallback } from 'react';
-import { ActivityIndicator, StyleSheet, View, StatusBar, AppState, Image } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, StatusBar, AppState, Image, Platform } from 'react-native';
 import { router, Stack, SplashScreen, usePathname } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
+import Constants from 'expo-constants';
 import {
   DMSans_400Regular,
   DMSans_400Regular_Italic,
@@ -33,9 +34,35 @@ import GradientBackground from '@/src/screen-components/gradient-background/Grad
 import { setCurrentPath } from '@/src/navigation/routeTracker';
 import * as Updates from 'expo-updates';
 import { applyGlobalDMSans } from '@/src/theme/applyGlobalFont';
+import SuperwallRevenueCatBridge from '@/src/components/SuperwallRevenueCatBridge';
+import SuperwallDebugLogger from '@/src/components/SuperwallDebugLogger';
 
 // Keep native splash visible for a controlled duration on app start
 void SplashScreen.preventAutoHideAsync();
+
+type SuperwallProviderComponent = React.ComponentType<{
+  apiKeys: { ios?: string; android?: string };
+  options?: any;
+  children: React.ReactNode;
+  onConfigurationError?: (error: Error) => void;
+}>;
+
+let SuperwallProvider: SuperwallProviderComponent | null = null;
+let CustomPurchaseControllerProvider: React.ComponentType<{ children: React.ReactNode; controller: any }> | null = null;
+try {
+  // expo-superwall throws on import if the native module isn't compiled into the app binary yet.
+  // We must guard it to support running in Expo Go or stale dev-clients.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const sw = require('expo-superwall');
+  SuperwallProvider = sw.SuperwallProvider as SuperwallProviderComponent;
+  CustomPurchaseControllerProvider = sw.CustomPurchaseControllerProvider as React.ComponentType<{
+    children: React.ReactNode;
+    controller: any;
+  }>;
+} catch {
+  SuperwallProvider = null;
+  CustomPurchaseControllerProvider = null;
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -89,21 +116,51 @@ export default function RootLayout() {
   if (!fontsReady) {
     return null;
   }
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+
+  const extra =
+    (Constants.expoConfig?.extra as any) ||
+    (Constants.manifest2 as any)?.extra ||
+    (Constants.manifest as any)?.extra ||
+    undefined;
+  const superwallConfig = (extra?.superwall as { iosApiKey?: string; androidApiKey?: string } | undefined) ?? undefined;
+
+  // Expo injects EXPO_PUBLIC_* at runtime too; use as fallback in case `extra` isn't populated
+  // (e.g. stale manifest/dev-client, or metro not restarted after env changes).
+  const FALLBACK_SUPERWALL_IOS_KEY = 'pk_1tKyBjngSPyyRhHcAtRYz';
+  const FALLBACK_SUPERWALL_ANDROID_KEY = 'pk_K0Y9JPpF1f7wWrKTqDKBv';
+  const env = (process as any)?.env as Record<string, string | undefined> | undefined;
+  const envIosKey = env?.EXPO_PUBLIC_SUPERWALL_IOS_KEY || env?.EXPO_SUPERWALL_PUBLIC_API_KEY || FALLBACK_SUPERWALL_IOS_KEY;
+  const envAndroidKey = env?.EXPO_PUBLIC_SUPERWALL_ANDROID_KEY || env?.EXPO_SUPERWALL_PUBLIC_API_KEY || FALLBACK_SUPERWALL_ANDROID_KEY;
+  const superwallApiKeys = {
+    // IMPORTANT: use `||` so empty-string config doesn't block fallbacks.
+    ios: superwallConfig?.iosApiKey || envIosKey || FALLBACK_SUPERWALL_IOS_KEY,
+    android: superwallConfig?.androidApiKey || envAndroidKey || FALLBACK_SUPERWALL_ANDROID_KEY,
+  };
+
+  const shouldEnableSuperwall =
+    Platform.OS !== 'web' &&
+    !!SuperwallProvider &&
+    !!CustomPurchaseControllerProvider &&
+    (superwallApiKeys.ios.length > 0 || superwallApiKeys.android.length > 0);
+
+  const superwallOptions = Platform.OS === 'android' ? { passIdentifiersToPlayStore: true } : undefined;
+
+  const AppTree = (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <AuthProvider>
+        {shouldEnableSuperwall ? <SuperwallRevenueCatBridge /> : null}
+        {shouldEnableSuperwall && __DEV__ ? <SuperwallDebugLogger /> : null}
         <ThemeProvider>
           <NotificationsProvider>
             <UserProvider>
               <LogsProvider>
                 <JournalProvider>
                   <AchievementsProvider>
-                  <PledgeProvider>
-                  <NotificationInitializer />
-                  <AuthNavigation />
-                  </PledgeProvider>
+                    <PledgeProvider>
+                      <NotificationInitializer />
+                      <AuthNavigation />
+                    </PledgeProvider>
                   </AchievementsProvider>
                 </JournalProvider>
               </LogsProvider>
@@ -111,25 +168,103 @@ export default function RootLayout() {
           </NotificationsProvider>
         </ThemeProvider>
       </AuthProvider>
+
+      <UpdateGate
+        isSplashVisible={!splashTimerElapsed || updateGateBlocking}
+        onPromptShown={() => setUpdateGateBlocking(true)}
+        onDecision={() => setUpdateGateBlocking(false)}
+      />
+      {!splashTimerElapsed || updateGateBlocking ? (
+        <View style={styles.initialSplash}>
+          <GradientBackground ignoreFocus>
+            <View style={styles.initialSplashInner}>
+              <Image
+                source={require('@/assets/images/logo.png')}
+                resizeMode="contain"
+                style={styles.initialLogo}
+              />
+            </View>
+          </GradientBackground>
+        </View>
+      ) : null}
     </SafeAreaProvider>
-    <UpdateGate
-      isSplashVisible={!splashTimerElapsed || updateGateBlocking}
-      onPromptShown={() => setUpdateGateBlocking(true)}
-      onDecision={() => setUpdateGateBlocking(false)}
-    />
-    {!splashTimerElapsed || updateGateBlocking ? (
-      <View style={styles.initialSplash}>
-        <GradientBackground ignoreFocus>
-          <View style={styles.initialSplashInner}>
-            <Image
-              source={require('@/assets/images/logo.png')}
-              resizeMode="contain"
-              style={styles.initialLogo}
-            />
-          </View>
-        </GradientBackground>
-      </View>
-    ) : null}
+  );
+
+  const superwallPurchaseController = {
+    // Called by Superwall when the user taps purchase inside a Superwall paywall.
+    onPurchase: async (params: { productId: string; platform?: 'ios' | 'android'; basePlanId?: string; offerId?: string }) => {
+      const PurchasesModule: any = await import('react-native-purchases');
+      const Purchases = PurchasesModule.default ?? PurchasesModule;
+      const { PURCHASES_ERROR_CODE } = PurchasesModule;
+
+      try {
+        if (__DEV__) console.log('[Superwall][RC] onPurchase', params);
+        const products = await Purchases.getProducts([params.productId]);
+        const product = products?.[0];
+        if (!product) return { type: 'failed', error: 'Product not found' };
+
+        // Android base plans / offers:
+        // Superwall provides `basePlanId` and optional `offerId`. RevenueCat requires purchasing
+        // the matching SubscriptionOption when you need a specific base plan or offer.
+        if (Platform.OS === 'android' && params.basePlanId) {
+          const optionId = params.offerId ? `${params.basePlanId}:${params.offerId}` : params.basePlanId;
+          const options: any[] | null | undefined = product.subscriptionOptions;
+          const defaultOption: any | null | undefined = product.defaultOption;
+          const chosenOption =
+            (Array.isArray(options) ? options.find((o) => o?.id === optionId) : null) ||
+            defaultOption ||
+            (Array.isArray(options) ? options[0] : null);
+
+          if (!chosenOption) {
+            if (__DEV__) console.log('[Superwall][RC] No subscription option found; falling back to purchaseStoreProduct', { optionId });
+            await Purchases.purchaseStoreProduct(product);
+          } else {
+            if (__DEV__) console.log('[Superwall][RC] Purchasing subscription option', { optionId: chosenOption?.id, productId: chosenOption?.productId });
+            await Purchases.purchaseSubscriptionOption(chosenOption);
+          }
+        } else {
+          // iOS or Android without basePlanId
+          await Purchases.purchaseStoreProduct(product);
+        }
+
+        return { type: 'purchased' };
+      } catch (error: any) {
+        const code = error?.code;
+        if (code === PURCHASES_ERROR_CODE?.PURCHASE_CANCELLED_ERROR || error?.userCancelled) {
+          return { type: 'cancelled' };
+        }
+        if (code === PURCHASES_ERROR_CODE?.PAYMENT_PENDING_ERROR) {
+          return { type: 'pending' };
+        }
+        if (__DEV__) console.log('[Superwall][RC] Purchase failed', { code, message: error?.message, raw: error });
+        return { type: 'failed', error: error?.message || 'Unknown purchase error' };
+      }
+    },
+
+    // Called by Superwall when the user taps restore inside a Superwall paywall.
+    onPurchaseRestore: async () => {
+      const PurchasesModule: any = await import('react-native-purchases');
+      const Purchases = PurchasesModule.default ?? PurchasesModule;
+      try {
+        await Purchases.restorePurchases();
+        return { type: 'restored' };
+      } catch (error: any) {
+        return { type: 'failed', error: error?.message || 'Unknown restore error' };
+      }
+    },
+  };
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {shouldEnableSuperwall ? (
+        <CustomPurchaseControllerProvider controller={superwallPurchaseController}>
+          <SuperwallProvider apiKeys={superwallApiKeys} options={superwallOptions}>
+            {AppTree}
+          </SuperwallProvider>
+        </CustomPurchaseControllerProvider>
+      ) : (
+        AppTree
+      )}
     </GestureHandlerRootView>
   );
 }

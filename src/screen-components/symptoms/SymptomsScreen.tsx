@@ -269,7 +269,8 @@ const createStyles = (theme: any, buttonHeight: number, insets: any) => StyleShe
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 30,
+    borderRadius: theme.borderRadius.pill,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
@@ -301,7 +302,8 @@ const createStyles = (theme: any, buttonHeight: number, insets: any) => StyleShe
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f39c12', // Brighter warning color for better visibility
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.xl,
+    borderCurve: 'continuous',
     padding: 14,
     marginBottom: 20,
     ...theme.shadows.light,
@@ -339,7 +341,8 @@ const createStyles = (theme: any, buttonHeight: number, insets: any) => StyleShe
     color: theme.colors.textPrimary,
   },
   symptomsContainer: {
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.xl,
+    borderCurve: 'continuous',
     overflow: 'hidden',
     gap: 8, // Add spacing between symptom items
   },
@@ -347,7 +350,8 @@ const createStyles = (theme: any, buttonHeight: number, insets: any) => StyleShe
     backgroundColor: theme.colors.cardBackground,
     paddingVertical: 16,
     paddingHorizontal: 18,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.xl,
+    borderCurve: 'continuous',
     ...theme.shadows.light,
   },
   symptomSelected: {
@@ -374,6 +378,7 @@ const createStyles = (theme: any, buttonHeight: number, insets: any) => StyleShe
     width: 24,
     height: 24,
     borderRadius: 12,
+    borderCurve: 'continuous',
     borderWidth: 2,
     borderColor: theme.colors.border || '#d1d5db',
     alignItems: 'center',
@@ -388,7 +393,8 @@ const createStyles = (theme: any, buttonHeight: number, insets: any) => StyleShe
     marginTop: 16,
     marginBottom: 20,
     backgroundColor: theme.colors.background === '#000000' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.xl,
+    borderCurve: 'continuous',
     padding: 16,
   },
   footerText: {

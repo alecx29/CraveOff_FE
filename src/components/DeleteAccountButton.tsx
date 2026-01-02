@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/context/ThemeProvider';
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
+import GradientActionCard from '@/src/components/GradientActionCard';
 
 interface DeleteAccountButtonProps {
   onSuccess?: () => void;
@@ -56,10 +57,13 @@ const DeleteAccountButton: React.FC<DeleteAccountButtonProps> = ({ onSuccess }) 
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={open} activeOpacity={0.85}>
-        <Ionicons name="trash-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-        <Text style={styles.buttonText}>Delete my account</Text>
-      </TouchableOpacity>
+      <GradientActionCard
+        title="Delete my account"
+        description="This action is irreversible"
+        titleColor={theme.colors.error || '#dc2626'}
+        icon={<Ionicons name="trash-outline" size={20} color={theme.colors.textPrimary} />}
+        onPress={open}
+      />
 
       <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
         <View style={styles.backdrop}>
@@ -103,20 +107,7 @@ const DeleteAccountButton: React.FC<DeleteAccountButtonProps> = ({ onSuccess }) 
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     marginTop: 6,
-    marginBottom: 20,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.error || '#dc2626',
-    paddingVertical: 14,
-    borderRadius: theme.borderRadius.pill || 48,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
+    marginBottom: 4,
   },
   backdrop: {
     flex: 1,

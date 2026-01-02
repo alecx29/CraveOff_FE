@@ -30,6 +30,7 @@ allprojects {
 
     google()
     mavenCentral()
+    maven { url 'https://mvn.superwall.com/release' }
     maven { url 'https://www.jitpack.io' }
   }
 }

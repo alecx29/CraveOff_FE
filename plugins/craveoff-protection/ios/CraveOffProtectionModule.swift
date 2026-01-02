@@ -10,6 +10,8 @@ class CraveOffProtection: NSObject {
   private let defaults = UserDefaults.standard
   private let enabledKey = "craveoff.protection.enabled"
   private let webDomainTokensKey = "craveoff.protection.webDomainTokens.v1"
+  private let applicationTokensKey = "craveoff.protection.applicationTokens.v1"
+  private let categoryTokensKey = "craveoff.protection.categoryTokens.v1"
 
   @objc static func requiresMainQueueSetup() -> Bool {
     return false
@@ -34,38 +36,50 @@ class CraveOffProtection: NSObject {
   }
 
   @available(iOS 16.0, *)
-  private func loadWebDomainTokens() -> Set<WebDomainToken> {
-    guard let data = defaults.data(forKey: webDomainTokensKey) else { return [] }
+  private func loadTokenSet<T: Codable & Hashable>(_ key: String) -> Set<T> {
+    guard let data = defaults.data(forKey: key) else { return [] }
     do {
-      let decoded = try JSONDecoder().decode([WebDomainToken].self, from: data)
+      let decoded = try JSONDecoder().decode([T].self, from: data)
       return Set(decoded)
     } catch {
-      NSLog("CraveOff[iOS]: Failed to decode saved webDomainTokens: \(error.localizedDescription)")
+      NSLog("CraveOff[iOS]: Failed to decode saved token set (key=\(key)): \(error.localizedDescription)")
       return []
     }
   }
 
   @available(iOS 16.0, *)
-  private func saveWebDomainTokens(_ tokens: Set<WebDomainToken>) {
+  private func saveTokenSet<T: Codable>(_ tokens: Set<T>, key: String) {
     do {
       let data = try JSONEncoder().encode(Array(tokens))
-      defaults.set(data, forKey: webDomainTokensKey)
+      defaults.set(data, forKey: key)
     } catch {
-      NSLog("CraveOff[iOS]: Failed to encode webDomainTokens: \(error.localizedDescription)")
+      NSLog("CraveOff[iOS]: Failed to encode token set (key=\(key)): \(error.localizedDescription)")
     }
   }
 
   @available(iOS 16.0, *)
-  private func applyShield(tokens: Set<WebDomainToken>) {
+  private func applyShield(selection: FamilyActivitySelection) {
     let store = ManagedSettingsStore()
-    store.shield.webDomains = tokens
-    NSLog("CraveOff[iOS]: Applied shield.webDomains tokens=\(tokens.count)")
+    let web = selection.webDomainTokens
+    let apps = selection.applicationTokens
+    let cats = selection.categoryTokens
+
+    // Web domains
+    store.shield.webDomains = web.isEmpty ? nil : web
+    // Applications + categories (the system picker allows selecting these too)
+    store.shield.applications = apps.isEmpty ? nil : apps
+    // NOTE: `applicationCategories` takes a policy, not a raw set of tokens.
+    store.shield.applicationCategories = cats.isEmpty ? nil : .specific(cats)
+
+    NSLog("CraveOff[iOS]: Applied shields web=\(web.count) apps=\(apps.count) categories=\(cats.count)")
   }
 
   @available(iOS 16.0, *)
   private func clearShield() {
     let store = ManagedSettingsStore()
     store.shield.webDomains = nil
+    store.shield.applications = nil
+    store.shield.applicationCategories = nil
     NSLog("CraveOff[iOS]: Cleared shield.webDomains")
   }
 
@@ -147,9 +161,13 @@ class CraveOffProtection: NSObject {
       }
 
       let max = max(1, min(20, maxCount.intValue))
-      let existingTokens = loadWebDomainTokens()
+      let existingWebTokens: Set<WebDomainToken> = loadTokenSet(webDomainTokensKey)
+      let existingAppTokens: Set<ApplicationToken> = loadTokenSet(applicationTokensKey)
+      let existingCategoryTokens: Set<ActivityCategoryToken> = loadTokenSet(categoryTokensKey)
       var initialSelection = FamilyActivitySelection()
-      initialSelection.webDomainTokens = existingTokens
+      initialSelection.webDomainTokens = existingWebTokens
+      initialSelection.applicationTokens = existingAppTokens
+      initialSelection.categoryTokens = existingCategoryTokens
 
       DispatchQueue.main.async {
         guard let presenter = self.topViewController() else {
@@ -171,20 +189,32 @@ class CraveOffProtection: NSObject {
             if didResolve { return }
             didResolve = true
 
-            let tokens = selection.webDomainTokens
-            if tokens.isEmpty {
+            NSLog(
+              "CraveOff[iOS]: Website picker DONE selection: webDomains=\(selection.webDomainTokens.count), apps=\(selection.applicationTokens.count), categories=\(selection.categoryTokens.count), trimmed=\(trimmed)"
+            )
+            let web = selection.webDomainTokens
+            let apps = selection.applicationTokens
+            let cats = selection.categoryTokens
+
+            if web.isEmpty && apps.isEmpty && cats.isEmpty {
               self.setEnabledFlag(false)
-              reject("EMPTY_SELECTION", "Please select at least one website to block.", nil)
+              reject("EMPTY_SELECTION", "Please select at least one item to block (website/app/category).", nil)
               return
             }
 
-            self.saveWebDomainTokens(tokens)
+            self.saveTokenSet(web, key: self.webDomainTokensKey)
+            self.saveTokenSet(apps, key: self.applicationTokensKey)
+            self.saveTokenSet(cats, key: self.categoryTokensKey)
             self.setEnabledFlag(true)
-            self.applyShield(tokens: tokens)
+            self.applyShield(selection: selection)
 
             resolve([
               "cancelled": false,
-              "selectedCount": tokens.count,
+              // Keep compatibility with JS (it reads `selectedCount`).
+              "selectedCount": web.count + apps.count + cats.count,
+              "selectedWebsitesCount": web.count,
+              "selectedAppsCount": apps.count,
+              "selectedCategoriesCount": cats.count,
               "trimmed": trimmed
             ])
           }
@@ -241,10 +271,17 @@ class CraveOffProtection: NSObject {
     var count = 0
     if #available(iOS 16.0, *) {
       let enabled = isEnabledFlag()
-      let tokens = loadWebDomainTokens()
-      count = tokens.count
-      if enabled && !tokens.isEmpty {
-        applyShield(tokens: tokens)
+      let web: Set<WebDomainToken> = loadTokenSet(webDomainTokensKey)
+      let apps: Set<ApplicationToken> = loadTokenSet(applicationTokensKey)
+      let cats: Set<ActivityCategoryToken> = loadTokenSet(categoryTokensKey)
+
+      count = web.count + apps.count + cats.count
+      if enabled && count > 0 {
+        var selection = FamilyActivitySelection()
+        selection.webDomainTokens = web
+        selection.applicationTokens = apps
+        selection.categoryTokens = cats
+        applyShield(selection: selection)
         running = true
       } else {
         running = false
@@ -265,9 +302,15 @@ class CraveOffProtection: NSObject {
 private struct WebDomainPickerView: View {
   @Environment(\.dismiss) private var dismiss
   @State private var selection: FamilyActivitySelection
+  @State private var dismissalIntent: DismissalIntent? = nil
   private let maxCount: Int
   private let onCancel: () -> Void
   private let onDone: (FamilyActivitySelection, Bool) -> Void
+
+  private enum DismissalIntent {
+    case cancel
+    case done
+  }
 
   init(
     initialSelection: FamilyActivitySelection,
@@ -296,23 +339,39 @@ private struct WebDomainPickerView: View {
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Cancel") {
+            // NOTE: The FamilyActivityPicker may only commit its selection back into the binding
+            // when it disappears. We defer reading selection until onDisappear.
+            dismissalIntent = .cancel
             dismiss()
-            onCancel()
           }
         }
         ToolbarItem(placement: .confirmationAction) {
           Button("Done") {
-            var trimmed = false
-            var out = FamilyActivitySelection()
-            var tokens = selection.webDomainTokens
-            if tokens.count > maxCount {
-              trimmed = true
-              tokens = Set(Array(tokens).prefix(maxCount))
-            }
-            out.webDomainTokens = tokens
+            // Defer reading `selection.webDomainTokens` until onDisappear.
+            dismissalIntent = .done
             dismiss()
-            onDone(out, trimmed)
           }
+        }
+      }
+    }
+    .onDisappear {
+      // Defer to next runloop tick to give the system picker a chance to flush state into our binding.
+      // If the sheet is dismissed interactively (swipe-down), treat it as Cancel to avoid a hanging JS promise.
+      let intent = dismissalIntent ?? .cancel
+      DispatchQueue.main.async {
+        switch intent {
+        case .cancel:
+          onCancel()
+        case .done:
+          var trimmed = false
+          var out = selection
+          var tokens = out.webDomainTokens
+          if tokens.count > maxCount {
+            trimmed = true
+            tokens = Set(Array(tokens).prefix(maxCount))
+          }
+          out.webDomainTokens = tokens
+          onDone(out, trimmed)
         }
       }
     }

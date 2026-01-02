@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Switch, Alert, Platform, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, Switch, Alert, Platform, TouchableOpacity, StyleSheet, Linking, Modal, ActivityIndicator, Pressable } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -19,18 +19,21 @@ export default function ContentBlockerScreen() {
 	const [busy, setBusy] = useState(false);
 	const [, setMode] = useState<'full-tunnel' | 'dns-only' | undefined>();
 	const [blockedCount, setBlockedCount] = useState<number>(0);
+	const [showManageWebsitesModal, setShowManageWebsitesModal] = useState(false);
+	const [managingWebsites, setManagingWebsites] = useState(false);
+
+	const refreshProtectionStatus = useCallback(async () => {
+		try {
+			const s = await CraveOffProtection.status();
+			setEnabled(!!s.running);
+			setMode(s.mode);
+			setBlockedCount(Number.isFinite(s.blocklistSize) ? s.blocklistSize : 0);
+		} catch {}
+	}, []);
 
 	useEffect(() => {
 		let sub: any;
-		const init = async () => {
-			try {
-				const s = await CraveOffProtection.status();
-				setEnabled(!!s.running);
-				setMode(s.mode);
-				setBlockedCount(Number.isFinite(s.blocklistSize) ? s.blocklistSize : 0);
-			} catch {}
-		};
-		init();
+		refreshProtectionStatus();
 		sub = CraveOffProtection.addListener?.((evt: { type: string }) => {
 			if (evt?.type === 'PROTECTION_OFF') {
 				setEnabled(false);
@@ -39,6 +42,46 @@ export default function ContentBlockerScreen() {
 		return () => {
 			sub?.remove?.();
 		};
+	}, [refreshProtectionStatus]);
+
+	const ensureFamilyControlsAuthorized = useCallback(async () => {
+		if (Platform.OS !== 'ios') return true;
+		let authStatus: 'approved' | 'denied' | 'notDetermined' | 'unknown' | 'unavailable' = 'unknown';
+		try {
+			// @ts-ignore - available on iOS via our native bridge
+			authStatus = await CraveOffProtection.authorizationStatus?.();
+		} catch {}
+
+		if (authStatus === 'denied') {
+			Alert.alert(
+				'Permission required',
+				"Family Controls are denied. To enable: Settings > Screen Time must be ON. Then try again.",
+				[
+					{ text: 'Cancel', style: 'cancel' },
+					{ text: 'Open Settings', onPress: () => Linking.openSettings?.() },
+				]
+			);
+			return false;
+		}
+
+		if (authStatus !== 'approved') {
+			try {
+				await CraveOffProtection.enable();
+			} catch (e: any) {
+				Alert.alert(
+					'Permission required',
+					e?.message ||
+						'CraveOff needs Family Controls authorization to filter and manage blocked content on iOS. Ensure Settings > Screen Time is ON, then try again.',
+					[
+						{ text: 'Cancel', style: 'cancel' },
+						{ text: 'Open Settings', onPress: () => Linking.openSettings?.() },
+					]
+				);
+				return false;
+			}
+		}
+
+		return true;
 	}, []);
 
 	const onToggle = async (value: boolean) => {
@@ -95,6 +138,9 @@ export default function ContentBlockerScreen() {
 					// If user cancels, toggle must go back OFF.
 					try {
 						const result = await CraveOffProtection.configureWebsites(IOS_MAX_WEBSITES);
+						if (__DEV__) {
+							console.log('CraveOffProtection.configureWebsites result:', result);
+						}
 						if (result?.cancelled) {
 							setEnabled(false);
 							setMode(undefined);
@@ -149,6 +195,39 @@ export default function ContentBlockerScreen() {
 			const message = e?.message || String(e);
 			Alert.alert('Error', message);
 		} finally {
+			setBusy(false);
+		}
+	};
+
+	const handleManageWebsites = async () => {
+		if (Platform.OS !== 'ios') return;
+		if (busy) return;
+		setBusy(true);
+		setManagingWebsites(true);
+		try {
+			const authorized = await ensureFamilyControlsAuthorized();
+			if (!authorized) {
+				return;
+			}
+			const result = await CraveOffProtection.configureWebsites(IOS_MAX_WEBSITES);
+			if (__DEV__) {
+				console.log('CraveOffProtection.manageWebsites result:', result);
+			}
+			if (result?.cancelled) {
+				return;
+			}
+			if (result?.trimmed) {
+				Alert.alert(
+					'Selection limit',
+					`You can select up to ${IOS_MAX_WEBSITES} websites. Only the first ${IOS_MAX_WEBSITES} were saved.`
+				);
+			}
+			await refreshProtectionStatus();
+			setShowManageWebsitesModal(false);
+		} catch (e: any) {
+			Alert.alert('Blocked websites', e?.message || 'Unable to manage blocked websites right now. Please try again.');
+		} finally {
+			setManagingWebsites(false);
 			setBusy(false);
 		}
 	};
@@ -223,19 +302,66 @@ export default function ContentBlockerScreen() {
 				</View>
 
 				{Platform.OS === 'ios' && (
-					<TouchableOpacity
-						activeOpacity={0.85}
-						style={styles.appBlockerCard}
-						onPress={() => Alert.alert('Coming soon', 'App Blocker is coming soon.')}
-					>
-						<View style={styles.appBlockerRow}>
-							<View style={styles.appBlockerLeft}>
-								<Text style={styles.appBlockerTitle}>App Blocker</Text>
-								<Text style={styles.appBlockerCount}>{blockedCount}</Text>
+					<>
+						<TouchableOpacity
+							activeOpacity={0.85}
+							style={styles.appBlockerCard}
+							onPress={() => {
+								if (busy) return;
+								setShowManageWebsitesModal(true);
+							}}
+						>
+							<View style={styles.appBlockerRow}>
+								<View style={styles.appBlockerLeft}>
+									<Text style={styles.appBlockerTitle}>Blocked websites</Text>
+									<Text style={styles.appBlockerCount}>
+										{blockedCount > 0 ? `${blockedCount} ${blockedCount === 1 ? 'website' : 'websites'}` : 'No websites selected'}
+									</Text>
+									<Text style={styles.appBlockerHint}>Tap to view or edit via Screen Time</Text>
+								</View>
+								<Ionicons name="chevron-forward" size={22} color={theme.colors.textPrimary} />
 							</View>
-							<Ionicons name="chevron-forward" size={22} color={theme.colors.textPrimary} />
-						</View>
-					</TouchableOpacity>
+						</TouchableOpacity>
+
+						<Modal
+							visible={showManageWebsitesModal}
+							animationType="slide"
+							transparent
+							onRequestClose={() => setShowManageWebsitesModal(false)}
+						>
+							<View style={styles.modalBackdrop}>
+								<Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowManageWebsitesModal(false)} />
+								<View style={styles.modalCard}>
+									<View style={styles.modalHandle} />
+									<Text style={styles.modalTitle}>Blocked websites</Text>
+									<Text style={styles.modalSubtitle}>
+										{blockedCount > 0
+											? `You currently have ${blockedCount} ${blockedCount === 1 ? 'website' : 'websites'} blocked via Screen Time.`
+											: 'You have not selected any websites to block yet.'}
+									</Text>
+									<TouchableOpacity
+										activeOpacity={0.9}
+										style={[styles.modalPrimaryButton, (busy || managingWebsites) && styles.modalButtonDisabled]}
+										onPress={handleManageWebsites}
+										disabled={busy || managingWebsites}
+									>
+										{managingWebsites ? (
+											<ActivityIndicator color="#000" />
+										) : (
+											<Text style={styles.modalPrimaryButtonText}>Edit blocked websites</Text>
+										)}
+									</TouchableOpacity>
+									<TouchableOpacity
+										activeOpacity={0.9}
+										style={styles.modalSecondaryButton}
+										onPress={() => setShowManageWebsitesModal(false)}
+									>
+										<Text style={styles.modalSecondaryButtonText}>Close</Text>
+									</TouchableOpacity>
+								</View>
+							</View>
+						</Modal>
+					</>
 				)}
 
 				{Platform.OS === 'ios' && (
@@ -365,6 +491,11 @@ const createStyles = (theme: any) => StyleSheet.create({
 		fontSize: 14,
 		fontWeight: '600',
 	},
+	appBlockerHint: {
+		marginTop: 4,
+		color: theme.colors.textSecondary,
+		fontSize: 13,
+	},
 	troubleshootCard: {
 		marginTop: 12,
 		backgroundColor: theme.colors.card || theme.colors.surface || '#121218',
@@ -442,6 +573,68 @@ const createStyles = (theme: any) => StyleSheet.create({
 		color: '#000',
 		fontSize: 14,
 		fontWeight: '600',
+	},
+	modalBackdrop: {
+		flex: 1,
+		backgroundColor: 'rgba(0,0,0,0.6)',
+		justifyContent: 'flex-end',
+	},
+	modalCard: {
+		backgroundColor: theme.colors.card || theme.colors.surface || '#121218',
+		borderTopLeftRadius: 24,
+		borderTopRightRadius: 24,
+		paddingHorizontal: 20,
+		paddingTop: 16,
+		paddingBottom: 32,
+	},
+	modalHandle: {
+		alignSelf: 'center',
+		width: 48,
+		height: 4,
+		borderRadius: 999,
+		backgroundColor: theme.colors.inputBorder,
+		marginBottom: 16,
+	},
+	modalTitle: {
+		color: theme.colors.textPrimary,
+		fontSize: 18,
+		fontWeight: '700',
+		marginBottom: 8,
+		textAlign: 'center',
+	},
+	modalSubtitle: {
+		color: theme.colors.textSecondary,
+		fontSize: 14,
+		marginBottom: 24,
+		textAlign: 'center',
+	},
+	modalPrimaryButton: {
+		backgroundColor: '#fff',
+		borderRadius: 999,
+		paddingVertical: 14,
+		alignItems: 'center',
+		marginBottom: 12,
+	},
+	modalPrimaryButtonText: {
+		color: '#000',
+		fontSize: 15,
+		fontWeight: '700',
+	},
+	modalSecondaryButton: {
+		borderRadius: 999,
+		paddingVertical: 14,
+		alignItems: 'center',
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: theme.colors.inputBorder,
+		marginBottom: 12,
+	},
+	modalSecondaryButtonText: {
+		color: theme.colors.textPrimary,
+		fontSize: 15,
+		fontWeight: '600',
+	},
+	modalButtonDisabled: {
+		opacity: 0.6,
 	},
 	row: {
 		flexDirection: 'row',

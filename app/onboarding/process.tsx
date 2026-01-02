@@ -1,6 +1,6 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, Text, SafeAreaView, TouchableOpacity, Image, ScrollView, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Image, ScrollView, Dimensions, Platform } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolateColor } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useTheme } from '@/src/context/ThemeProvider';
@@ -96,7 +96,7 @@ export default function OnboardingProcess() {
   };
 
   return (
-    <SafeAreaView style={[styles.container]}> 
+    <View style={[styles.container]}> 
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, bgAnimStyle]} />
       <StatusBar style="light" />
 
@@ -126,9 +126,9 @@ export default function OnboardingProcess() {
                   style={[
                     styles.imageContainer,
                     i === 1
-                      ? { width: Math.min(width * 0.7, 280), height: Math.min(width * 0.7, 280) }
+                      ? { width: Math.min(width * 0.62, 250), height: Math.min(width * 0.62, 250), marginBottom: height * 0.02 }
                       : i === 2
-                        ? { width: Math.min(width * 0.4, 160), height: Math.min(width * 0.4, 160), marginTop: height * 0.01 }
+                        ? { width: Math.min(width * 0.52, 190), height: Math.min(width * 0.46, 190), marginTop: height * 0.01, marginBottom: height * 0.045 }
                         : null,
                   ]}
                 >
@@ -172,7 +172,7 @@ export default function OnboardingProcess() {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -183,7 +183,7 @@ const createStyles = (insets: any) =>
     },
     logoContainer: {
       alignItems: 'center',
-      paddingTop: Platform.OS === 'android' ? height * 0.06 + 6 : height * 0.03,
+      paddingTop: insets.top + (Platform.OS === 'android' ? height * 0.06 + 6 : height * 0.03),
       paddingBottom: height * 0.01,
     },
     logo: {

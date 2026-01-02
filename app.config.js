@@ -8,7 +8,7 @@ module.exports = {
   expo: {
     name: "CraveOff",
     slug: "craveoff-app",
-    version: "1.2.25",
+    version: "1.2.26",
 
     // Note: These properties will not be synced when android/ios folders are present
     orientation: "portrait", 
@@ -16,15 +16,15 @@ module.exports = {
     scheme: "craveoffapp",
     userInterfaceStyle: "automatic",
 
-    updates: {
-      url: "https://u.expo.dev/ab8a7457-9c09-4b84-946e-2dee70f210b1",
-      enabled: true,
-      checkAutomatically: "ON_ERROR_RECOVERY",
-      fallbackToCacheTimeout: 0,
-    },
-    runtimeVersion: {
-      policy: "sdkVersion",
-    },
+    // updates: {
+    //   url: "https://u.expo.dev/ab8a7457-9c09-4b84-946e-2dee70f210b1",
+    //   enabled: true,
+    //   checkAutomatically: "ON_ERROR_RECOVERY",
+    //   fallbackToCacheTimeout: 0,
+    // },
+    // runtimeVersion: {
+    //   policy: "sdkVersion",
+    // },
     
     newArchEnabled: false,
     
@@ -49,7 +49,7 @@ module.exports = {
       softwareKeyboardLayoutMode: "resize",
     
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 50,
+      versionCode: 53,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"
@@ -79,6 +79,17 @@ module.exports = {
     
     plugins: [
       "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          },
+          "ios": {
+            "deploymentTarget": "16.0"
+          }
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -138,6 +149,15 @@ module.exports = {
         androidApiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY || "",
         publicApiKey: process.env.EXPO_PUBLIC_REVENUECAT_PUBLIC_KEY || "",
         entitlementId: process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID || "premium"
+      },
+      superwall: {
+        // Superwall "Public API Key" is per-platform app in the Superwall dashboard.
+        // Prefer platform-specific EXPO_PUBLIC_* vars, but allow a single generic key for quick local testing.
+        // NOTE: Fallback keys below are for local debugging only. Prefer using EXPO_PUBLIC_* env vars.
+        iosApiKey: process.env.EXPO_PUBLIC_SUPERWALL_IOS_KEY || process.env.EXPO_SUPERWALL_PUBLIC_API_KEY || "pk_1tKyBjngSPyyRhHcAtRYz",
+        androidApiKey: process.env.EXPO_PUBLIC_SUPERWALL_ANDROID_KEY || process.env.EXPO_SUPERWALL_PUBLIC_API_KEY || "pk_K0Y9JPpF1f7wWrKTqDKBv",
+        // Must match the exact Placement ID in Superwall (case-sensitive)
+        testPlacement: process.env.EXPO_PUBLIC_SUPERWALL_TEST_PLACEMENT || "upgrade_pressed"
       }
     },
     

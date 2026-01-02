@@ -6,6 +6,7 @@ import Constants from 'expo-constants';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { useTheme } from '@/src/context/ThemeProvider';
 import DeleteAccountButton from '@/src/components/DeleteAccountButton';
+import GradientActionCard from '@/src/components/GradientActionCard';
 import { AuthContext } from '@/src/context/AuthContext';
 
 export default function AccountOptionsScreen() {
@@ -18,10 +19,12 @@ export default function AccountOptionsScreen() {
       <View style={styles.container}>
         {/* <Text style={styles.title}>Account Options</Text> */}
 
-        <TouchableOpacity style={styles.logoutButton} activeOpacity={0.85} onPress={signOut}>
-          <Ionicons name="log-out-outline" size={20} color={theme.colors.textPrimary} style={{ marginRight: 8 }} />
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
+        <GradientActionCard
+          title="Log Out"
+          description="Sign out from this device"
+          icon={<Ionicons name="log-out-outline" size={20} color={theme.colors.textPrimary} />}
+          onPress={signOut}
+        />
 
         <DeleteAccountButton onSuccess={signOut} />
 
@@ -46,22 +49,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: 20,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.backgroundDeep,
-    paddingVertical: 14,
-    borderRadius: theme.borderRadius.pill,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 14,
-  },
-  logoutText: {
-    color: theme.colors.textPrimary,
-    fontWeight: '700',
-    fontSize: 16,
   },
   versionContainer: {
     marginTop: 'auto',

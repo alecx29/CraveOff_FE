@@ -87,7 +87,8 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   option: {
     padding: 16,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: theme.borderRadius.xl,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.cardBackground,
     marginBottom: 12,
     borderWidth: 1,

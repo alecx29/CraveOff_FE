@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import { ActivityIndicator, Modal, StatusBar, StyleSheet, Text, View, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { ActivityIndicator, Alert, Modal, StatusBar, StyleSheet, Text, View, TouchableOpacity, Image, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeInDown, FadeOut, SlideInUp, SlideOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import { apiClient } from '@/src/axios/apiClient';
@@ -29,6 +30,72 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
   const styles = createStyles(theme);
   const [isJourneyModalVisible, setIsJourneyModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const testPlacement =
+    (Constants.expoConfig?.extra as any)?.superwall?.testPlacement ||
+    (Constants.manifest2 as any)?.extra?.superwall?.testPlacement ||
+    'upgrade_pressed';
+
+  const handleTestPaywall = async () => {
+    console.log('[Superwall][Test] Pressed', { placement: String(testPlacement) });
+    try {
+      const extra =
+        (Constants.expoConfig?.extra as any) ||
+        (Constants.manifest2 as any)?.extra ||
+        (Constants.manifest as any)?.extra ||
+        undefined;
+      const cfg = extra?.superwall as { iosApiKey?: string; androidApiKey?: string } | undefined;
+      const env = (process as any)?.env as Record<string, string | undefined> | undefined;
+      const envKey =
+        Platform.OS === 'ios'
+          ? (env?.EXPO_PUBLIC_SUPERWALL_IOS_KEY || env?.EXPO_SUPERWALL_PUBLIC_API_KEY)
+          : (env?.EXPO_PUBLIC_SUPERWALL_ANDROID_KEY || env?.EXPO_SUPERWALL_PUBLIC_API_KEY);
+      const apiKey = (Platform.OS === 'ios' ? cfg?.iosApiKey : cfg?.androidApiKey) || envKey;
+
+      const { SuperwallExpoModule, DefaultSuperwallOptions } = await import('expo-superwall');
+
+      const statusRaw = await SuperwallExpoModule.getConfigurationStatus().catch(() => '');
+      const status = String(statusRaw || '').toLowerCase();
+      const isConfigured = status.includes('configured');
+      console.log('[Superwall][Test] Configuration status', { statusRaw, isConfigured });
+
+      if (!isConfigured) {
+        if (!apiKey) {
+          Alert.alert(
+            'Superwall',
+            'Missing Superwall API key for this platform. Set EXPO_PUBLIC_SUPERWALL_IOS_KEY / EXPO_PUBLIC_SUPERWALL_ANDROID_KEY (or EXPO_SUPERWALL_PUBLIC_API_KEY) and restart Metro.',
+          );
+          return;
+        }
+        console.log('[Superwall][Test] Calling configure()', {
+          platform: Platform.OS,
+          apiKeyPrefix: typeof apiKey === 'string' ? `${apiKey.slice(0, 5)}***` : '(missing)',
+        });
+        await SuperwallExpoModule.configure(String(apiKey), DefaultSuperwallOptions, false);
+      }
+
+      // Inspect what would happen before registering.
+      try {
+        // NOTE: Native expects 2 args at runtime (placement, params) even if params is optional in typings.
+        const preview = await SuperwallExpoModule.getPresentationResult(String(testPlacement), {});
+        console.log('[Superwall][Test] PresentationResult', preview);
+      } catch (previewErr: any) {
+        console.log('[Superwall][Test] getPresentationResult failed', previewErr?.message || previewErr);
+      }
+
+      console.log('[Superwall][Test] Calling registerPlacement()', { placement: String(testPlacement) });
+      await SuperwallExpoModule.registerPlacement(String(testPlacement), undefined, 'dev-test');
+      console.log('[Superwall][Test] registerPlacement() resolved');
+    } catch (e: any) {
+      const msg =
+        e?.message && String(e.message).includes('Cannot find native module')
+          ? 'Superwall native module is missing. You must rebuild your dev client (Expo Go will not work).'
+          : e?.message
+            ? String(e.message)
+            : 'Failed to present paywall.';
+      console.log('[Superwall][Test] FAILED', e?.message || e);
+      Alert.alert('Superwall', msg);
+    }
+  };
 
   // Features with icons
   const features: FeatureItem[] = [
@@ -320,16 +387,30 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
         <Text style={styles.reframeText}>
           Willpower alone is not enough. You need to entirely reframe the way you view yourself, the purpose of sex, and your relationships.
         </Text>
-        <TouchableOpacity 
-          style={styles.continueButtonContainer}
-          onPress={openJourneyModal}
-          activeOpacity={0.8}
-          disabled={isLoading}
-        >
-          <View style={styles.continueButtonSolid}>
-            <Text style={styles.continueButtonTextSolid}>Turn Crave OFF</Text>
-          </View>
-        </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.continueButtonContainer, styles.primaryButtonInRow]}
+            onPress={openJourneyModal}
+            activeOpacity={0.8}
+            disabled={isLoading}
+          >
+            <View style={styles.continueButtonSolid}>
+              <Text style={styles.continueButtonTextSolid}>Turn Crave OFF</Text>
+            </View>
+          </TouchableOpacity>
+
+          {__DEV__ ? (
+            <TouchableOpacity
+              style={styles.testPaywallButton}
+              onPress={handleTestPaywall}
+              activeOpacity={0.85}
+              accessibilityLabel="Test Superwall Paywall"
+            >
+              <Ionicons name="flask-outline" size={18} color="#111827" />
+              <Text style={styles.testPaywallButtonText}>Test</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
         
         <Text style={styles.limitedTimeText}>
           Limited time offer • No credit card required
@@ -521,12 +602,38 @@ const createStyles = (_theme: any) => StyleSheet.create({
     borderRadius: 30,
     overflow: 'hidden',
     marginTop: 4,
-    marginBottom: 16,
     shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  primaryButtonInRow: {
+    flex: 1,
+  },
+  testPaywallButton: {
+    height: 54,
+    paddingHorizontal: 14,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(17, 24, 39, 0.12)',
+  },
+  testPaywallButtonText: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
   },
   continueButton: {
     paddingVertical: 18,
