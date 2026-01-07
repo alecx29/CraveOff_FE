@@ -13,6 +13,7 @@ import FreeJourneyContent from './FreeJourneyContent';
 import PaywallTest from './PaywallTest';
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
+import { saveAuthFlags } from '@/src/Storage/authFlagsStorage';
 
 interface SubscriptionScreenProps {
   onComplete?: () => void;
@@ -30,6 +31,8 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
     (async () => {
       try {
         await apiClient.post(BackendRoutes.PAYWALL_REACHED);
+        // Persist locally so relaunch / interceptors can decide routing without waiting on network.
+        await saveAuthFlags({ reached_paywall: true });
       } catch {
         // non-blocking
       }

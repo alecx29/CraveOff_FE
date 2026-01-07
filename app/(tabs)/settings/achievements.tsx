@@ -8,8 +8,10 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTheme } from '@/src/context/ThemeProvider';
 import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { useAchievements } from '@/src/context/AchievementsContext';
+import { useLogs } from '@/src/context/LogsContext';
 import LottieUniversal from '@/src/components/LottieUniversal';
 import { getAchievementImage } from '@/src/utils/achievementImages';
+import { computeUnlockedFromStreak } from '@/src/utils/achievementProgress';
 import { BlurView } from 'expo-blur';
 
 const isStarterAchievement = (code?: string) => code === 'WELCOME';
@@ -17,6 +19,7 @@ const isStarterAchievement = (code?: string) => code === 'WELCOME';
 const AchievementsScreen = () => {
   const { theme } = useTheme();
   const { achievements: ctxAchievements } = useAchievements();
+  const { currentStreak } = useLogs();
   const styles = createStyles(theme);
 
   // Helper: format date nice
@@ -34,15 +37,20 @@ const AchievementsScreen = () => {
     }
   };
 
-  const achievements = (ctxAchievements || []).map(it => ({
-    id: it.code,
-    title: it.title,
-    description: it.description || '',
-    imageSource: getAchievementImage(it.code),
-    unlocked: !!it.unlocked,
-    date: it.unlocked ? formatUnlockedAt(it.unlockedAt) : undefined,
-    xp: typeof it.xp === 'number' ? it.xp : 0,
-  }));
+  const cleanDays = Number.isFinite(Number(currentStreak)) ? Math.max(0, Math.floor(Number(currentStreak))) : 0;
+
+  const achievements = (ctxAchievements || []).map(it => {
+    const streakUnlocked = computeUnlockedFromStreak(it, cleanDays);
+    return {
+      id: it.code,
+      title: it.title,
+      description: it.description || '',
+      imageSource: getAchievementImage(it.code),
+      unlocked: streakUnlocked,
+      date: streakUnlocked ? formatUnlockedAt(it.unlockedAt) : undefined,
+      xp: typeof it.xp === 'number' ? it.xp : 0,
+    };
+  });
 
   // Showcase overlay state
   const [showcase, setShowcase] = useState<null | (typeof achievements)[number]>(null);

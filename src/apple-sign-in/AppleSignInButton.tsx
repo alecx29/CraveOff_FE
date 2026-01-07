@@ -72,7 +72,33 @@ export default function AppleSignInButton() {
       console.log('[AppleSignIn] Response config method:', response.config?.method);
       console.log('[AppleSignIn] ================================================');
       
-      const { session, user } = response.data;
+      const { session } = response.data;
+      const rawUser = response.data?.user ?? {};
+      // Normalize auth flags: backend may return them either inside user or at top-level (snake_case or camelCase)
+      const normalizedUser = {
+        ...rawUser,
+        signup_complete:
+          typeof rawUser?.signup_complete === 'boolean'
+            ? rawUser.signup_complete
+            : typeof rawUser?.signupComplete === 'boolean'
+              ? rawUser.signupComplete
+            : typeof response.data?.signup_complete === 'boolean'
+              ? response.data.signup_complete
+              : typeof response.data?.signupComplete === 'boolean'
+                ? response.data.signupComplete
+              : rawUser?.signup_complete,
+        reached_paywall:
+          typeof rawUser?.reached_paywall === 'boolean'
+            ? rawUser.reached_paywall
+            : typeof rawUser?.reachedPaywall === 'boolean'
+              ? rawUser.reachedPaywall
+            : typeof response.data?.reached_paywall === 'boolean'
+              ? response.data.reached_paywall
+              : typeof response.data?.reachedPaywall === 'boolean'
+                ? response.data.reachedPaywall
+              : rawUser?.reached_paywall,
+      };
+      const user = normalizedUser as any;
       console.log('[AppleSignIn] Session object:', JSON.stringify(session, null, 2));
       
       // Extract tokens
@@ -114,9 +140,14 @@ export default function AppleSignInButton() {
         // Ensure opposite provider token is cleared to avoid ambiguity
         await AsyncStorage.removeItem('googleIdToken');
         
-        // Redirect to signup flow
-        console.log('[AppleSignIn] Redirecting to signup flow');
-        router.push('/signup');
+        // Redirect to signup flow (or subscription if paywall was already reached but signup not complete)
+        if (user.reached_paywall === true && user.signup_complete === false) {
+          console.log('[AppleSignIn] New user but reached_paywall=true and signup_complete=false; redirecting to subscription');
+          router.push('/(auth)/subscription');
+        } else {
+          console.log('[AppleSignIn] Redirecting to signup flow');
+          router.push('/signup');
+        }
       } else if (user.signup_complete === false) {
         // For users who haven't completed signup, persist identityToken for signup-complete
         if (identityToken) {
@@ -129,9 +160,14 @@ export default function AppleSignInButton() {
           console.warn('[AppleSignIn] Incomplete signup but identityToken missing. Skipping storage');
         }
 
-        // Redirect to symptoms
-        console.log('[AppleSignIn] Incomplete signup detected, redirecting to symptoms screen');
-        router.push('/(auth)/symptoms');
+        // Redirect to subscription if paywall was reached; otherwise continue onboarding
+        if (user.reached_paywall === true) {
+          console.log('[AppleSignIn] Incomplete signup + reached_paywall=true; redirecting to subscription screen');
+          router.push('/(auth)/subscription');
+        } else {
+          console.log('[AppleSignIn] Incomplete signup detected, redirecting to symptoms screen');
+          router.push('/(auth)/symptoms');
+        }
       } else {
         // For existing users with completed signup, redirect to home
         console.log('[AppleSignIn] Existing user with completed signup, redirecting to home');

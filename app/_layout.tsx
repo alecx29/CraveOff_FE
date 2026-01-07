@@ -36,6 +36,7 @@ import * as Updates from 'expo-updates';
 import { applyGlobalDMSans } from '@/src/theme/applyGlobalFont';
 import SuperwallRevenueCatBridge from '@/src/components/SuperwallRevenueCatBridge';
 import SuperwallDebugLogger from '@/src/components/SuperwallDebugLogger';
+import { saveAuthFlags } from '@/src/Storage/authFlagsStorage';
 
 // Keep native splash visible for a controlled duration on app start
 void SplashScreen.preventAutoHideAsync();
@@ -280,6 +281,16 @@ const AuthNavigation: React.FC = () => {
     if (user && user.signup_complete === true) return;
     const sc = (user as any)?.signup_complete;
     if (typeof sc !== 'boolean') return;
+    // Fast path: if backend already provided reached_paywall in the user payload, respect it immediately.
+    const cachedReached = (user as any)?.reached_paywall === true || (user as any)?.reachedPaywall === true;
+    if (sc === false && cachedReached) {
+      paywallCheckedRef.current = true;
+      try {
+        await saveAuthFlags({ signup_complete: false, reached_paywall: true });
+      } catch {}
+      if (pathname !== '/(auth)/subscription') router.replace('/(auth)/subscription');
+      return;
+    }
     const expired = await isTokenExpired();
     if (expired) return;
     try {
@@ -287,6 +298,9 @@ const AuthNavigation: React.FC = () => {
       const reached = !!(res?.data && (res.data.reached_paywall === true || res.data?.status === 'reached' || res.data?.reached === true));
       if (reached) {
         paywallCheckedRef.current = true;
+        try {
+          await saveAuthFlags({ signup_complete: false, reached_paywall: true });
+        } catch {}
         if (pathname !== '/(auth)/subscription') router.replace('/(auth)/subscription');
       }
     } catch {}
@@ -310,6 +324,30 @@ const AuthNavigation: React.FC = () => {
           try {
             const response = await apiClient.post('/auth/refresh', { refresh_token: refreshToken });
             const userData = response.data;
+            const rawUser = userData?.user ?? {};
+            const normalizedUser = {
+              ...rawUser,
+              signup_complete:
+                typeof rawUser?.signup_complete === 'boolean'
+                  ? rawUser.signup_complete
+                  : typeof rawUser?.signupComplete === 'boolean'
+                    ? rawUser.signupComplete
+                  : typeof userData?.signup_complete === 'boolean'
+                    ? userData.signup_complete
+                    : typeof userData?.signupComplete === 'boolean'
+                      ? userData.signupComplete
+                    : rawUser?.signup_complete,
+              reached_paywall:
+                typeof rawUser?.reached_paywall === 'boolean'
+                  ? rawUser.reached_paywall
+                  : typeof rawUser?.reachedPaywall === 'boolean'
+                    ? rawUser.reachedPaywall
+                  : typeof userData?.reached_paywall === 'boolean'
+                    ? userData.reached_paywall
+                    : typeof userData?.reachedPaywall === 'boolean'
+                      ? userData.reachedPaywall
+                    : rawUser?.reached_paywall,
+            };
 
             // Use signIn to properly update the auth context and token storage
             await signIn({
@@ -317,7 +355,7 @@ const AuthNavigation: React.FC = () => {
               refreshToken: userData.refresh_token || refreshToken,
               expiresAt: userData.expires_at,
               refreshExpiresAt: userData.refresh_expires_at,
-              user: userData.user
+              user: normalizedUser
             });
             
             console.log('Token refreshed and auth context updated');
@@ -365,6 +403,7 @@ const AuthNavigation: React.FC = () => {
       }
     };
     bootstrap();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkPaywallOnce]);
 
   // Check when app returns to foreground
@@ -381,6 +420,7 @@ const AuthNavigation: React.FC = () => {
     return () => {
       subscription.remove();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   useEffect(() => {

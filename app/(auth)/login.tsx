@@ -40,7 +40,33 @@ const LoginScreen: React.FC = () => {
       console.log('[Login] Authentication successful, processing response');
       console.log('[Login] Full response structure:', JSON.stringify(response.data, null, 2));
       
-      const { session, user } = response.data;
+      const { session } = response.data;
+      const rawUser = response.data?.user ?? {};
+      // Normalize auth flags: backend may return them either inside user or at top-level (snake_case or camelCase)
+      const normalizedUser = {
+        ...rawUser,
+        signup_complete:
+          typeof rawUser?.signup_complete === 'boolean'
+            ? rawUser.signup_complete
+            : typeof rawUser?.signupComplete === 'boolean'
+              ? rawUser.signupComplete
+            : typeof response.data?.signup_complete === 'boolean'
+              ? response.data.signup_complete
+              : typeof response.data?.signupComplete === 'boolean'
+                ? response.data.signupComplete
+              : rawUser?.signup_complete,
+        reached_paywall:
+          typeof rawUser?.reached_paywall === 'boolean'
+            ? rawUser.reached_paywall
+            : typeof rawUser?.reachedPaywall === 'boolean'
+              ? rawUser.reachedPaywall
+            : typeof response.data?.reached_paywall === 'boolean'
+              ? response.data.reached_paywall
+              : typeof response.data?.reachedPaywall === 'boolean'
+                ? response.data.reachedPaywall
+              : rawUser?.reached_paywall,
+      };
+      const user = normalizedUser as any;
       console.log('[Login] Session object:', JSON.stringify(session, null, 2));
       
       // Verificăm exact ce cheie folosește serverul pentru tokens
@@ -96,9 +122,14 @@ const LoginScreen: React.FC = () => {
           console.warn('[Login] New user detected but idToken invalid. Skipping storage for signup-complete');
         }
         
-        // Redirect to signup flow
-        console.log('[Login] Redirecting to signup flow');
-        router.push('/signup');
+        // Redirect to signup flow (or subscription if paywall was already reached but signup not complete)
+        if (user.reached_paywall === true && user.signup_complete === false) {
+          console.log('[Login] New user but reached_paywall=true and signup_complete=false; redirecting to subscription');
+          router.push('/(auth)/subscription');
+        } else {
+          console.log('[Login] Redirecting to signup flow');
+          router.push('/signup');
+        }
       } else if (user.signup_complete === false) {
         // For users who haven't completed signup, persist idToken for signup-complete
         const isValidIdToken = (token?: string | null) => {
@@ -120,9 +151,14 @@ const LoginScreen: React.FC = () => {
           console.warn('[Login] Incomplete signup but idToken invalid. Skipping storage');
         }
 
-        // Redirect to symptoms
-        console.log('[Login] Incomplete signup detected, redirecting to symptoms screen');
-        router.push('/(auth)/symptoms');
+        // Redirect to subscription if paywall was reached; otherwise continue onboarding
+        if (user.reached_paywall === true) {
+          console.log('[Login] Incomplete signup + reached_paywall=true; redirecting to subscription screen');
+          router.push('/(auth)/subscription');
+        } else {
+          console.log('[Login] Incomplete signup detected, redirecting to symptoms screen');
+          router.push('/(auth)/symptoms');
+        }
       } else {
         // For existing users with completed signup, redirect to home
         console.log('[Login] Existing user with completed signup, redirecting to home');

@@ -15,6 +15,7 @@ import { useAchievements } from '@/src/context/AchievementsContext';
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
 import { getAchievementImage } from '@/src/utils/achievementImages';
+import { computeUnlockedFromStreak, getCurrentAchievementCode } from '@/src/utils/achievementProgress';
 import AchievementsPlanetsRow from '@/src/components/AchievementsPlanetsRow';
 
 import SettingCard from './SettingsCard';
@@ -171,31 +172,26 @@ const SettingsScreen = () => {
     } catch {}
   };
 
-  // Current (most recently unlocked) achievement to show as avatar
+  // Single source of truth: current achievement is derived from streak (clean days).
   const currentAchievementImage = useMemo(() => {
     try {
-      const unlocked = (achievementsList || []).filter(a => !!a.unlocked);
-      if (unlocked.length === 0) return null;
-      const withDate = unlocked
-        .map(a => ({
-          item: a,
-          date: a.unlockedAt ? new Date(a.unlockedAt) : null,
-          threshold: typeof a.threshold === 'number' ? a.threshold : -1,
-        }));
-      // Prefer latest by date if available, otherwise by highest threshold
-      withDate.sort((a, b) => {
-        if (a.date && b.date) return b.date.getTime() - a.date.getTime();
-        if (a.date && !b.date) return -1;
-        if (!a.date && b.date) return 1;
-        return b.threshold - a.threshold;
-      });
-      const winner = withDate[0]?.item;
-      if (!winner) return null;
-      return getAchievementImage(winner.code);
+      const code = getCurrentAchievementCode(cleanDays, achievementsList || []);
+      return getAchievementImage(code);
     } catch {
       return null;
     }
-  }, [achievementsList]);
+  }, [achievementsList, cleanDays]);
+
+  // Streak-based unlocked flags for consistent UI across profile + achievements list
+  const achievementsForPlanets = useMemo(() => {
+    const list = achievementsList || [];
+    return list
+      .filter(a => a.code !== 'WELCOME')
+      .map(a => ({
+        code: a.code,
+        unlocked: computeUnlockedFromStreak(a, cleanDays),
+      }));
+  }, [achievementsList, cleanDays]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 44) }]} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false}>
@@ -225,7 +221,7 @@ const SettingsScreen = () => {
 
       {/* Achievements Planets Banner */}
       <AchievementsPlanetsRow
-        achievements={(achievementsList || []).filter(a => a.code !== 'WELCOME').map(a => ({ code: a.code, unlocked: !!a.unlocked }))}
+        achievements={achievementsForPlanets}
         summary={summary}
         onPress={navigateToAchievements}
         maxItems={9}

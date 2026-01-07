@@ -2,6 +2,7 @@ import axios from 'axios';
 import { getTokens, saveTokens, getRefreshToken, clearTokens } from '@/src/Storage/tokenStorage';
 import { baseURL } from '@/src/config-files/constants/backend-url';
 import routeTracker, { getCurrentPath, isOnboardingPath } from '@/src/navigation/routeTracker';
+import { loadAuthFlags } from '@/src/Storage/authFlagsStorage';
 
 // Create a lock mechanism to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
@@ -108,8 +109,17 @@ apiClient.interceptors.response.use(
         const path = getCurrentPath();
         // If already in onboarding/auth, don't bounce them away from the current step
         if (!isOnboardingPath(path)) {
-          console.log('[API Client] 428 received - redirecting to signup flow');
-          router.replace('/signup');
+          const flags = await loadAuthFlags();
+          const signupComplete = flags?.signup_complete === true;
+          const reachedPaywall = flags?.reached_paywall === true;
+
+          if (!signupComplete && reachedPaywall) {
+            console.log('[API Client] 428 received - reached_paywall=true & signup_complete=false; redirecting to subscription');
+            router.replace('/(auth)/subscription');
+          } else {
+            console.log('[API Client] 428 received - redirecting to signup flow');
+            router.replace('/signup');
+          }
         } else {
           console.log('[API Client] 428 received while on onboarding/auth; staying on current step');
         }
@@ -351,8 +361,17 @@ apiClientImage.interceptors.response.use(
         const { router } = await import('expo-router');
         const path = getCurrentPath();
         if (!isOnboardingPath(path)) {
-          console.log('[Image Response Interceptor] 428 received - redirecting to signup flow');
-          router.replace('/signup');
+          const flags = await loadAuthFlags();
+          const signupComplete = flags?.signup_complete === true;
+          const reachedPaywall = flags?.reached_paywall === true;
+
+          if (!signupComplete && reachedPaywall) {
+            console.log('[Image Response Interceptor] 428 received - reached_paywall=true & signup_complete=false; redirecting to subscription');
+            router.replace('/(auth)/subscription');
+          } else {
+            console.log('[Image Response Interceptor] 428 received - redirecting to signup flow');
+            router.replace('/signup');
+          }
         } else {
           console.log('[Image Response Interceptor] 428 received while on onboarding/auth; staying on current step');
         }

@@ -28,6 +28,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import HomeTopBar from '@/src/components/header/HomeTopBar';
 import ContentBlockerComingSoonModal from '@/src/components/ContentBlockerComingSoonModal';
 import { getAchievementImage } from '@/src/utils/achievementImages';
+import { getCurrentAchievementCode } from '@/src/utils/achievementProgress';
 
 // Helper function to format time with more precision
 const formatTimeCounter = (seconds: number) => {
@@ -223,27 +224,12 @@ export default function HomeScreen() {
 
   const currentAchievementImage = useMemo(() => {
     try {
-      const unlocked = (achievementsList || []).filter((a: any) => !!a.unlocked);
-      if (unlocked.length === 0) return null;
-      const withDate = unlocked.map((a: any) => ({
-        item: a,
-        date: a.unlockedAt ? new Date(a.unlockedAt) : null,
-        threshold: typeof a.threshold === 'number' ? a.threshold : -1,
-      }));
-      // Prefer latest by date if available, otherwise by highest threshold
-      withDate.sort((a: any, b: any) => {
-        if (a.date && b.date) return b.date.getTime() - a.date.getTime();
-        if (a.date && !b.date) return -1;
-        if (!a.date && b.date) return 1;
-        return b.threshold - a.threshold;
-      });
-      const winner = withDate[0]?.item;
-      if (!winner) return null;
-      return getAchievementImage(winner.code);
+      const code = getCurrentAchievementCode(cleanDays, achievementsList || []);
+      return getAchievementImage(code);
     } catch {
       return null;
     }
-  }, [achievementsList]);
+  }, [achievementsList, cleanDays]);
 
   const profileAvatarSource = currentAchievementImage || require('@/assets/images/output1.webp');
   

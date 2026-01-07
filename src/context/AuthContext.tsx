@@ -5,10 +5,10 @@ import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { saveTokens, clearTokens, getTokens } from '@/src/Storage/tokenStorage';
 import { apiClient, apiClientImage, refreshTokenManually } from '@/src/axios/apiClient';
-import axios from 'axios';
 import { registerDeviceWithBackend } from '@/src/services/pushService';
 import { initRevenueCat, logInRevenueCat, logOutRevenueCat } from '@/src/services/revenueCat';
 import { getMonetizationUserId } from '@/src/services/monetizationUserId';
+import { clearAuthFlags, extractAuthFlags, saveAuthFlags } from '@/src/Storage/authFlagsStorage';
 
 interface AuthContextProps {
   isAuthenticated: boolean;
@@ -63,6 +63,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (raw) {
         const parsed = JSON.parse(raw);
         setUser(parsed);
+        try {
+          const flags = extractAuthFlags(parsed);
+          if (Object.keys(flags).length > 0) await saveAuthFlags(flags);
+        } catch {}
         console.log('[AuthContext] Loaded user from storage');
         logInRevenueCat(getRevenueCatUserId(parsed));
       }
@@ -86,10 +90,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Fetch current user profile after token is set
       const response = await apiClient.get('/users/profile');
       if (response?.data) {
-        setUser(response.data);
-        persistUser(response.data);
+        const incoming = response.data;
+        const incomingFlags = extractAuthFlags(incoming);
+        const existingFlags = extractAuthFlags(user);
+        const merged = {
+          ...incoming,
+          ...(incomingFlags.signup_complete === undefined && existingFlags.signup_complete !== undefined
+            ? { signup_complete: existingFlags.signup_complete }
+            : {}),
+          ...(incomingFlags.reached_paywall === undefined && existingFlags.reached_paywall !== undefined
+            ? { reached_paywall: existingFlags.reached_paywall }
+            : {}),
+        };
+        setUser(merged);
+        persistUser(merged);
+        try {
+          const flags = extractAuthFlags(merged);
+          if (Object.keys(flags).length > 0) await saveAuthFlags(flags);
+        } catch {}
         console.log('[AuthContext] User profile fetched from API');
-        logInRevenueCat(getRevenueCatUserId(response.data));
+        logInRevenueCat(getRevenueCatUserId(merged));
       }
     } catch (e) {
       console.warn('[AuthContext] Failed to fetch user profile:', (e as any)?.message);
@@ -138,6 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
     
     checkAuth();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Resetăm contorul de erori când utilizatorul se autentifică cu succes
@@ -168,6 +189,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         persistUser(userData.user);
         console.log('[AuthContext] User data set');
         logInRevenueCat(getRevenueCatUserId(userData.user));
+        // Persist auth flags for routing (used by interceptors / boot flow)
+        try {
+          const flags = extractAuthFlags(userData.user);
+          if (Object.keys(flags).length > 0) await saveAuthFlags(flags);
+        } catch {}
       } else {
         // If user payload not provided, fetch it now
         await fetchUserProfile();
@@ -225,6 +251,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser({});
       clearPersistedUser();
       logOutRevenueCat();
+      clearAuthFlags();
       
       // Remove the token from the API client headers
       delete apiClient.defaults.headers.common['Authorization'];
