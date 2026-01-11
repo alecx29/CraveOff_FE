@@ -1,9 +1,8 @@
 import React, { useContext, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, StatusBar, StyleSheet, Text, View, TouchableOpacity, Image, ScrollView, Platform } from 'react-native';
+import { ActivityIndicator, Alert, Modal, StatusBar, StyleSheet, Text, View, TouchableOpacity, Image, ImageBackground, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeInDown, FadeOut, SlideInUp, SlideOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
@@ -30,6 +29,14 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
   const styles = createStyles(theme);
   const [isJourneyModalVisible, setIsJourneyModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Temporary: we keep the signup-complete flow implemented, but we do NOT call it yet.
+  // Flip this to `true` when you want "Try For FREE" to complete signup before routing onward.
+  const SHOULD_CALL_SIGNUP_COMPLETE = false;
+
+  // TEMP: Always show internal test controls (needed for internal rollout builds too).
+  // TODO: Gate this again before a public release (e.g. with an env/config flag).
+  const showInternalPaywallTestControls = true;
   const testPlacement =
     (Constants.expoConfig?.extra as any)?.superwall?.testPlacement ||
     (Constants.manifest2 as any)?.extra?.superwall?.testPlacement ||
@@ -70,7 +77,10 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
           platform: Platform.OS,
           apiKeyPrefix: typeof apiKey === 'string' ? `${apiKey.slice(0, 5)}***` : '(missing)',
         });
-        await SuperwallExpoModule.configure(String(apiKey), DefaultSuperwallOptions, false);
+        // IMPORTANT: this app uses a CustomPurchaseControllerProvider (manual purchase management).
+        // If we configure with `false` here, Superwall may not route paywall purchase actions through
+        // our JS purchase controller, which can lead to confusing "loading forever" behavior.
+        await SuperwallExpoModule.configure(String(apiKey), DefaultSuperwallOptions, true);
       }
 
       // Inspect what would happen before registering.
@@ -227,7 +237,7 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
     router.replace('/login');
   };
 
-  const handleContinue = async () => {
+  const handleSignupComplete = async () => {
     if (isLoading) return;
     setIsLoading(true);
     
@@ -381,6 +391,25 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
     }
   };
 
+  const goToPaywall = async () => {
+    if (isLoading) return;
+    setIsJourneyModalVisible(false);
+
+    if (SHOULD_CALL_SIGNUP_COMPLETE) {
+      await handleSignupComplete();
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Let the modal fully dismiss before pushing a new screen (prevents the paywall feeling like a stacked modal).
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      router.push('/(auth)/revenuecat-paywall');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <>
       <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.actionContainer}>
@@ -399,7 +428,7 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
             </View>
           </TouchableOpacity>
 
-          {__DEV__ ? (
+          {showInternalPaywallTestControls ? (
             <TouchableOpacity
               style={styles.testPaywallButton}
               onPress={handleTestPaywall}
@@ -411,7 +440,7 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
             </TouchableOpacity>
           ) : null}
         </View>
-        
+
         <Text style={styles.limitedTimeText}>
           Limited time offer • No credit card required
         </Text>
@@ -420,7 +449,7 @@ const FreeJourneyContent: React.FC<FreeJourneyContentProps> = ({ onContinue }) =
       <JourneyModal
         visible={isJourneyModalVisible}
         onClose={closeJourneyModal}
-        onTry={handleContinue}
+        onTry={goToPaywall}
         features={features}
         loading={isLoading}
       />
@@ -460,72 +489,66 @@ const JourneyModal = ({ visible, onClose, onTry, features, loading }: JourneyMod
           entering={SlideInUp.duration(350).springify()}
           exiting={SlideOutDown.duration(250).springify()}
         >
-          <View style={modalStyles.haloWrapper} pointerEvents="none">
-            <LinearGradient
-              colors={[
-                'rgba(124, 58, 237, 0.32)',
-                'rgba(124, 58, 237, 0.18)',
-                'rgba(124, 58, 237, 0.10)',
-                'rgba(124, 58, 237, 0.04)',
-                'rgba(124, 58, 237, 0)',
-              ]}
-              locations={[0, 0.35, 0.6, 0.78, 1]}
-              start={{ x: 0.5, y: 0.15 }}
-              end={{ x: 0.5, y: 1 }}
-              style={modalStyles.halo}
-            />
-          </View>
+          <ImageBackground
+            source={require('@/assets/images/PaymentScreen.png')}
+            style={modalStyles.modalBackground}
+            resizeMode="cover"
+          >
+            <View style={modalStyles.modalBackgroundDim} pointerEvents="none" />
 
-          <View style={modalStyles.modalHeader}>
-            <TouchableOpacity style={modalStyles.closeButton} onPress={onClose} activeOpacity={0.8}>
-              <Ionicons name="close" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={modalStyles.modalBody}>
-            <ScrollView
-              contentContainerStyle={modalStyles.modalBodyContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <Image
-                source={require('@/assets/images/logo.png')}
-                style={modalStyles.modalLogo}
-                resizeMode="contain"
-              />
-              <Text style={modalStyles.modalTitle}>We want you to try CraveOff for free</Text>
-              <Text style={modalStyles.modalSubtitle}>
-                We unlocked every premium tool while we finish the experience. Take a moment to review what you&apos;re getting before you jump in.
-              </Text>
-
-              <View style={modalStyles.modalFeatures}>
-                {features.map((feature, index) => (
-                  <View key={`${feature.text}-${index}`} style={modalStyles.modalFeatureChip}>
-                    <Ionicons name={feature.icon as any} size={16} color="#fff" />
-                    <Text style={modalStyles.modalFeatureText}>{feature.text}</Text>
-                  </View>
-                ))}
+            <View style={modalStyles.modalContent}>
+              <View style={modalStyles.modalHeader}>
+                <TouchableOpacity style={modalStyles.closeButton} onPress={onClose} activeOpacity={0.8}>
+                  <Ionicons name="close" size={20} color="#fff" />
+                </TouchableOpacity>
               </View>
-            </ScrollView>
-          </View>
 
-          <View style={modalStyles.modalActions}>
-            <View style={modalStyles.modalNoteRow}>
-              <Ionicons name="checkmark-circle" size={16} color="#fff" />
-              <Text style={modalStyles.modalNoteText}>No Card Needed</Text>
+              <View style={modalStyles.modalBody}>
+                <ScrollView
+                  contentContainerStyle={modalStyles.modalBodyContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <Image
+                    source={require('@/assets/images/logo.png')}
+                    style={modalStyles.modalLogo}
+                    resizeMode="contain"
+                  />
+                  <Text style={modalStyles.modalTitle}>We want you to try CraveOff for free</Text>
+                  <Text style={modalStyles.modalSubtitle}>
+                    We unlocked every premium tool while we finish the experience. Take a moment to review what you&apos;re getting before you jump in.
+                  </Text>
+
+                  <View style={modalStyles.modalFeatures}>
+                    {features.map((feature, index) => (
+                      <View key={`${feature.text}-${index}`} style={modalStyles.modalFeatureChip}>
+                        <Ionicons name={feature.icon as any} size={16} color="#fff" />
+                        <Text style={modalStyles.modalFeatureText}>{feature.text}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+
+              <View style={modalStyles.modalActions}>
+                <View style={modalStyles.modalNoteRow}>
+                  <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                  <Text style={modalStyles.modalNoteText}>No Card Needed</Text>
+                </View>
+                <TouchableOpacity
+                  style={modalStyles.modalPrimary}
+                  onPress={onTry}
+                  activeOpacity={0.85}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text style={modalStyles.modalPrimaryText}>Try For FREE</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-            <TouchableOpacity
-              style={modalStyles.modalPrimary}
-              onPress={onTry}
-              activeOpacity={0.85}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Text style={modalStyles.modalPrimaryText}>Try For FREE</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          </ImageBackground>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -670,11 +693,21 @@ const createStyles = (_theme: any) => StyleSheet.create({
 const createModalStyles = (_theme: any, insets: { top: number; bottom: number }) => StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
   },
   modal: {
     flex: 1,
-    backgroundColor: '#05060d',
+    backgroundColor: 'transparent',
+  },
+  modalBackground: {
+    flex: 1,
+  },
+  modalBackgroundDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  modalContent: {
+    flex: 1,
     paddingTop: Math.max(insets.top + 12, 40),
   },
   modalHeader: {
@@ -741,19 +774,6 @@ const createModalStyles = (_theme: any, insets: { top: number; bottom: number })
   modalActions: {
     paddingHorizontal: 24,
     paddingBottom: Math.max(insets.bottom + 16, 32),
-  },
-  haloWrapper: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  halo: {
-    width: 900,
-    height: 900,
-    borderRadius: 450,
-    marginTop: -260,
   },
   modalNoteRow: {
     flexDirection: 'row',

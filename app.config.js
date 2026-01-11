@@ -8,7 +8,7 @@ module.exports = {
   expo: {
     name: "CraveOff",
     slug: "craveoff-app",
-    version: "1.2.26",
+    version: "1.3.0",
 
     // Note: These properties will not be synced when android/ios folders are present
     orientation: "portrait", 
@@ -49,7 +49,7 @@ module.exports = {
       softwareKeyboardLayoutMode: "resize",
     
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 53,
+      versionCode: 57,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"
@@ -148,7 +148,10 @@ module.exports = {
         iosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY || "",
         androidApiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY || "",
         publicApiKey: process.env.EXPO_PUBLIC_REVENUECAT_PUBLIC_KEY || "",
-        entitlementId: process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID || "premium"
+        entitlementId: process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID || "CraveOff Pro",
+        // Optional: set to a specific RevenueCat Offering identifier to force which dashboard paywall is shown
+        // (otherwise the SDK will use the "current" offering / first offering)
+        paywallOfferingId: process.env.EXPO_PUBLIC_REVENUECAT_OFFERING_ID || ""
       },
       superwall: {
         // Superwall "Public API Key" is per-platform app in the Superwall dashboard.

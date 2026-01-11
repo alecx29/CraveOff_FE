@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LottieView from 'lottie-react-native';
+import * as Updates from 'expo-updates';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import FreeJourneyContent from './FreeJourneyContent';
@@ -24,7 +25,10 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const styles = createStyles(theme, insets);
-  const showPaywall = __DEV__;
+
+  // TEMP: Always show the test paywall (needed for internal rollout builds too).
+  // TODO: Gate this again before a public release (e.g. with an env/config flag).
+  const showPaywall = true;
 
   // Mark paywall reached when this screen mounts (idempotent backend)
   React.useEffect(() => {

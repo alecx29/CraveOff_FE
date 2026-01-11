@@ -200,9 +200,37 @@ export default function RootLayout() {
 
       try {
         if (__DEV__) console.log('[Superwall][RC] onPurchase', params);
+
+        // iOS-specific: Superwall paywalls can be presented outside React's main VC/window.
+        // RevenueCat presents the Apple purchase sheet from the currently presented VC; when the paywall
+        // is in a separate overlay/window, the purchase sheet may fail to present and the promise can hang.
+        // Dismissing the paywall first makes the purchase sheet presentation reliable.
+        if (Platform.OS === 'ios') {
+          try {
+            const { SuperwallExpoModule } = await import('expo-superwall');
+            await SuperwallExpoModule.dismiss?.().catch(() => {});
+            // Let UIKit settle the dismissal before presenting StoreKit UI.
+            await new Promise((r) => setTimeout(r, 250));
+          } catch (e) {
+            if (__DEV__) console.log('[Superwall][RC] iOS pre-dismiss failed (non-blocking)', (e as any)?.message || e);
+          }
+        }
+
+        // Basic capability check (helps catch iOS restrictions / parental controls quickly).
+        try {
+          const canPay = await Purchases.canMakePayments();
+          if (__DEV__) console.log('[Superwall][RC] canMakePayments', { canPay });
+          if (canPay === false) return { type: 'failed', error: 'In-app purchases are not allowed on this device.' };
+        } catch {
+          // non-blocking
+        }
+
         const products = await Purchases.getProducts([params.productId]);
         const product = products?.[0];
-        if (!product) return { type: 'failed', error: 'Product not found' };
+        if (!product) {
+          if (__DEV__) console.log('[Superwall][RC] Product not found for id', params.productId);
+          return { type: 'failed', error: 'Product not found' };
+        }
 
         // Android base plans / offers:
         // Superwall provides `basePlanId` and optional `offerId`. RevenueCat requires purchasing
@@ -223,12 +251,34 @@ export default function RootLayout() {
             if (__DEV__) console.log('[Superwall][RC] Purchasing subscription option', { optionId: chosenOption?.id, productId: chosenOption?.productId });
             await Purchases.purchaseSubscriptionOption(chosenOption);
           }
+        } else if (Platform.OS === 'ios') {
+          // Prefer purchasing via Offerings/Packages on iOS (matches your existing paywall flow
+          // and preserves presentedOfferingContext when available).
+          try {
+            const offerings = await Purchases.getOfferings();
+            const offering = offerings?.current ?? (offerings?.all ? Object.values(offerings.all)[0] : null);
+            const pkgs = offering?.availablePackages ?? [];
+            const matchedPkg =
+              Array.isArray(pkgs) ? pkgs.find((p: any) => p?.product?.identifier === params.productId) : null;
+            if (matchedPkg) {
+              if (__DEV__) console.log('[Superwall][RC] iOS purchasing via package', { pkgId: matchedPkg?.identifier });
+              await Purchases.purchasePackage(matchedPkg);
+            } else {
+              if (__DEV__) console.log('[Superwall][RC] iOS purchasing via store product', { productId: product?.identifier });
+              await Purchases.purchaseStoreProduct(product);
+            }
+          } catch (e) {
+            // Fall back to direct store product purchase if offerings lookup fails.
+            if (__DEV__) console.log('[Superwall][RC] iOS offerings lookup failed; falling back', (e as any)?.message || e);
+            await Purchases.purchaseStoreProduct(product);
+          }
         } else {
-          // iOS or Android without basePlanId
+          // Android without basePlanId
           await Purchases.purchaseStoreProduct(product);
         }
 
-        return { type: 'purchased' };
+        // Success: returning void is enough; CustomPurchaseControllerProvider treats it as purchased.
+        return;
       } catch (error: any) {
         const code = error?.code;
         if (code === PURCHASES_ERROR_CODE?.PURCHASE_CANCELLED_ERROR || error?.userCancelled) {
@@ -453,41 +503,65 @@ const AuthNavigation: React.FC = () => {
     );
   }
 
+  if (!isAuthenticated) {
+    return (
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/signup" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/analysis-complete" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/goals" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/symptoms" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/subscription" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="(auth)/paywall"
+          options={{ headerShown: false, animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="(auth)/revenuecat-paywall"
+          options={{ headerShown: false, animation: 'slide_from_right' }}
+        />
+      </Stack>
+    );
+  }
+
   return (
     <>
-    <Stack screenOptions={{ headerShown: false }}>
-      {!isAuthenticated ? (
-        <>
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/signup" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/analysis-complete" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/goals" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/symptoms" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/subscription" options={{ headerShown: false }} />
-        </>
-      ) : (
-        <>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
-          <Stack.Screen name="deep-breathing" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'slide_from_right' }} />
-          <Stack.Screen name="deep-breathing/session" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }} />
-          <Stack.Screen name="journal-modal" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-          <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen
+          name="(auth)/paywall"
+          options={{ headerShown: false, animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="(auth)/revenuecat-paywall"
+          options={{ headerShown: false, animation: 'slide_from_right' }}
+        />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen
+          name="deep-breathing/index"
+          options={{
+            headerShown: false,
+            presentation: 'fullScreenModal',
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="deep-breathing/session"
+          options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }}
+        />
+        <Stack.Screen
+          name="journal-modal"
+          options={{
+            headerShown: false,
+            presentation: 'fullScreenModal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+      </Stack>
 
-          <Stack.Screen
-            name="form-modal"
-            options={{
-              headerShown: false,
-              presentation: 'fullScreenModal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-        </>
-      )}
-    </Stack>
-      
       {/* Show daily check-in popup only for authenticated users on the home page */}
-      {isAuthenticated && !loading && <HomeOnlyCheckInController />}
+      {!loading ? <HomeOnlyCheckInController /> : null}
     </>
   );
 };

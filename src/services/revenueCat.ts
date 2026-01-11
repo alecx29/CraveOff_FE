@@ -20,7 +20,7 @@ const getRevenueCatConfig = (): RevenueCatConfig => {
 const FALLBACK_IOS_KEY = "appl_TvqcrNvOzhrgtyWVHedaKMZBcmH";
 const FALLBACK_ANDROID_KEY = "goog_OtBqOAUdGCvwygWNWrprerAhHNw";
 const FALLBACK_PUBLIC_KEY = "appl_TvqcrNvOzhrgtyWVHedaKMZBcmH";
-const FALLBACK_ENTITLEMENT = "default";
+const FALLBACK_ENTITLEMENT = "craveoff_premium";
 
 // Prefer runtime env (EXPO_PUBLIC_*) first, then constants from app.config,
 // and only then fall back to hardcoded values as an absolute last resort.
