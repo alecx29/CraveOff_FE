@@ -9,11 +9,15 @@ import { registerDeviceWithBackend } from '@/src/services/pushService';
 import { initRevenueCat, logInRevenueCat, logOutRevenueCat } from '@/src/services/revenueCat';
 import { getMonetizationUserId } from '@/src/services/monetizationUserId';
 import { clearAuthFlags, extractAuthFlags, saveAuthFlags } from '@/src/Storage/authFlagsStorage';
+import { clearCachedAccessStatus, getAccessStatus } from '@/src/services/accessStatus';
 
 interface AuthContextProps {
   isAuthenticated: boolean;
   user: any;
   accessToken: string | null;
+  isPremium: boolean | null;
+  accessLoading: boolean;
+  refreshAccessStatus: (params?: { useCache?: boolean }) => Promise<boolean | null>;
   signIn: (userData: { accessToken: string; refreshToken: string; user?: any; expiresAt?: number; refreshExpiresAt?: number }) => Promise<void>;
   signUp: (userData: { accessToken: string; refreshToken: string; user?: any; expiresAt?: number; refreshExpiresAt?: number }) => Promise<void>;
   signOut: () => void;
@@ -27,6 +31,9 @@ export const AuthContext = createContext<AuthContextProps>({
   isAuthenticated: false,
   user: {},
   accessToken: null,
+  isPremium: null,
+  accessLoading: false,
+  refreshAccessStatus: () => Promise.resolve(null),
   signIn: () => Promise.resolve(),
   signUp: () => Promise.resolve(),
   signOut: () => {},
@@ -46,6 +53,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [authErrorCount, setAuthErrorCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
+  const [accessLoading, setAccessLoading] = useState<boolean>(false);
 
   const PERSISTED_USER_KEY = 'authUser';
 
@@ -85,6 +94,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const getRevenueCatUserId = (userData?: any): string | undefined => getMonetizationUserId(userData);
 
+  const refreshAccessStatus = async (params?: { useCache?: boolean }): Promise<boolean | null> => {
+    try {
+      const t = await getTokens();
+      if (!t?.accessToken) {
+        setIsPremium(null);
+        return null;
+      }
+
+      setAccessLoading(true);
+      const access = await getAccessStatus({ useCache: params?.useCache !== false });
+      setIsPremium(access.isPremium);
+      return access.isPremium;
+    } catch (e: any) {
+      console.warn('[Access] Failed to fetch /access/status:', e?.response?.data || e?.message || e);
+      setIsPremium(null);
+      return null;
+    } finally {
+      setAccessLoading(false);
+    }
+  };
+
   const fetchUserProfile = async () => {
     try {
       // Fetch current user profile after token is set
@@ -110,6 +140,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch {}
         console.log('[AuthContext] User profile fetched from API');
         logInRevenueCat(getRevenueCatUserId(merged));
+        // Non-blocking: keep backend as source of truth for access state
+        refreshAccessStatus({ useCache: true }).catch(() => {});
       }
     } catch (e) {
       console.warn('[AuthContext] Failed to fetch user profile:', (e as any)?.message);
@@ -144,13 +176,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           // Then refresh user data from API in background
           fetchUserProfile();
+
+          // Also refresh access state (backend source of truth)
+          refreshAccessStatus({ useCache: true }).catch(() => {});
         } else {
           console.log('[AuthContext] No token found, user is not authenticated');
           setIsAuthenticated(false);
+          setIsPremium(null);
         }
       } catch (error) {
         console.error('[AuthContext] Error checking authentication:', error);
         setIsAuthenticated(false);
+        setIsPremium(null);
       } finally {
         console.log('[AuthContext] Authentication check complete, setting loading to false');
         setLoading(false);
@@ -205,6 +242,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.log('[AuthContext] Sign in complete');
 
+      // Non-blocking: refresh backend access state after login
+      refreshAccessStatus({ useCache: false }).catch(() => {});
+
       // Attempt to register device for push notifications (non-blocking)
       try {
         registerDeviceWithBackend({ silent: true });
@@ -252,6 +292,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       clearPersistedUser();
       logOutRevenueCat();
       clearAuthFlags();
+      setIsPremium(null);
+      setAccessLoading(false);
+      clearCachedAccessStatus().catch(() => {});
       
       // Remove the token from the API client headers
       delete apiClient.defaults.headers.common['Authorization'];
@@ -298,7 +341,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, signIn, signUp, signOut, user, accessToken, refreshToken, setAccessToken, setIsAuthenticated, loading }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        signIn,
+        signUp,
+        signOut,
+        user,
+        accessToken,
+        isPremium,
+        accessLoading,
+        refreshAccessStatus,
+        refreshToken,
+        setAccessToken,
+        setIsAuthenticated,
+        loading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

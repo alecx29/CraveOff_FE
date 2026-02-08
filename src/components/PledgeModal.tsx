@@ -7,15 +7,12 @@ import {
   StatusBar,
   Animated as RNAnimated,
   ScrollView,
-  Modal
+  Modal,
+  ImageBackground
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { 
-  FadeIn, 
-  FadeOut
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 import Header from '@/src/components/header/Header';
@@ -83,16 +80,13 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
       animationType="none"
       statusBarTranslucent
     >
-      <Animated.View 
-        style={styles.container}
-        entering={FadeIn.duration(300)}
-        exiting={FadeOut.duration(200)}
-      >
+      <Animated.View style={styles.container}>
         <StatusBar barStyle="light-content" />
         
-        <LinearGradient
-          colors={['rgba(20,20,30,0.98)', 'rgba(10,10,20,0.99)']}
-          style={styles.backgroundGradient}
+        <ImageBackground
+          source={require('@/assets/images/afterPay1.png')}
+          style={styles.background}
+          resizeMode="cover"
         >
           <RNAnimated.View 
             style={[
@@ -191,7 +185,7 @@ const PledgeModal = ({ visible, onClose, onPledge }: PledgeModalProps) => {
               </View>
             </ScrollView>
           </RNAnimated.View>
-        </LinearGradient>
+        </ImageBackground>
       </Animated.View>
     </Modal>
   );
@@ -203,10 +197,13 @@ const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+    // Modal is `transparent`, so ensure we still fully cover (no bleed-through).
+    backgroundColor: '#000',
   },
-  backgroundGradient: {
+  background: {
     width: '100%',
     height: '100%',
+    opacity: 0.90,
   },
   fullScreenContainer: {
     flex: 1,
@@ -250,7 +247,10 @@ const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
   optionsContainer: {
     borderRadius: 16,
     padding: 10,
-    backgroundColor: 'rgba(30, 30, 40, 0.5)',
+    // Tinted overlay over the background image (readable + premium, still shows the image)
+    backgroundColor: 'rgba(10, 10, 20, 0.24 )',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
   },
   optionItem: {
     padding: 8,
@@ -268,7 +268,7 @@ const createStyles = (theme: any, bottomPadding: number) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(20, 20, 30, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,

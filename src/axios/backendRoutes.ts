@@ -5,6 +5,9 @@ export const BackendRoutes = {
   DEV_LOGIN: "/auth/dev-login",
   REGISTER: "/auth/signup",
   REFRESH_TOKEN: "/auth/refresh",
+
+  // Monetization / Access control (baseURL already includes `/api`)
+  ACCESS_STATUS: "/access/status",
   SIGNUP_ANALYSIS: "/signup/analysis",
   SIGNUP_COMPLETE: "/profile/signup-complete",
   SIGNUP_COMPLETE_AUTH: "/profile/signup-complete-auth",

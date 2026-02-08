@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, AppState } from 'react-native';
+import { View, StyleSheet, AppState, Image, ImageSourcePropType, Platform } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 
 import { useTheme } from '@/src/context/ThemeProvider';
@@ -26,7 +26,7 @@ const BG_Lottie_Styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     opacity: 0.5,
-    zIndex: 1,
+    zIndex: 2,
   },
 });
 
@@ -43,7 +43,33 @@ const BackgroundLottie = React.memo(() => (
 ));
 BackgroundLottie.displayName = 'BackgroundLottie';
 
-const GradientBackground = ({ children, paused = false, ignoreFocus = false }: { children: React.ReactNode; paused?: boolean; ignoreFocus?: boolean }) => {
+const BG_Abstract_Styles = StyleSheet.create({
+  abstract: {
+    ...StyleSheet.absoluteFillObject,
+    transform: [{ scale: 1.06 }],
+    zIndex: 1,
+  },
+});
+
+const DEFAULT_BG_IMAGE = require('@/assets/images/afterPay1.png');
+
+type GradientBackgroundProps = {
+  children: React.ReactNode;
+  paused?: boolean;
+  ignoreFocus?: boolean;
+  backgroundImageSource?: ImageSourcePropType;
+  backgroundImageOpacity?: number;
+  backgroundImageBlurRadius?: number;
+};
+
+const GradientBackground = ({
+  children,
+  paused = false,
+  ignoreFocus = false,
+  backgroundImageSource = DEFAULT_BG_IMAGE,
+  backgroundImageOpacity = 0.55,
+  backgroundImageBlurRadius = Platform.OS === 'ios' ? 6 : 3,
+}: GradientBackgroundProps) => {
   const { theme } = useTheme();
   const isFocused = useIsFocused();
   const [isAppActive, setIsAppActive] = useState(true);
@@ -76,8 +102,16 @@ const GradientBackground = ({ children, paused = false, ignoreFocus = false }: {
         ]}
         style={StyleSheet.absoluteFill} // Covers full screen
       />
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <Image
+          source={backgroundImageSource}
+          resizeMode="cover"
+          blurRadius={backgroundImageBlurRadius}
+          style={[BG_Abstract_Styles.abstract, { opacity: backgroundImageOpacity }]}
+        />
+      </View>
       {(isAppActive && !paused && (ignoreFocus || isFocused)) && <BackgroundLottie />}
-      <View style={{ flex: 1, zIndex: 2 }}>
+      <View style={{ flex: 1, zIndex: 3 }}>
         {children}
       </View>
     </View>

@@ -5,6 +5,9 @@ export function getMonetizationUserId(userData?: any): string | undefined {
   // - This ID should match across RevenueCat + Superwall.
   // - Avoid PII (e.g. email) especially if passing identifiers to Google Play.
   const id =
+    userData.supabase_user_id?.toString?.() ??
+    userData.supabaseUserId?.toString?.() ??
+    userData.auth_user_id?.toString?.() ??
     userData.id?.toString?.() ??
     userData.user_id?.toString?.() ??
     userData.uuid?.toString?.() ??

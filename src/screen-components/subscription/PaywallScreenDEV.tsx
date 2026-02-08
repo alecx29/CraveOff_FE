@@ -7,19 +7,18 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ImageBackground, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, ImageBackground, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Purchases, { CustomerInfo, PACKAGE_TYPE, PurchasesPackage } from 'react-native-purchases';
-import { useRouter } from 'expo-router';
+import Purchases, { PACKAGE_TYPE, PURCHASES_ERROR_CODE, PurchasesPackage } from 'react-native-purchases';
+import { useNavigation, useRouter } from 'expo-router';
 
 import {
-  getRevenueCatCustomerInfo,
-  getRevenueCatEntitlementId,
-  getRevenueCatOfferings,
+  getRevenueCatOfferings, 
 } from '@/src/services/revenueCat';
+import { getAccessStatus, waitForPremiumAccess } from '@/src/services/accessStatus';
 
 type PlanKey = 'annual' | 'lunar';
 
@@ -33,6 +32,8 @@ export default function PaywallScreenDEV() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const router = useRouter();
+  const navigation = useNavigation();
+  const exitHandledRef = React.useRef(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('annual');
   const [isFetching, setIsFetching] = useState(true);
   const [isRequesting, setIsRequesting] = useState(false);
@@ -40,21 +41,7 @@ export default function PaywallScreenDEV() {
   const [errorText, setErrorText] = useState<string | null>(null);
   const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
   const [annualPackage, setAnnualPackage] = useState<PurchasesPackage | null>(null);
-
-  const entitlementId = useMemo(() => getRevenueCatEntitlementId(), []);
-
-  const checkEntitlement = React.useCallback(
-    (info?: CustomerInfo | null) => {
-      if (!info || !entitlementId) return false;
-      const active = !!info.entitlements?.active?.[entitlementId];
-      if (active) {
-        // After successful purchase/restore, proceed into the app.
-        router.replace('/(tabs)');
-      }
-      return active;
-    },
-    [entitlementId, router]
-  );
+  const premiumNotifiedRef = React.useRef(false);
 
   // Match the padding structure used by the "We want you to try..." modal.
   // (Scrollable body + fixed bottom actions; padding only in those containers.)
@@ -108,20 +95,59 @@ export default function PaywallScreenDEV() {
     setIsFetching(true);
     setErrorText(null);
     try {
-      const [offerings, info] = await Promise.all([getRevenueCatOfferings(), getRevenueCatCustomerInfo()]);
+      const [offerings, access] = await Promise.all([getRevenueCatOfferings(), getAccessStatus({ useCache: true })]);
+      if (access?.isPremium) {
+        if (!premiumNotifiedRef.current) {
+          premiumNotifiedRef.current = true;
+          Alert.alert('CraveOff', 'You already have an active subscription. Enjoy premium access!', [
+            { text: 'OK', onPress: () => router.replace('/(tabs)') },
+          ]);
+          return;
+        }
+        router.replace('/(tabs)');
+        return;
+      }
       const offeringToUse = pickOffering(offerings);
       selectPackages(offeringToUse);
-      checkEntitlement(info);
     } catch (err: any) {
       setErrorText(err?.message || 'Failed to load subscription options.');
     } finally {
       setIsFetching(false);
     }
-  }, [checkEntitlement]);
+  }, [router]);
 
   React.useEffect(() => {
     refreshData();
   }, [refreshData]);
+
+  const openExitOffer = React.useCallback(() => {
+    if (exitHandledRef.current) return;
+    exitHandledRef.current = true;
+    router.replace('/(auth)/claim-free-trial-paywall');
+  }, [router]);
+
+  // When the user tries to close/back out, show the exit offer paywall instead.
+  React.useEffect(() => {
+    const sub = navigation.addListener('beforeRemove', (e: any) => {
+      const actionType = e?.data?.action?.type;
+      if (actionType === 'REPLACE' || actionType === 'PUSH' || actionType === 'NAVIGATE') return;
+      if (exitHandledRef.current) return;
+      e.preventDefault();
+      openExitOffer();
+    });
+    return sub;
+  }, [navigation, openExitOffer]);
+
+  // Android hardware back: route to exit offer.
+  React.useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const handler = () => {
+      openExitOffer();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', handler);
+    return () => sub.remove();
+  }, [openExitOffer]);
 
   const formatPrice = (pkg: PurchasesPackage | null, suffix: string) => {
     if (!pkg) return undefined;
@@ -144,14 +170,24 @@ export default function PaywallScreenDEV() {
     setRequestingAction('purchase');
     setErrorText(null);
     try {
-      const { customerInfo } = await Purchases.purchasePackage(pkg);
-      if (!checkEntitlement(customerInfo)) {
-        Alert.alert('CraveOff', 'Purchase completed. If access is not active yet, please wait a moment and try Restore.');
+      await Purchases.purchasePackage(pkg);
+      const access = await waitForPremiumAccess();
+      if (access?.isPremium) {
+        router.replace('/(auth)/premium-intro');
+        return;
       }
+      Alert.alert(
+        'CraveOff',
+        'Purchase completed, but access is still activating. Please wait a moment and try again (or tap Restore).',
+      );
     } catch (err: any) {
-      if (!err?.userCancelled) {
-        setErrorText(err?.message || 'Purchase failed. Please try again.');
+      const isCancelled =
+        err?.userCancelled || err?.code === PURCHASES_ERROR_CODE?.PURCHASE_CANCELLED_ERROR;
+      if (isCancelled) {
+        openExitOffer();
+        return;
       }
+      setErrorText(err?.message || 'Purchase failed. Please try again.');
     } finally {
       setIsRequesting(false);
       setRequestingAction(null);
@@ -164,10 +200,13 @@ export default function PaywallScreenDEV() {
     setRequestingAction('restore');
     setErrorText(null);
     try {
-      const info = await Purchases.restorePurchases();
-      if (!checkEntitlement(info)) {
-        setErrorText('No previous subscription found to restore.');
+      await Purchases.restorePurchases();
+      const access = await waitForPremiumAccess();
+      if (access?.isPremium) {
+        router.replace('/(auth)/premium-intro');
+        return;
       }
+      setErrorText('No active subscription found to restore (or access is still activating).');
     } catch (err: any) {
       setErrorText(err?.message || 'Restore failed. Please try again.');
     } finally {
@@ -359,6 +398,8 @@ const createStyles = (scale: number) => {
   return StyleSheet.create({
     background: {
       flex: 1,
+      // Prevent a light/grey flash while the ImageBackground mounts during navigation transitions.
+      backgroundColor: '#000',
     },
     dim: {
       ...StyleSheet.absoluteFillObject,
@@ -398,7 +439,8 @@ const createStyles = (scale: number) => {
       position: 'absolute',
       left: (timelineIconColWidth / 2) - (timelineBarWidth / 2),
       top: timelineDotSize / 2,
-      bottom: timelineDotSize / 2,
+      // Extend the bar slightly below the last dot so it peeks out a few pixels.
+      bottom: (timelineDotSize / 2) - s(6),
       width: timelineBarWidth,
       borderRadius: 999,
       opacity: 0.85,
@@ -423,6 +465,7 @@ const createStyles = (scale: number) => {
     timelineTextCol: {
       flex: 1,
       paddingTop: 0,
+      paddingLeft: s(6), // Nudge text a few pixels to the right relative to the icons
     },
     timelineTitleRow: {
       minHeight: timelineDotSize,

@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Dimensions, Animated, Easing, Text } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Dimensions, Animated, Easing, Text, ImageBackground } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import inhaleBell from '@/assets/images/deep-meditation-bell-hit-root-chakra-1.mp3';
 import exhaleBell from '@/assets/images/deep-meditation-bell-hit-heart-chakra-4.mp3';
 
-import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { useTheme } from '@/src/context/ThemeProvider';
 // Haptics temporarily disabled; keeping toggle UI only
 
@@ -42,8 +41,8 @@ export default function DeepBreathingSessionScreen() {
   const audioOnRef = useRef<boolean>(true);
 
   const stopAllSounds = React.useCallback(async () => {
-    try { await inhaleSoundRef.current?.stopAsync?.(); } catch {}
-    try { await exhaleSoundRef.current?.stopAsync?.(); } catch {}
+    try { await inhaleSoundRef.current?.stopAsync?.(); } catch { }
+    try { await exhaleSoundRef.current?.stopAsync?.(); } catch { }
   }, []);
 
   useEffect(() => {
@@ -57,7 +56,7 @@ export default function DeepBreathingSessionScreen() {
       leftRef.current = durationSec;
       setPhaseLeft(durationSec);
       if (audioOnRef.current) {
-        try { void inhaleSoundRef.current?.replayAsync(); } catch {}
+        try { void inhaleSoundRef.current?.replayAsync(); } catch { }
       }
       // stop any previous animation to avoid overlapping chains
       animRef.current?.stop?.();
@@ -83,7 +82,7 @@ export default function DeepBreathingSessionScreen() {
       leftRef.current = durationSec;
       setPhaseLeft(durationSec);
       if (audioOnRef.current) {
-        try { void exhaleSoundRef.current?.replayAsync(); } catch {}
+        try { void exhaleSoundRef.current?.replayAsync(); } catch { }
       }
       // stop any previous animation to avoid overlapping chains
       animRef.current?.stop?.();
@@ -126,8 +125,8 @@ export default function DeepBreathingSessionScreen() {
 
     return () => {
       isCancelled = true;
-      try { clearInterval(secTimer); } catch {}
-      try { scaleAnim.stopAnimation(); } catch {}
+      try { clearInterval(secTimer); } catch { }
+      try { scaleAnim.stopAnimation(); } catch { }
       animRef.current?.stop?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -152,17 +151,21 @@ export default function DeepBreathingSessionScreen() {
         }
         inhaleSoundRef.current = inhaleCreated.sound;
         exhaleSoundRef.current = exhaleCreated.sound;
-      } catch {}
+      } catch { }
     })();
     return () => {
       mounted = false;
-      try { void inhaleSoundRef.current?.unloadAsync(); } catch {}
-      try { void exhaleSoundRef.current?.unloadAsync(); } catch {}
+      try { void inhaleSoundRef.current?.unloadAsync(); } catch { }
+      try { void exhaleSoundRef.current?.unloadAsync(); } catch { }
     };
   }, []);
 
   return (
-    <GradientBackground>
+    <ImageBackground
+      source={require('@/assets/images/afterPay2.webp')}
+      style={styles.background}
+      resizeMode="cover"
+    >
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
         <View style={styles.headerRow}>
@@ -236,7 +239,7 @@ export default function DeepBreathingSessionScreen() {
                 } else {
                   // Restartăm întotdeauna ciclul de la cerc mic (Inhale 4s) și continuăm în buclă
                   animRef.current?.stop?.();
-                  try { scaleAnim.stopAnimation(); } catch {}
+                  try { scaleAnim.stopAnimation(); } catch { }
                   scaleAnim.setValue(innerScale);
                   const continueLoop = () => {
                     if (pausedRef.current || pendingStopRef.current) return;
@@ -245,7 +248,7 @@ export default function DeepBreathingSessionScreen() {
                     leftRef.current = INHALE_SEC;
                     setPhaseLeft(INHALE_SEC);
                     if (audioOnRef.current) {
-                      try { void inhaleSoundRef.current?.replayAsync(); } catch {}
+                      try { void inhaleSoundRef.current?.replayAsync(); } catch { }
                     }
                     animRef.current = Animated.timing(scaleAnim, {
                       toValue: 1,
@@ -260,7 +263,7 @@ export default function DeepBreathingSessionScreen() {
                         leftRef.current = EXHALE_SEC;
                         setPhaseLeft(EXHALE_SEC);
                         if (audioOnRef.current) {
-                          try { void exhaleSoundRef.current?.replayAsync(); } catch {}
+                          try { void exhaleSoundRef.current?.replayAsync(); } catch { }
                         }
                         animRef.current = Animated.timing(scaleAnim, {
                           toValue: innerScale,
@@ -295,7 +298,7 @@ export default function DeepBreathingSessionScreen() {
           </View>
         </View>
       </View>
-    </GradientBackground>
+    </ImageBackground>
   );
 }
 
@@ -310,6 +313,10 @@ const createStyles = (theme: any) => {
   const diameter = Math.min(width, height) * 0.78;
   const inner = diameter * 0.32;
   return StyleSheet.create({
+    background: {
+      flex: 1,
+      backgroundColor: '#000',
+    },
     container: {
       flex: 1,
       paddingTop: 44,

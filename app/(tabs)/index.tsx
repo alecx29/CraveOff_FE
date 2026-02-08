@@ -1,6 +1,6 @@
 import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform, Image, InteractionManager } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList, TextInput, ActivityIndicator, TouchableWithoutFeedback, Alert, KeyboardAvoidingView, Platform, Image, ImageBackground, InteractionManager } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, Easing, useAnimatedScrollHandler, useAnimatedRef, runOnJS, withRepeat, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 import { router } from 'expo-router';
@@ -1676,19 +1676,23 @@ export default function HomeScreen() {
             setShowOriaModal(false);
           }}
         >
-          <GradientBackground ignoreFocus>
-          <SafeAreaView
-            style={[
-              styles.oriaModalContainer,
-              { paddingTop: oriaInsets.top || 12, paddingBottom: oriaInsets.bottom || 12 },
-            ]}
-            edges={[]}
+          <ImageBackground
+            source={require('@/assets/images/afterPay2.webp')}
+            style={styles.oriaModalBackground}
+            resizeMode="cover"
           >
-            <KeyboardAvoidingView
-              style={{ flex: 1 }}
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+            <SafeAreaView
+              style={[
+                styles.oriaModalContainer,
+                { paddingTop: oriaInsets.top || 12, paddingBottom: oriaInsets.bottom || 12 },
+              ]}
+              edges={[]}
             >
+              <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+              >
             
             {!selectedChat ? (
               // Conversation list view
@@ -1893,9 +1897,9 @@ export default function HomeScreen() {
                 </View>
               </View>
             )}
-            </KeyboardAvoidingView>
-          </SafeAreaView>
-          </GradientBackground>
+              </KeyboardAvoidingView>
+            </SafeAreaView>
+          </ImageBackground>
         </Modal>
       )}
       
@@ -2076,6 +2080,10 @@ const createStyles = (theme: any, insets: { top: number }) => StyleSheet.create(
   oriaModalContainer: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  oriaModalBackground: {
+    flex: 1,
+    backgroundColor: '#000',
   },
   oriaModalHeader: {
     flexDirection: 'row',
@@ -2277,7 +2285,9 @@ const createStyles = (theme: any, insets: { top: number }) => StyleSheet.create(
     backgroundColor: theme.colors.primary,
   },
   oriaMessageBubble: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'rgba(10, 10, 20, 0.50)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   messageText: {
     fontSize: 16,
@@ -2301,14 +2311,16 @@ const createStyles = (theme: any, insets: { top: number }) => StyleSheet.create(
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.cardBackground,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
   },
   chatInputWrapper: {
     flex: 1,
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: 16,
+    backgroundColor: 'rgba(10, 10, 20, 0.55)',
+    borderRadius: 22,
     paddingHorizontal: 12,
     marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   chatInput: {
     fontSize: 16,
@@ -2324,12 +2336,15 @@ const createStyles = (theme: any, insets: { top: number }) => StyleSheet.create(
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'rgba(10, 10, 20, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
   },
   sendButtonActive: {
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'rgba(10, 10, 20, 0.75)',
+    borderColor: 'rgba(255, 255, 255, 0.16)',
   },
   widgetsContainer: {
     marginBottom: 16,

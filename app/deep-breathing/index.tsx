@@ -1,9 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Text, ImageBackground } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import GradientBackground from '@/src/screen-components/gradient-background/GradientBackground';
 import { useTheme } from '@/src/context/ThemeProvider';
 
 const DURATION_MIN = 4;
@@ -21,7 +20,11 @@ export default function DeepBreathingScreen() {
   };
 
   return (
-    <GradientBackground>
+    <ImageBackground
+      source={require('@/assets/images/afterPay2.webp')}
+      style={styles.background}
+      resizeMode="cover"
+    >
       <Stack.Screen options={{ headerShown: false, presentation: 'fullScreenModal' }} />
       <View style={styles.container}>
         <View style={styles.headerRow}>
@@ -45,11 +48,15 @@ export default function DeepBreathingScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </GradientBackground>
+    </ImageBackground>
   );
 }
 
 const createStyles = (theme: any) => StyleSheet.create({
+  background: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
   container: {
     flex: 1,
     paddingTop: 44,

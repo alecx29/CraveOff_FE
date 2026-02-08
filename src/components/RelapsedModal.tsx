@@ -65,13 +65,14 @@ const RelapsedModal = ({ visible, onClose, onResetCounter }: RelapsedModalProps)
       visible={visible}
       onRequestClose={onClose}
       animationType="none"
+      statusBarTranslucent
     >
       <Animated.View 
         style={styles.container}
         entering={FadeIn.duration(300)}
         exiting={FadeOut.duration(200)}
       >
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
         
         {/* Using the reusable Header component */}
         <Header 
@@ -255,7 +256,7 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 20,
+    paddingTop: topPadding + 8,
     paddingBottom: bottomPadding + 20,
     justifyContent: 'space-between',
   },

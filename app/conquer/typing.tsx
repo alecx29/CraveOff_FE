@@ -66,7 +66,7 @@ function useTypewriterSequence(sequences: { text: string; holdMs?: number }[]) {
         setDisplay(target.slice(0, nextIndex));
         setCharIndex(nextIndex);
         // Haptic per character (throttled)
-        try { maybeHapticChar(nextIndex - 1); } catch {}
+        try { maybeHapticChar(nextIndex - 1); } catch { }
       }, TYPING_DELAY_MS);
       return () => clearTimeout(t);
     } else {
@@ -74,7 +74,7 @@ function useTypewriterSequence(sequences: { text: string; holdMs?: number }[]) {
       const t = setTimeout(() => {
         // Boundary haptic then advance; keep final message without clearing
         if (seqIndex < sequences.length - 1) {
-          try { boundaryHaptic(); } catch {}
+          try { boundaryHaptic(); } catch { }
           setDisplay('');
           setCharIndex(0);
           setSeqIndex(seqIndex + 1);
@@ -104,7 +104,7 @@ export default function ConquerTyping() {
       try {
         const stored = await AsyncStorage.getItem('signup.personalName');
         if (stored && stored.trim().length > 0) setName(stored.trim());
-      } catch {}
+      } catch { }
     })();
   }, []);
 
@@ -277,7 +277,7 @@ const createStyles = (insets: any) => StyleSheet.create({
     paddingBottom: insets.bottom + 32,
   },
   animationBox: {
-    width: 220,
+    width: Platform.OS === 'ios' ? 260 : 220,
     height: 220,
   },
   animation: {

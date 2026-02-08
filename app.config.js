@@ -8,10 +8,10 @@ module.exports = {
   expo: {
     name: "CraveOff",
     slug: "craveoff-app",
-    version: "1.3.0",
+    version: "1.2.31",
 
     // Note: These properties will not be synced when android/ios folders are present
-    orientation: "portrait", 
+    orientation: "portrait",
     icon: "./assets/images/logoCraveoff-512.png",
     scheme: "craveoffapp",
     userInterfaceStyle: "automatic",
@@ -25,9 +25,9 @@ module.exports = {
     runtimeVersion: {
       policy: "sdkVersion",
     },
-    
+
     newArchEnabled: false,
-    
+
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.usualsuspect29.craveoffapp",
@@ -47,9 +47,9 @@ module.exports = {
       },
       edgeToEdgeEnabled: true,
       softwareKeyboardLayoutMode: "resize",
-    
+
       package: "com.usualsuspect29.craveoffapp",
-      versionCode: 57,
+      versionCode: 58,
       notification: {
         icon: "./assets/images/ic_launcher.png",
         color: "#6366f1"
@@ -70,13 +70,13 @@ module.exports = {
         }
       ]
     },
-    
+
     web: {
       bundler: "metro",
       output: "static",
       favicon: "./assets/images/play_store_512.png"
     },
-    
+
     plugins: [
       "expo-router",
       [
@@ -97,7 +97,7 @@ module.exports = {
           "imageWidth": 200,
           "resizeMode": "contain",
           // Align native splash with the animated gradient background to avoid a visible flash
-          "backgroundColor": "#16171a"
+          "backgroundColor": "#000000"
         }
       ],
       "expo-notifications",
@@ -118,11 +118,11 @@ module.exports = {
         }
       ]
     ],
-    
+
     experiments: {
       typedRoutes: true
     },
-    
+
     extra: {
       router: {},
       eas: {
@@ -148,7 +148,7 @@ module.exports = {
         iosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY || "",
         androidApiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY || "",
         publicApiKey: process.env.EXPO_PUBLIC_REVENUECAT_PUBLIC_KEY || "",
-        entitlementId: process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID || "CraveOff Pro",
+        entitlementId: process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID || "craveoff_premium",
         // Optional: set to a specific RevenueCat Offering identifier to force which dashboard paywall is shown
         // (otherwise the SDK will use the "current" offering / first offering)
         paywallOfferingId: process.env.EXPO_PUBLIC_REVENUECAT_OFFERING_ID || ""
@@ -163,7 +163,7 @@ module.exports = {
         testPlacement: process.env.EXPO_PUBLIC_SUPERWALL_TEST_PLACEMENT || "upgrade_pressed"
       }
     },
-    
+
     // Disable the development status bar
     developmentClient: {
       silentLaunch: true

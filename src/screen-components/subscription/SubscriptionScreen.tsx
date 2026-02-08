@@ -10,7 +10,7 @@ import LottieView from 'lottie-react-native';
 import * as Updates from 'expo-updates';
 
 import { useTheme } from '@/src/context/ThemeProvider';
-import FreeJourneyContent from './FreeJourneyContent';
+import { FreeJourneyBody, FreeJourneyFooter } from './FreeJourneyContent';
 import PaywallTest from './PaywallTest';
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
@@ -24,11 +24,11 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
   const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const styles = createStyles(theme, insets);
+  const footerHeight = 150 + Math.max(insets.bottom || 0, 12);
+  const styles = createStyles(theme, insets, footerHeight);
 
-  // TEMP: Always show the test paywall (needed for internal rollout builds too).
-  // TODO: Gate this again before a public release (e.g. with an env/config flag).
-  const showPaywall = true;
+  // TEMP: Gate internal paywall test UI from code.
+  const showPaywall = false;
 
   // Mark paywall reached when this screen mounts (idempotent backend)
   React.useEffect(() => {
@@ -204,7 +204,7 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
         <View style={styles.hr} />
           
           {/* Free Journey Content */}
-          <FreeJourneyContent onContinue={handleContinue} />
+          <FreeJourneyBody onContinue={handleContinue} />
 
           {/* Subscription paywall (dev only) */}
           {showPaywall && (
@@ -213,12 +213,15 @@ const SubscriptionScreen = ({ onComplete }: SubscriptionScreenProps) => {
             </Animated.View>
           )}
         </ScrollView>
+        <View style={styles.footerContainer}>
+          <FreeJourneyFooter onContinue={handleContinue} />
+        </View>
       </View>
     </ImageBackground>
   );
 };
 
-const createStyles = (theme: any, insets: any) => StyleSheet.create({
+const createStyles = (theme: any, insets: any, footerHeight: number) => StyleSheet.create({
   backgroundImage: {
     flex: 1,
     width: '100%',
@@ -241,8 +244,18 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 56 + (insets.bottom || 0),
+    paddingBottom: footerHeight + 24,
     paddingTop: 16,
+  },
+  footerContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: Math.max(insets.bottom || 0, 0),
+    backgroundColor: '#000',
   },
   heroContainer: {
     alignItems: 'center',

@@ -1,13 +1,13 @@
 import axios from 'axios';
 import { getTokens, saveTokens, getRefreshToken, clearTokens } from '@/src/Storage/tokenStorage';
 import { baseURL } from '@/src/config-files/constants/backend-url';
-import routeTracker, { getCurrentPath, isOnboardingPath } from '@/src/navigation/routeTracker';
+import { getCurrentPath, isOnboardingPath } from '@/src/navigation/routeTracker';
 import { loadAuthFlags } from '@/src/Storage/authFlagsStorage';
 
 // Create a lock mechanism to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
 let refreshPromise: Promise<any> | null = null;
-let refreshSubscribers: Array<(token: string) => void> = [];
+let refreshSubscribers: ((token: string) => void)[] = [];
 
 // Function to add callbacks to the queue
 const addRefreshSubscriber = (callback: (token: string) => void) => {
@@ -43,22 +43,22 @@ apiClient.interceptors.request.use(
     try {
       // Log all outgoing requests
       console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
-      
+
       // Skip adding Authorization header for authentication endpoints
       if (config.url === '/auth/authenticate' || config.url === '/auth/login' || config.url === '/auth/signup') {
         console.log(`[API Client] Skipping Authorization header for ${config.url}`);
         console.log(`[API Client] Headers for auth endpoint:`, JSON.stringify(config.headers, null, 2));
         return config;
       }
-      
+
       // Check if token is about to expire and refresh if needed
       const { accessToken, expiresAt } = await getTokens();
-      
+
       if (accessToken) {
         // Check if token is expired or about to expire (within 5 minutes)
         const now = Math.floor(Date.now() / 1000);
         const shouldRefresh = expiresAt && expiresAt - now < 300;
-        
+
         if (shouldRefresh && config.url !== '/auth/refresh') {
           console.log('Token about to expire, refreshing before request');
           try {
@@ -71,7 +71,7 @@ apiClient.interceptors.request.use(
             console.error('Error refreshing token before request:', error);
           }
         }
-        
+
         // Set the token in the header
         config.headers.Authorization = `Bearer ${accessToken}`;
       }
@@ -99,13 +99,21 @@ apiClient.interceptors.response.use(
     } else {
       console.log(`API Request Failed:`, error.message);
     }
-    
+
     const originalRequest = error.config;
     // Handle 428 Precondition Required: signup not complete → redirect to onboarding
     if (error.response && error.response.status === 428) {
       try {
         // Import dynamically to avoid circular deps when this file is imported in layout
         const { router } = await import('expo-router');
+        const detail = error.response?.data?.detail;
+        const code =
+          (typeof detail === 'object' && detail ? (detail as any).code : undefined) ?? error.response?.data?.code;
+        if (code === 'INTRO_REQUIRED') {
+          console.log('[API Client] 428 INTRO_REQUIRED received; redirecting to premium intro');
+          router.replace('/(auth)/premium-intro');
+          return Promise.reject(error);
+        }
         const path = getCurrentPath();
         // If already in onboarding/auth, don't bounce them away from the current step
         if (!isOnboardingPath(path)) {
@@ -123,26 +131,26 @@ apiClient.interceptors.response.use(
         } else {
           console.log('[API Client] 428 received while on onboarding/auth; staying on current step');
         }
-      } catch {}
+      } catch { }
       return Promise.reject(error);
     }
-    
+
     // If the error is not 401 or the request has already been retried, reject
     if (!error.response || error.response.status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
     }
-    
+
     // Special case: do NOT refresh Bearer tokens for signup-complete flow.
     // The endpoint only cares about provider idToken; allow caller to handle.
     try {
       const url = originalRequest?.url as string | undefined;
       if (url === '/profile/signup-complete' || url === '/signup-complete') {
         return Promise.reject(error);
-      } 
-    } catch {}
+      }
+    } catch { }
 
     originalRequest._retry = true;
-    
+
     // If a refresh is already in progress, wait for it to complete
     if (isRefreshing) {
       try {
@@ -152,7 +160,7 @@ apiClient.interceptors.response.use(
             resolve(token);
           });
         });
-        
+
         // Update the request with the new token
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return apiClient(originalRequest);
@@ -160,14 +168,14 @@ apiClient.interceptors.response.use(
         return Promise.reject(refreshError);
       }
     }
-    
+
     // Start a new refresh process
     isRefreshing = true;
-    
+
     try {
       // Get the refresh token
       const { refreshToken, refreshExpiresAt } = await getTokens();
-      
+
       // Check if refresh token is expired
       const now = Math.floor(Date.now() / 1000);
       if (refreshExpiresAt && refreshExpiresAt <= now) {
@@ -177,19 +185,19 @@ apiClient.interceptors.response.use(
         isRefreshing = false;
         return Promise.reject(new Error('Refresh token expired'));
       }
-      
+
       if (!refreshToken) {
         isRefreshing = false;
         return Promise.reject(new Error('No refresh token available'));
       }
-      
+
       // Create the refresh promise
       refreshPromise = apiClient.post('/auth/refresh', { refresh_token: refreshToken });
-      
+
       // Wait for the response
       const response = await refreshPromise;
       const userData = response.data;
-      
+
       // Save the new tokens
       await saveTokens(
         userData.access_token,
@@ -197,31 +205,31 @@ apiClient.interceptors.response.use(
         userData.expires_at,
         userData.refresh_expires_at
       );
-      
+
       // Update the default headers for future requests
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${userData.access_token}`;
       apiClientImage.defaults.headers.common['Authorization'] = `Bearer ${userData.access_token}`;
-      
+
       // Notify all subscribers
       onRefreshSuccess(userData.access_token);
-      
+
       // Update the current request
       originalRequest.headers.Authorization = `Bearer ${userData.access_token}`;
-      
+
       // Reset the refresh state
       isRefreshing = false;
       refreshPromise = null;
-      
+
       // Retry the original request
       return apiClient(originalRequest);
     } catch (refreshError) {
       // Reset the refresh state
       isRefreshing = false;
       refreshPromise = null;
-      
+
       // Clear tokens on refresh failure instead of clearing all AsyncStorage
       await clearTokens();
-      
+
       return Promise.reject(refreshError);
     }
   }
@@ -231,14 +239,14 @@ apiClient.interceptors.response.use(
 export const isTokenExpired = async (): Promise<boolean> => {
   try {
     const { expiresAt } = await getTokens();
-    
+
     if (!expiresAt) {
       return true; // If we don't have an expiration time, assume it's expired
     }
-    
+
     const now = Math.floor(Date.now() / 1000);
     const isExpired = expiresAt - now < 300; // Consider expired if less than 5 minutes left (standardizat la 5 minute)
-    
+
     return isExpired;
   } catch (error) {
     console.error('[API Client] Error checking token expiration:', error);
@@ -253,18 +261,18 @@ export const refreshTokenManually = async (): Promise<string | null> => {
     try {
       const response = await refreshPromise;
       return response.data.access_token;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
-  
+
   // Start a new refresh process
   isRefreshing = true;
-  
+
   try {
     // Get the refresh token
     const { refreshToken, refreshExpiresAt } = await getTokens();
-    
+
     // Check if refresh token is expired
     const now = Math.floor(Date.now() / 1000);
     if (refreshExpiresAt && refreshExpiresAt <= now) {
@@ -274,19 +282,19 @@ export const refreshTokenManually = async (): Promise<string | null> => {
       isRefreshing = false;
       return null;
     }
-    
+
     if (!refreshToken) {
       isRefreshing = false;
       return null;
     }
-    
+
     // Create the refresh promise
     refreshPromise = apiClient.post('/auth/refresh', { refresh_token: refreshToken });
-    
+
     // Wait for the response
     const response = await refreshPromise;
     const userData = response.data;
-    
+
     // Save the new tokens
     await saveTokens(
       userData.access_token,
@@ -294,23 +302,23 @@ export const refreshTokenManually = async (): Promise<string | null> => {
       userData.expires_at,
       userData.refresh_expires_at
     );
-    
+
     // Update the default headers for future requests
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${userData.access_token}`;
     apiClientImage.defaults.headers.common['Authorization'] = `Bearer ${userData.access_token}`;
-    
+
     // Reset the refresh state
     isRefreshing = false;
     refreshPromise = null;
-    
+
     return userData.access_token;
   } catch (error) {
     console.error('Error refreshing token manually:', error);
-    
+
     // Reset the refresh state
     isRefreshing = false;
     refreshPromise = null;
-    
+
     return null;
   }
 };
@@ -322,24 +330,24 @@ apiClientImage.interceptors.request.use(
     if (config.url?.includes('/auth/refresh')) {
       return config;
     }
-    
+
     // Check if token is expired and refresh if needed
     const tokenExpired = await isTokenExpired();
     if (tokenExpired) {
       console.log('[Image Request Interceptor] Token expired, attempting refresh before request');
       await refreshTokenManually();
     }
-    
+
     const accessToken = await getTokens().then(tokens => tokens.accessToken);
     console.log('[Image Request Interceptor] Access Token:', accessToken ? 'Token exists' : 'No token');
-    
+
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
       console.log('[Image Request Interceptor] Authorization header set');
     } else {
       console.log('[Image Request Interceptor] No Authorization header set - missing token');
     }
-    
+
     return config;
   },
   error => {
@@ -359,6 +367,14 @@ apiClientImage.interceptors.response.use(
     if (error.response?.status === 428) {
       try {
         const { router } = await import('expo-router');
+        const detail = error.response?.data?.detail;
+        const code =
+          (typeof detail === 'object' && detail ? (detail as any).code : undefined) ?? error.response?.data?.code;
+        if (code === 'INTRO_REQUIRED') {
+          console.log('[Image Response Interceptor] 428 INTRO_REQUIRED received; redirecting to premium intro');
+          router.replace('/(auth)/premium-intro');
+          return Promise.reject(error);
+        }
         const path = getCurrentPath();
         if (!isOnboardingPath(path)) {
           const flags = await loadAuthFlags();
@@ -375,7 +391,7 @@ apiClientImage.interceptors.response.use(
         } else {
           console.log('[Image Response Interceptor] 428 received while on onboarding/auth; staying on current step');
         }
-      } catch {}
+      } catch { }
       return Promise.reject(error);
     }
 
@@ -386,31 +402,31 @@ apiClientImage.interceptors.response.use(
         // Obținem refreshToken din SecureStore sau AsyncStorage
         const refreshToken = await getRefreshToken();
         console.log('[Image Response Interceptor] Refresh Token exists:', !!refreshToken);
-        
+
         if (refreshToken) {
           console.log('[Image Response Interceptor] Attempting to refresh token...');
-          
+
           // Send refresh_token in the format expected by the backend
           const response = await axios.post(`${baseURL}/auth/refresh`, {
             refresh_token: refreshToken,
           });
-          
+
           // Handle the token format from the backend (access_token instead of accessToken)
           const newAccessToken = response.data.access_token;
           const newRefreshToken = response.data.refresh_token;
           const expiresAt = response.data.expires_at;
           const refreshExpiresAt = response.data.refresh_expires_at;
-          
+
           console.log('[Image Response Interceptor] Token refreshed successfully');
 
           // Save tokens using the tokenStorage function
           await saveTokens(newAccessToken, newRefreshToken, expiresAt, refreshExpiresAt);
-          
+
           // Update default headers for all future requests
           apiClient.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
           apiClientImage.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
           console.log('[Image Response Interceptor] API client default headers updated with new token');
-          
+
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           console.log('[Image Response Interceptor] Retrying original request with new token');
           return apiClientImage(originalRequest);
