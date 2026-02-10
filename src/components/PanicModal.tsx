@@ -5,13 +5,16 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   Image,
+  ScrollView,
   Platform,
   StatusBar,
   Linking,
   Animated as RNAnimated,
-  Modal
+  Modal,
+  Dimensions,
+  AppState
 } from 'react-native';
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { 
   FadeIn, 
@@ -20,14 +23,24 @@ import Animated, {
   SlideOutDown 
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
 interface PanicModalProps {
   visible: boolean;
   onClose: () => void;
+  onRelapsed?: () => void;
+  onPrevention?: () => void;
 }
+
+type SideEffectItem = {
+  key: string;
+  title: string;
+  description: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  color: string;
+};
 
 // Define motivational text sentences
 const MOTIVATIONAL_TEXT = [
@@ -39,12 +52,51 @@ const MOTIVATIONAL_TEXT = [
   "Victory is 5 minutes away."
 ];
 
-const PanicModal = ({ visible, onClose }: PanicModalProps) => {
+const SIDE_EFFECTS: SideEffectItem[] = [
+  {
+    key: 'reduced-performance',
+    title: 'REDUCED PERFORMANCE',
+    description: 'Not feeling physically responsive',
+    icon: 'chart-bar',
+    color: '#d45555',
+  },
+  {
+    key: 'desensitization',
+    title: 'DESENSITIZATION',
+    description: 'Needing more extreme content for arousal.',
+    icon: 'eye-outline',
+    color: '#d28a3f',
+  },
+  {
+    key: 'relationship-issues',
+    title: 'RELATIONSHIP ISSUES',
+    description: 'Decreased intimacy and trust.',
+    icon: 'heart-broken-outline',
+    color: '#d35b7a',
+  },
+  {
+    key: 'social-isolation',
+    title: 'SOCIAL ISOLATION',
+    description: 'Withdrawal from social interactions.',
+    icon: 'account-off-outline',
+    color: '#4a86e8',
+  },
+  {
+    key: 'distorted-perceptions',
+    title: 'DISTORTED PERCEPTIONS OF SEX',
+    description: 'Unrealistic expectations in relationships.',
+    icon: 'brain',
+    color: '#a86bff',
+  },
+];
+
+const PanicModal = ({ visible, onClose, onRelapsed, onPrevention }: PanicModalProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [displayedSentences, setDisplayedSentences] = useState<string[]>([]);
   const [typingText, setTypingText] = useState("");
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [cameraPermissionSnapshot, setCameraPermissionSnapshot] = useState<any>(null);
   const cursorOpacity = useRef(new RNAnimated.Value(1)).current;
   const timeoutRef = useRef<number | null>(null);
   const currentSentenceRef = useRef(0);
@@ -57,6 +109,11 @@ const PanicModal = ({ visible, onClose }: PanicModalProps) => {
   const bottomPadding = Math.max(insets.bottom, 20);
   const androidStatusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
   const topPadding = Math.max(insets.top, androidStatusBarHeight, 20);
+  const [topOverlayHeight, setTopOverlayHeight] = useState<number>(0);
+  const [bottomActionsHeight, setBottomActionsHeight] = useState<number>(0);
+  const contentTopPadding = Math.max(topOverlayHeight, topPadding + 110);
+  const permissionForRender = cameraPermissionSnapshot ?? cameraPermission ?? null;
+  const cameraGranted = !!permissionForRender?.granted;
   
   // Get a typing delay with slight variation
   const getTypingDelay = useCallback(() => {
@@ -67,6 +124,33 @@ const PanicModal = ({ visible, onClose }: PanicModalProps) => {
     const now = Date.now();
     hapticPausedUntilRef.current = Math.max(hapticPausedUntilRef.current || 0, now + ms);
   }, []);
+
+  const refreshCameraPermission = useCallback(async () => {
+    try {
+      const current = await Camera.getCameraPermissionsAsync();
+      setCameraPermissionSnapshot(current);
+    } catch {
+      setCameraPermissionSnapshot(cameraPermission ?? null);
+    }
+  }, [cameraPermission]);
+
+  useEffect(() => {
+    setCameraPermissionSnapshot(cameraPermission ?? null);
+  }, [cameraPermission]);
+
+  useEffect(() => {
+    if (!visible) return;
+    void refreshCameraPermission();
+  }, [visible, refreshCameraPermission]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && visible) {
+        void refreshCameraPermission();
+      }
+    });
+    return () => subscription.remove();
+  }, [visible, refreshCameraPermission]);
   
   // Function to trigger a haptic pattern: 3 x warning at 160ms, then 900ms pause, repeat
   const triggerHapticPattern = useCallback(() => {
@@ -287,107 +371,172 @@ const PanicModal = ({ visible, onClose }: PanicModalProps) => {
         entering={SlideInUp.duration(400).springify()}
         exiting={SlideOutDown.duration(300).springify()}
       >
-        <View style={styles.headerContainer}>
-          <TouchableOpacity 
-            style={styles.closeButton} 
-            onPress={onClose}
-            activeOpacity={0.7}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <AntDesign name="close" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.logoContainer}>
-          <Image 
-            source={require('@/assets/images/logo.png')} 
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.panicText}>Panic Button</Text>
-        </View>
-        
-        <View style={styles.contentContainer}>
-          <View style={styles.placeholderContainer}>
-            {visible && cameraPermission?.granted ? (
-              <View style={styles.cameraViewWrapper} pointerEvents="none">
-                <CameraView
-                  style={styles.cameraView}
-                  facing="front"
-                  pointerEvents="none"
-                />
-              </View>
-            ) : null}
-
-            <View
-              style={[
-                styles.textOverlay,
-                (visible && cameraPermission?.granted) ? styles.textOverlayOnCamera : null,
-              ]}
-              pointerEvents="none"
+        <View
+          style={styles.topOverlay}
+          pointerEvents="box-none"
+          onLayout={(event) => setTopOverlayHeight(event.nativeEvent.layout.height)}
+        >
+          <View style={styles.headerContainer} pointerEvents="box-none">
+            <View style={styles.headerSpacer} />
+            <Image
+              source={require('@/assets/images/logo.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <View style={styles.textContainer}>
-                {typingText !== "" && (
-                  <View
-                    style={[
-                      styles.sentenceContainer,
-                      (visible && cameraPermission?.granted) ? styles.sentenceContainerOnCamera : null,
-                    ]}
-                  >
-                    <Text style={styles.sentenceText}>
-                      {typingText}
-                      <RNAnimated.Text style={[styles.cursor, { opacity: cursorOpacity }]}>|</RNAnimated.Text>
-                    </Text>
-                  </View>
-                )}
+              <AntDesign name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
 
-                {completedSentencesForRender
-                  .map((sentence, index) => ({ sentence, index }))
-                  .reverse()
-                  .map(({ sentence, index }) => (
-                    <Animated.View
-                      key={`sentence-${index}-${sentence}`}
+          <View style={styles.titleContainer} pointerEvents="none">
+            <Text style={styles.panicText}>Panic Button</Text>
+          </View>
+        </View>
+
+        <ScrollView
+          style={styles.scrollContainer}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: contentTopPadding + 12, paddingBottom: bottomActionsHeight + bottomPadding + 16 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.placeholderContainer}>
+              {visible && cameraGranted ? (
+                <View style={styles.cameraViewWrapper} pointerEvents="none">
+                  <CameraView
+                    style={styles.cameraView}
+                    facing="front"
+                    pointerEvents="none"
+                  />
+                </View>
+              ) : null}
+
+              <View
+                style={[
+                  styles.textOverlay,
+                  (visible && cameraGranted) ? styles.textOverlayOnCamera : null,
+                ]}
+                pointerEvents="none"
+              >
+                <View style={styles.textContainer}>
+                  {typingText !== "" && (
+                    <View
                       style={[
                         styles.sentenceContainer,
-                        (visible && cameraPermission?.granted) ? styles.sentenceContainerOnCamera : null,
+                        (visible && cameraGranted) ? styles.sentenceContainerOnCamera : null,
                       ]}
-                      entering={Platform.OS === 'ios' ? FadeIn.duration(200) : (undefined as any)}
                     >
-                      <HighlightedSentence sentence={sentence} />
-                    </Animated.View>
-                  ))}
-              </View>
-            </View>
-
-            {!cameraPermission?.granted ? (
-              <View style={styles.cameraPromptOverlay}>
-                <Text style={styles.cameraPromptTitle}>Front Camera</Text>
-                <Text style={styles.cameraPromptBody}>
-                  To show your camera feed in Panic Mode, allow camera access.
-                </Text>
-
-                <View style={styles.cameraPromptButtons}>
-                  {cameraPermission?.canAskAgain === false ? (
-                    <TouchableOpacity
-                      style={styles.cameraPromptButton}
-                      onPress={handleOpenSettings}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.cameraPromptButtonText}>Open Settings</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.cameraPromptButton}
-                      onPress={handleEnableCamera}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.cameraPromptButtonText}>Allow Camera</Text>
-                    </TouchableOpacity>
+                      <Text style={styles.sentenceText}>
+                        {typingText}
+                        <RNAnimated.Text style={[styles.cursor, { opacity: cursorOpacity }]}>|</RNAnimated.Text>
+                      </Text>
+                    </View>
                   )}
+
+                  {completedSentencesForRender
+                    .map((sentence, index) => ({ sentence, index }))
+                    .reverse()
+                    .map(({ sentence, index }) => (
+                      <Animated.View
+                        key={`sentence-${index}-${sentence}`}
+                        style={[
+                          styles.sentenceContainer,
+                          (visible && cameraGranted) ? styles.sentenceContainerOnCamera : null,
+                        ]}
+                        entering={Platform.OS === 'ios' ? FadeIn.duration(200) : (undefined as any)}
+                      >
+                        <HighlightedSentence sentence={sentence} />
+                      </Animated.View>
+                    ))}
                 </View>
               </View>
-            ) : null}
+
+              {!cameraGranted ? (
+                <View style={styles.cameraPromptOverlay}>
+                  <Text style={styles.cameraPromptTitle}>Front Camera</Text>
+                  <Text style={styles.cameraPromptBody}>
+                    To show your camera feed in Panic Mode, allow camera access.
+                  </Text>
+
+                  <View style={styles.cameraPromptButtons}>
+                    {permissionForRender?.canAskAgain === false ? (
+                      <TouchableOpacity
+                        style={styles.cameraPromptButton}
+                        onPress={handleOpenSettings}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.cameraPromptButtonText}>Open Settings</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.cameraPromptButton}
+                        onPress={handleEnableCamera}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.cameraPromptButtonText}>Allow Camera</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              ) : null}
           </View>
+
+          <View style={styles.sectionSeparator}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>Side Effects of Relapsing</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
+          <View style={styles.effectsCard}>
+            {SIDE_EFFECTS.map((item, index) => (
+              <View key={item.key}>
+                <View style={styles.effectRow}>
+                  <View style={styles.effectIconWrap}>
+                    <MaterialCommunityIcons name={item.icon} size={26} color={item.color} />
+                  </View>
+                  <View style={styles.effectTextWrap}>
+                    <Text style={styles.effectTitle}>{item.title}</Text>
+                    <Text style={styles.effectBody}>{item.description}</Text>
+                  </View>
+                </View>
+                {index < SIDE_EFFECTS.length - 1 && <View style={styles.effectDivider} />}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+
+        <View
+          style={styles.bottomActions}
+          onLayout={(event) => setBottomActionsHeight(event.nativeEvent.layout.height)}
+        >
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={[styles.actionButton, styles.primaryActionButton]}
+            onPress={() => {
+              onClose();
+              setTimeout(() => onPrevention?.(), 0);
+            }}
+          >
+            <MaterialCommunityIcons name="alert-circle-outline" size={20} color="#ffffff" />
+            <Text style={styles.actionButtonText}>I&apos;m thinking of relapsing</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={[styles.actionButton, styles.secondaryActionButton]}
+            onPress={() => {
+              onClose();
+              setTimeout(() => onRelapsed?.(), 0);
+            }}
+          >
+            <MaterialCommunityIcons name="thumb-down-outline" size={20} color="#ffffff" />
+            <Text style={styles.actionButtonText}>I Relapsed</Text>
+          </TouchableOpacity>
         </View>
       </Animated.View>
     </Animated.View>
@@ -406,15 +555,31 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     backgroundColor: '#000000',
     overflow: 'hidden',
   },
+  topOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 60,
+    elevation: 60,
+  },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: topPadding + 10,
     paddingBottom: 8,
     zIndex: 50,
     elevation: 50,
+  },
+  headerSpacer: {
+    width: 40,
+    height: 40,
+  },
+  headerLogo: {
+    width: 120,
+    height: 40,
   },
   closeButton: {
     width: 40,
@@ -426,15 +591,10 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     zIndex: 51,
     elevation: 51,
   },
-  logoContainer: {
+  titleContainer: {
     alignItems: 'center',
-    marginTop: Platform.OS === 'ios' ? 20 : 10,
-    marginBottom: Platform.OS === 'ios' ? 30 : 20,
-  },
-  logo: {
-    width: 150,
-    height: 60,
-    marginBottom: 16,
+    marginTop: Platform.OS === 'ios' ? 8 : 4,
+    marginBottom: Platform.OS === 'ios' ? 18 : 12,
   },
   panicText: {
     fontSize: 24,
@@ -442,18 +602,122 @@ const createStyles = (theme: any, bottomPadding: number, topPadding: number) => 
     color: '#d85555',
     textAlign: 'center',
   },
-  contentContainer: {
+  scrollContainer: {
     flex: 1,
-    padding: 20,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
     paddingBottom: bottomPadding + 20,
   },
   placeholderContainer: {
-    flex: 1,
+    width: '100%',
+    height: Math.min(420, Math.max(260, Math.round(Dimensions.get('window').height * 0.42))),
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    marginBottom: 16,
+  },
+  sectionSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 6,
+    marginBottom: 30,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  separatorText: {
+    paddingHorizontal: 12,
+    color: 'rgba(255, 255, 255, 0.62)',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  effectsCard: {
+    width: '100%',
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    marginBottom: 10,
+  },
+  bottomActions: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: bottomPadding,
+    backgroundColor: '#000000',
+    zIndex: 40,
+    elevation: 40,
+  },
+  actionButton: {
+    width: '100%',
+    borderRadius: 999,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  primaryActionButton: {
+    backgroundColor: '#e02727',
+    shadowColor: '#e02727',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  secondaryActionButton: {
+    marginTop: 12,
+    backgroundColor: '#2a2a2a',
+    marginBottom: 10,
+  },
+  actionButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  effectRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  effectIconWrap: {
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  effectTextWrap: {
+    flex: 1,
+  },
+  effectTitle: {
+    color: '#f2f2f2',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  effectBody: {
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 14,
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  effectDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginLeft: 54,
   },
   cameraView: {
     ...StyleSheet.absoluteFillObject,

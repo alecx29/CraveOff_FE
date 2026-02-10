@@ -5,12 +5,17 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/context/ThemeProvider';
 
-const DURATION_MIN = 4;
+const DURATION_OPTIONS = [
+  { label: '90 sec', minutes: 1.5 },
+  { label: '4 min', minutes: 4 },
+  { label: '6 min', minutes: 6 },
+];
+const DEFAULT_MINUTES = 4;
 
 export default function DeepBreathingScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
-  const [selectedMin] = useState<number>(DURATION_MIN);
+  const [selectedMin, setSelectedMin] = useState<number>(DEFAULT_MINUTES);
   const navigatingRef = useRef(false);
   const onStart = () => {
     if (navigatingRef.current) return;
@@ -36,9 +41,19 @@ export default function DeepBreathingScreen() {
         <View style={styles.controls}>
           <Text style={styles.title}>Deep Breathing</Text>
           <View style={styles.durationRow}>
-            <View style={[styles.durationFixed]}>
-              <Text style={styles.durationFixedText}>{DURATION_MIN} min</Text>
-            </View>
+            {DURATION_OPTIONS.map((option) => {
+              const isSelected = option.minutes === selectedMin;
+              return (
+                <TouchableOpacity
+                  key={option.label}
+                  onPress={() => setSelectedMin(option.minutes)}
+                  activeOpacity={0.85}
+                  style={[styles.durationOption, isSelected && styles.durationOptionSelected]}
+                >
+                  <Text style={styles.durationOptionText}>{option.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           <TouchableOpacity onPress={onStart} activeOpacity={0.85} style={styles.playOuter} disabled={navigatingRef.current}>
@@ -84,8 +99,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   durationRow: {
     flexDirection: 'row',
     marginBottom: 28,
+    gap: 12,
   },
-  durationFixed: {
+  durationOption: {
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 999,
@@ -93,7 +109,11 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
   },
-  durationFixedText: {
+  durationOptionSelected: {
+    borderColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  durationOptionText: {
     color: theme.colors.textPrimary,
     fontWeight: '600',
   },

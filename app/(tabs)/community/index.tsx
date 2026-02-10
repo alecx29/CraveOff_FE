@@ -23,6 +23,7 @@ type ChatRoom = {
   membersCount?: number;
   image_url?: string;
   imageUrl?: string;
+  slug?: string;
 };
 
 type PostResponse = {
@@ -42,6 +43,7 @@ type PostResponse = {
 };
 
 const POSTS_PAGE_SIZE = 12;
+const PREFERRED_ROOM_NAME = 'CraveOff Official Chat';
 
 type PostsPaginationMeta = {
   nextCursor: string | number | null;
@@ -221,9 +223,30 @@ const mergePosts = (
   return { list, added };
 };
 
+const normalizeRoomName = (value?: string): string => (value || '').trim().toLowerCase();
+
+const resolveRoomTitle = (room: ChatRoom): string =>
+  room.name || room.title || `Room #${room.id}`;
+
+const resolvePreferredRoom = (roomList: ChatRoom[]): ChatRoom | null => {
+  if (!Array.isArray(roomList) || roomList.length === 0) return null;
+  const preferred = roomList.find((room) =>
+    normalizeRoomName(resolveRoomTitle(room)) === normalizeRoomName(PREFERRED_ROOM_NAME)
+  );
+  return preferred ?? roomList[0] ?? null;
+};
+
 export default function CommunityInfoScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const colors = theme.colors as Record<string, string>;
+  const getColor = (name: string, fallback: string) => (name in colors ? colors[name] : fallback);
+  const primary = getColor('primary', '#6d28d9');
+  const startNowGradient: [string, string, string] = [
+    getColor('primaryLight', primary),
+    primary,
+    getColor('primaryDark', primary),
+  ];
   const insets = useSafeAreaInsets();
   const scrollContentPadding = Math.max(insets.bottom, 0) + 24;
   const contentPaddingStyle = React.useMemo(
@@ -283,9 +306,60 @@ export default function CommunityInfoScreen() {
     router.push('/community/notifications');
   };
 
-  const handleChatPress = () => {
-    // Placeholder: functionality will be provided later
-  };
+  const fetchRooms = useCallback(async (): Promise<ChatRoom[]> => {
+    try {
+      setError(null);
+      setLoading(true);
+      const response = await apiClient.get(BackendRoutes.CHAT_ROOMS);
+      const data = Array.isArray(response.data) ? response.data : (response.data?.rooms ?? []);
+      setRooms(data);
+      return data;
+    } catch {
+      setError('Failed to load chat rooms');
+      return [];
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  const openRoom = useCallback((room: ChatRoom) => {
+    const title = resolveRoomTitle(room);
+    const imageUrl = room.image_url || room.imageUrl;
+    const slug = (room as any).slug || room.name || String(room.id);
+    const isPublic = (room as any).is_public;
+    const genderPolicy = (room as any).gender_policy;
+    const myId =
+      (authUser as any)?.id ??
+      (authUser as any)?._id ??
+      (authUser as any)?.user_id ??
+      (authUser as any)?.uid ??
+      (authUser as any)?.uuid ??
+      '';
+    router.push({
+      pathname: '/(tabs)/community/room/[slug]' as any,
+      params: {
+        slug,
+        title,
+        imageUrl,
+        isPublic: String(!!isPublic),
+        genderPolicy: genderPolicy || '',
+        currentUserId: String(myId || ''),
+        roomId: String(room.id ?? slug),
+      },
+    });
+  }, [authUser]);
+
+  const handleChatPress = useCallback(async () => {
+    let availableRooms = rooms;
+    if (!Array.isArray(availableRooms) || availableRooms.length === 0) {
+      availableRooms = await fetchRooms();
+    }
+    const targetRoom = resolvePreferredRoom(availableRooms);
+    if (targetRoom) {
+      openRoom(targetRoom);
+    }
+  }, [rooms, fetchRooms, openRoom]);
 
   const openReddit = () => {
     Linking.openURL('https://www.reddit.com/r/CraveOff/');
@@ -294,21 +368,6 @@ export default function CommunityInfoScreen() {
   const openTelegram = () => {
     Linking.openURL('https://t.me/+csKNRFfBgRc1ZTFk');
   };
-
-  const fetchRooms = useCallback(async () => {
-    try {
-      setError(null);
-      setLoading(true);
-      const response = await apiClient.get(BackendRoutes.CHAT_ROOMS);
-      const data = Array.isArray(response.data) ? response.data : (response.data?.rooms ?? []);
-      setRooms(data);
-    } catch {
-      setError('Failed to load chat rooms');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
 
   const fetchPosts = useCallback(
     async (mode: PostsFetchMode = 'replace') => {
@@ -769,12 +828,9 @@ export default function CommunityInfoScreen() {
                 renderItem={({ item }) => {
                   const title = item.name || item.title || `Room #${item.id}`;
                   const imageUrl = item.image_url || item.imageUrl;
-                  const slug = (item as any).slug || item.name || String(item.id);
-                  const isPublic = (item as any).is_public;
-                  const genderPolicy = (item as any).gender_policy;
-                  const myId = (authUser as any)?.id ?? (authUser as any)?._id ?? (authUser as any)?.user_id ?? (authUser as any)?.uid ?? (authUser as any)?.uuid ?? '';
                   // Determine if this room should be disabled for the current user based on gender policy/title
                   const userGender = String((authUser as any)?.gender || '').toLowerCase();
+                  const genderPolicy = (item as any).gender_policy;
                   const isFemaleOnlyPolicy = typeof genderPolicy === 'string' && genderPolicy.toLowerCase() === 'female_only';
                   const isGirliesOnlyTitle = !genderPolicy && String(title || '').trim().toLowerCase() === 'girlies only';
                   const isDisabledForUser = (isFemaleOnlyPolicy || isGirliesOnlyTitle) && userGender !== 'female';
@@ -785,18 +841,7 @@ export default function CommunityInfoScreen() {
                       style={[styles.roomCard, isDisabledForUser ? { opacity: 0.5 } : null]}
                       onPress={() => {
                         if (isDisabledForUser) return;
-                        router.push({
-                          pathname: '/(tabs)/community/room/[slug]' as any,
-                          params: {
-                            slug,
-                            title,
-                            imageUrl,
-                            isPublic: String(!!isPublic),
-                            genderPolicy: genderPolicy || '',
-                            currentUserId: String(myId || ''),
-                            roomId: String(item.id ?? slug),
-                          },
-                        });
+                        openRoom(item);
                       }}
                     >
                       <LinearGradient
@@ -923,7 +968,14 @@ export default function CommunityInfoScreen() {
             onPress={() => setShowCreateModal(true)}
             style={styles.fabButton}
           >
-            <Ionicons name="add" size={24} color="white" />
+            <LinearGradient
+              colors={startNowGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.fabButtonGradient}
+            >
+              <Ionicons name="add" size={24} color="white" />
+            </LinearGradient>
           </TouchableOpacity>
         )}
 
@@ -1229,11 +1281,20 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 0,
+    overflow: 'hidden',
     ...theme.shadows.medium,
+  },
+  fabButtonGradient: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 28,
+    borderWidth: Platform.OS === 'android' ? 0 : 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   modalBackdrop: {
     position: 'absolute',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -243,7 +243,7 @@ const createStyles = (theme: any) =>
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 1,
+      borderWidth: Platform.OS === 'android' ? 0 : 1,
       borderColor: 'rgba(255, 255, 255, 0.12)',
     },
     startNowText: {

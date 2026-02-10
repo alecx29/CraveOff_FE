@@ -1,6 +1,6 @@
 // app/_layout.tsx
 import React, { useContext, useEffect, useState, useRef, useCallback } from 'react';
-import { ActivityIndicator, StyleSheet, View, StatusBar, AppState, Image, Platform, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, StatusBar, AppState, Image, Platform, Text, DevSettings } from 'react-native';
 import { router, Stack, SplashScreen, usePathname } from 'expo-router';
 import Animated, { Easing, Extrapolation, interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -66,6 +66,8 @@ try {
   CustomPurchaseControllerProvider = null;
 }
 
+const RESTART_AFTER_BACKGROUND_MS = 60 * 60 * 1000;
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     'DMSans-Regular': DMSans_400Regular,
@@ -81,6 +83,8 @@ export default function RootLayout() {
   const [splashLine2, setSplashLine2] = useState('');
   const fontsReady = fontsLoaded || !!fontError;
   const isInitialSplashVisible = !splashTimerElapsed || updateGateBlocking;
+  const lastBackgroundAtRef = useRef<number | null>(null);
+  const restartTriggeredRef = useRef(false);
 
   // Smooth slide-up + fade for the logo + typing text on initial splash
   const splashEnterProgress = useSharedValue(0);
@@ -209,6 +213,44 @@ export default function RootLayout() {
     }, 5400);
     return () => clearTimeout(timer);
   }, [fontsReady]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        lastBackgroundAtRef.current = Date.now();
+        restartTriggeredRef.current = false;
+        return;
+      }
+
+      if (nextAppState !== 'active') return;
+
+      const lastBackgroundAt = lastBackgroundAtRef.current;
+      if (!lastBackgroundAt) return;
+      if (Date.now() - lastBackgroundAt < RESTART_AFTER_BACKGROUND_MS) return;
+      if (restartTriggeredRef.current) return;
+
+      restartTriggeredRef.current = true;
+      lastBackgroundAtRef.current = null;
+
+      (async () => {
+        try {
+          if (Updates.isEnabled) {
+            await Updates.reloadAsync();
+            return;
+          }
+        } catch (error) {
+          console.warn('[App] Reload after background failed', error);
+        }
+        if (__DEV__) {
+          DevSettings.reload();
+        }
+      })();
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (!fontsLoaded) return;
@@ -755,6 +797,14 @@ const AuthNavigation: React.FC = () => {
         <Stack.Screen
           name="deep-breathing/session"
           options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }}
+        />
+        <Stack.Screen
+          name="relapse-prevention/stroop-test"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: '#0b0f18' },
+          }}
         />
         <Stack.Screen
           name="journal-modal"

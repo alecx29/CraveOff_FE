@@ -14,6 +14,7 @@ import PledgeModal from '@/src/components/PledgeModal';
 import PanicModal from '@/src/components/PanicModal';
 import ReflectionModal from '@/src/components/ReflectionModal';
 import RelapsedModal from '@/src/components/RelapsedModal';
+import RelapsePreventionModal from '@/src/components/RelapsePreventionModal';
 import { apiClient } from '@/src/axios/apiClient';
 import { BackendRoutes } from '@/src/axios/backendRoutes';
 import WeekBar from '@/src/components/WeekBar';
@@ -21,7 +22,6 @@ import oriaService, { StreamEventSource } from '@/src/services/oriaService';
 import quotesService from '@/src/services/quotesService';
 import { OriaChat, OriaChatWithMessages, SendMessageResponse } from '@/src/types/oria';
 import { usePledge } from '@/src/context/PledgeContext';
-import PetComingSoonModal from '@/src/components/PetComingSoonModal';
 import LeaderboardComingSoon from '@/src/components/LeaderboardComingSoon';
 import { useAchievements } from '@/src/context/AchievementsContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -125,6 +125,14 @@ export default function HomeScreen() {
   const { logs, lastRelapseData, fetchLogs } = useLogs();
   const { refreshFromApi, achievements: achievementsList } = useAchievements();
   const styles = createStyles(theme, oriaInsets);
+  const colors = theme.colors as Record<string, string>;
+  const getColor = (name: string, fallback: string) => (name in colors ? colors[name] : fallback);
+  const primary = getColor('primary', '#6d28d9');
+  const startNowGradient: [string, string, string] = [
+    getColor('primaryLight', primary),
+    primary,
+    getColor('primaryDark', primary),
+  ];
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = screenWidth - 40; // Define card width as a constant
   const cardTotalWidth = cardWidth + 40; // Total width including margins
@@ -140,13 +148,12 @@ export default function HomeScreen() {
   
   // State for showing the relapsed modal
   const [showRelapsedModal, setShowRelapsedModal] = useState(false);
+  const [showRelapsePreventionModal, setShowRelapsePreventionModal] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
   
   // State for showing the Oria chat modal
   const [showOriaModal, setShowOriaModal] = useState(false);
   
-  // State pentru showing the coming soon modal for Pet
-  const [showPetModal, setShowPetModal] = useState(false);
   // State for showing Content Blocker Coming Soon
   const [showContentBlockerModal, setShowContentBlockerModal] = useState(false);
   
@@ -379,25 +386,9 @@ export default function HomeScreen() {
   const scrollX = useSharedValue(0);
   const flatListRef = useAnimatedRef<Animated.ScrollView>();
   
-  // Animație pentru butonul cu animăluț
+  // Stil animat pentru butonul cu animăluț
   const petScale = useSharedValue(1);
   const petRotate = useSharedValue(0);
-  
-  const animatePet = () => {
-    // Animație de scale
-    petScale.value = withSequence(
-      withSpring(1.3, { damping: 2, stiffness: 80 }),
-      withSpring(1, { damping: 4, stiffness: 100 })
-    );
-    
-    // Animație de rotație
-    petRotate.value = withSequence(
-      withTiming(-36, { duration: 100, easing: Easing.ease }),
-      withTiming(36, { duration: 200, easing: Easing.ease }),
-      withTiming(-18, { duration: 150, easing: Easing.ease }),
-      withTiming(0, { duration: 100, easing: Easing.ease })
-    );
-  };
   
   const petAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -1282,7 +1273,7 @@ export default function HomeScreen() {
           cleanDays={cleanDays}
           isConnected={isConnected}
           onChatPress={() => setShowOriaModal(true)}
-          onPetPress={() => { animatePet(); setShowPetModal(true); }}
+          onPetPress={() => {}}
           petAnimatedStyle={petAnimatedStyle}
           onStreakPress={() => setShowStreakModal(true)}
         />
@@ -1469,10 +1460,17 @@ export default function HomeScreen() {
             setShowPanicModal(true);
           }}
         >
-          <Feather name="shield" size={20} color="#fff" />
-          <Text style={styles.panicButtonText}>Panic Button</Text>
+          <LinearGradient
+            colors={['#e85b5b', '#d94444']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.panicButtonGradient}
+          >
+            <Feather name="shield" size={20} color="#fff" />
+            <Text style={styles.panicButtonText}>Panic Button</Text>
+          </LinearGradient>
         </TouchableOpacity>
-        <Text style={styles.panicSubtitle}>CraveOff 2.0 launching soon</Text>
+        <Text style={styles.panicSubtitle}>CraveOff 2.0 is launching...</Text>
         
         {/* Chenare 21 Day Challenge și Pet */}
         <View style={styles.challengeRow}>
@@ -1497,18 +1495,18 @@ export default function HomeScreen() {
             </LinearGradient>
           </TouchableOpacity>
           
-          <TouchableOpacity 
-            style={styles.petCard}
-            onPress={() => setShowPetModal(true)}
-          >
+          <View style={styles.petCard}>
               <LinearGradient
                 colors={['rgba(76, 62, 98, 0.25)', 'rgba(76, 62, 98, 0.38)']}
                 style={styles.petGradient}
           >
             <Text style={styles.petCardEmoji}>🐶</Text>
-            <Text style={styles.petCardText}>Your buddy</Text>
+            <View style={styles.petCardTextRow}>
+              <Text style={styles.petCardText}>Your buddy</Text>
+              <Ionicons name="lock-closed" size={14} color={theme.colors.textMuted} style={styles.petCardLockIcon} />
+            </View>
             </LinearGradient>
-          </TouchableOpacity>
+          </View>
         </View>
         
         {/* Content Blocker Banner */}
@@ -1553,8 +1551,15 @@ export default function HomeScreen() {
             style={styles.oriaButton}
             onPress={() => setShowOriaModal(true)}
           >
-            <Text style={styles.oriaButtonText}>Start Chat</Text>
-            <Ionicons name="arrow-forward" size={16} color={theme.colors.primary} />
+            <LinearGradient
+              colors={startNowGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.oriaButtonGradient}
+            >
+              <Text style={styles.oriaButtonText}>Start Chat</Text>
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
+            </LinearGradient>
           </TouchableOpacity>
           <Text style={styles.oriaHint}>Also accessible from the chat icon in the header</Text>
           </LinearGradient>
@@ -1649,6 +1654,8 @@ export default function HomeScreen() {
       <PanicModal 
         visible={showPanicModal}
         onClose={() => setShowPanicModal(false)}
+        onRelapsed={() => setShowRelapsedModal(true)}
+        onPrevention={() => setShowRelapsePreventionModal(true)}
       />
       
       {/* Reflection Modal */}
@@ -1662,6 +1669,11 @@ export default function HomeScreen() {
         visible={showRelapsedModal}
         onClose={() => setShowRelapsedModal(false)}
         onResetCounter={handleResetCounter}
+      />
+
+      <RelapsePreventionModal
+        visible={showRelapsePreventionModal}
+        onClose={() => setShowRelapsePreventionModal(false)}
       />
       
       {/* Oria Chat Modal - Only render when visible */}
@@ -1903,12 +1915,6 @@ export default function HomeScreen() {
         </Modal>
       )}
       
-      {/* Pet Coming Soon Modal */}
-      <PetComingSoonModal
-        visible={showPetModal}
-        onClose={() => setShowPetModal(false)}
-      />
-
       {/* Content Blocker Coming Soon Modal */}
       <ContentBlockerComingSoonModal
         visible={showContentBlockerModal}
@@ -2063,19 +2069,24 @@ const createStyles = (theme: any, insets: { top: number }) => StyleSheet.create(
     marginBottom: 12,
   },
   oriaButton: {
+    borderRadius: 9999,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  oriaButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.colors.backgroundDeep,
-    borderRadius: 9999,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    marginTop: 4,
+    borderRadius: 9999,
+    borderWidth: Platform.OS === 'android' ? 0 : 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   oriaButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: theme.colors.primary,
+    color: '#fff',
   },
   oriaModalContainer: {
     flex: 1,
@@ -2520,12 +2531,8 @@ const createStyles = (theme: any, insets: { top: number }) => StyleSheet.create(
     textAlign: 'center',
   },
   panicButton: {
-    backgroundColor: 'rgba(216, 85, 85, 0.85)', // Roșu mai atenuat
     borderRadius: theme.borderRadius.pill,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
     marginBottom: 16,
     // Umbră mai subtilă
     shadowColor: '#d85555',
@@ -2534,8 +2541,15 @@ const createStyles = (theme: any, insets: { top: number }) => StyleSheet.create(
     shadowRadius: 4,
     elevation: 3,
   },
+  panicButtonGradient: {
+    paddingVertical: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: theme.borderRadius.pill,
+  },
   panicButtonText: {
-    color: theme.colors.textPrimary,
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
@@ -2663,10 +2677,17 @@ const createStyles = (theme: any, insets: { top: number }) => StyleSheet.create(
   petCardEmoji: {
     fontSize: 22,
   },
+  petCardTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
   petCardText: {
     fontSize: 12,
-    marginTop: 6,
     color: theme.colors.textSecondary,
+  },
+  petCardLockIcon: {
+    marginLeft: 6,
   },
   brainRewireGoalText: {
     fontSize: 12,
